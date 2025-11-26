@@ -204,7 +204,7 @@ function AddEvidenceModal({ onClose, onSave }) {
         }));
       };
       reader.readAsDataURL(file);
-    } 
+    }
     // Crea preview per audio
     else if (file.type.startsWith("audio/")) {
       const reader = new FileReader();
@@ -215,7 +215,7 @@ function AddEvidenceModal({ onClose, onSave }) {
           fileData: reader.result,
           fileSize: file.size,
           category: EVIDENCE_CATEGORY.DOCUMENT, // o crea EVIDENCE_CATEGORY.AUDIO se vuoi
-          fileType: 'audio',
+          fileType: "audio",
         }));
       };
       reader.readAsDataURL(file);
@@ -230,12 +230,11 @@ function AddEvidenceModal({ onClose, onSave }) {
           fileData: reader.result,
           fileSize: file.size,
           category: EVIDENCE_CATEGORY.DOCUMENT,
-          fileType: 'video',
+          fileType: "video",
         }));
       };
       reader.readAsDataURL(file);
-    }
-    else {
+    } else {
       setFormData((prev) => ({
         ...prev,
         fileSize: file.size,
@@ -299,19 +298,19 @@ function AddEvidenceModal({ onClose, onSave }) {
 
             {previewUrl && (
               <div className="file-preview">
-                {formData.fileType === 'audio' ? (
-                  <audio controls style={{ width: '100%', marginTop: '10px' }}>
+                {formData.fileType === "audio" ? (
+                  <audio controls style={{ width: "100%", marginTop: "10px" }}>
                     <source src={previewUrl} />
                     Il tuo browser non supporta l'elemento audio.
                   </audio>
-                ) : formData.fileType === 'video' ? (
-                  <video 
-                    controls 
-                    style={{ 
-                      maxWidth: '100%', 
-                      maxHeight: '200px', 
-                      marginTop: '10px',
-                      borderRadius: '8px'
+                ) : formData.fileType === "video" ? (
+                  <video
+                    controls
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "200px",
+                      marginTop: "10px",
+                      borderRadius: "8px",
                     }}
                   >
                     <source src={previewUrl} />
