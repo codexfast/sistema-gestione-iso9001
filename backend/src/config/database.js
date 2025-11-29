@@ -5,21 +5,55 @@
 
 const sql = require('mssql');
 const logger = require('../utils/logger');
+const fs = require('fs');
+const path = require('path');
 
+// Caricamento configurazione da file JSON
+const configPath = path.join(__dirname, '..', '..', 'config', 'database.json');
+let dbConfig;
+
+try {
+  const configFile = fs.readFileSync(configPath, 'utf8');
+  const configs = JSON.parse(configFile);
+
+  // Seleziona ambiente (development, production, test)
+  const environment = process.env.NODE_ENV || 'development';
+  dbConfig = configs[environment];
+
+  if (!dbConfig) {
+    throw new Error(`Configurazione per ambiente "${environment}" non trovata`);
+  }
+
+  // Sostituisce placeholder con variabili d'ambiente (solo in production)
+  if (environment === 'production') {
+    dbConfig.server = process.env.DB_SERVER || dbConfig.server;
+    dbConfig.port = parseInt(process.env.DB_PORT) || dbConfig.port;
+    dbConfig.database = process.env.DB_DATABASE || dbConfig.database;
+    dbConfig.user = process.env.DB_USER || dbConfig.user;
+    dbConfig.password = process.env.DB_PASSWORD || dbConfig.password;
+  }
+
+  logger.info(`📋 Configurazione database caricata per ambiente: ${environment}`);
+} catch (error) {
+  logger.error(`❌ Errore caricamento configurazione database: ${error.message}`);
+  process.exit(1);
+}
+
+// Configurazione finale per mssql
 const config = {
-  server: process.env.DB_SERVER,
-  port: parseInt(process.env.DB_PORT) || 1433,
-  database: process.env.DB_DATABASE,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: process.env.DB_ENCRYPT === 'true',
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
+  server: dbConfig.server,
+  port: dbConfig.port || 1433,
+  database: dbConfig.database,
+  user: dbConfig.user,
+  password: dbConfig.password,
+  options: dbConfig.options || {
+    encrypt: true,
+    trustServerCertificate: false,
     enableArithAbort: true,
     connectTimeout: 30000,
     requestTimeout: 30000,
   },
-  pool: {
+  pool: dbConfig.pool || {
     max: 10,
     min: 0,
     idleTimeoutMillis: 30000,
@@ -36,7 +70,7 @@ async function getPool() {
     try {
       pool = await sql.connect(config);
       logger.info('✅ SQL Server connection pool established');
-      
+
       // Handle pool errors
       pool.on('error', (err) => {
         logger.error('SQL Pool Error:', err);
@@ -57,12 +91,12 @@ async function query(queryText, params = {}) {
   try {
     const pool = await getPool();
     const request = pool.request();
-    
+
     // Bind parameters
     Object.entries(params).forEach(([key, value]) => {
       request.input(key, value);
     });
-    
+
     const result = await request.query(queryText);
     return result;
   } catch (err) {
@@ -78,7 +112,7 @@ async function execute(procedureName, params = {}) {
   try {
     const pool = await getPool();
     const request = pool.request();
-    
+
     // Bind parameters
     Object.entries(params).forEach(([key, value]) => {
       if (value.isOutput) {
@@ -87,7 +121,7 @@ async function execute(procedureName, params = {}) {
         request.input(key, value);
       }
     });
-    
+
     const result = await request.execute(procedureName);
     return result;
   } catch (err) {
