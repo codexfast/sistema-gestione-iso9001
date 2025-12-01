@@ -16,12 +16,12 @@ const { closePool } = require('./config/database');
 
 // Import routes
 const checklistRoutes = require('./routes/checklist.routes');
-// TODO: Implementare dopo test checklist
+const syncRoutes = require('./routes/sync.routes');
+// TODO: Implementare dopo test checklist + sync
 // const authRoutes = require('./routes/auth.routes');
 // const auditRoutes = require('./routes/audit.routes');
 // const attachmentRoutes = require('./routes/attachment.routes');
 // const ncRoutes = require('./routes/nc.routes');
-// const syncRoutes = require('./routes/sync.routes');
 
 const app = express();
 const PORT = process.env.PORT || 10443;
@@ -100,12 +100,12 @@ app.get('/health', async (req, res) => {
 // API routes
 const API_BASE = process.env.API_BASE_PATH || '/api/v1';
 app.use(API_BASE, checklistRoutes);
+app.use(API_BASE, syncRoutes);
 // TODO: Abilitare dopo implementazione
 // app.use(`${API_BASE}/auth`, authRoutes);
 // app.use(`${API_BASE}/audits`, auditRoutes);
 // app.use(`${API_BASE}/attachments`, attachmentRoutes);
 // app.use(`${API_BASE}/non-conformities`, ncRoutes);
-// app.use(`${API_BASE}/sync`, syncRoutes);
 
 // Static files (uploads)
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
