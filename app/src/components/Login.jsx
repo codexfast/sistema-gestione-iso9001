@@ -1,0 +1,159 @@
+/**
+ * Login Component - Schermata di autenticazione
+ * Sistema Gestione ISO 9001 - QS Studio
+ */
+
+import React, { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import "./Login.css";
+
+function Login() {
+  const { login, error, isLoading } = useAuth();
+
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setLocalError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validazione base
+    if (!formData.username.trim()) {
+      setLocalError("Inserire username");
+      return;
+    }
+    if (!formData.password) {
+      setLocalError("Inserire password");
+      return;
+    }
+
+    const success = await login(formData.username, formData.password);
+
+    if (!success) {
+      setFormData((prev) => ({ ...prev, password: "" }));
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-container">
+        {/* Logo e titolo */}
+        <div className="login-header">
+          <div className="login-logo">
+            <span className="logo-icon">🔒</span>
+          </div>
+          <h1>Sistema Gestione ISO</h1>
+          <p className="login-subtitle">ISO 9001 / ISO 14001 / ISO 45001</p>
+        </div>
+
+        {/* Form login */}
+        <form onSubmit={handleSubmit} className="login-form">
+          {/* Errori */}
+          {(error || localError) && (
+            <div className="login-error">
+              <span className="error-icon">⚠️</span>
+              {error || localError}
+            </div>
+          )}
+
+          {/* Username */}
+          <div className="form-group">
+            <label htmlFor="username">
+              <span className="field-icon">👤</span>
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="Inserisci username"
+              autoComplete="username"
+              autoFocus
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Password */}
+          <div className="form-group">
+            <label htmlFor="password">
+              <span className="field-icon">🔑</span>
+              Password
+            </label>
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Inserisci password"
+                autoComplete="current-password"
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button type="submit" className="btn-login" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <span className="spinner"></span>
+                Accesso in corso...
+              </>
+            ) : (
+              <>
+                <span className="btn-icon">🚀</span>
+                Accedi
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Credenziali demo */}
+        <div className="demo-credentials">
+          <p className="demo-title">🧪 Credenziali Demo:</p>
+          <div className="credentials-list">
+            <div className="credential-item">
+              <span className="role-badge admin">Admin</span>
+              <code>admin / admin123</code>
+            </div>
+            <div className="credential-item">
+              <span className="role-badge auditor">Auditor</span>
+              <code>auditor / auditor123</code>
+            </div>
+            <div className="credential-item">
+              <span className="role-badge viewer">Viewer</span>
+              <code>viewer / viewer123</code>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="login-footer">
+          <p>© {new Date().getFullYear()} QS Studio - Sistema Gestione ISO</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Login;

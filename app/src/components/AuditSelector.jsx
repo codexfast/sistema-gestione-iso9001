@@ -136,23 +136,19 @@ function AuditSelector() {
         )}
       </div>
 
-      {/* Alert se audit selezionato ma workspace non connesso - SOLO DESKTOP */}
+      {/* Alert compatto se workspace non connesso - SOLO DESKTOP, meno invasivo */}
       {!isMobile && currentAudit && !fsProvider?.ready() && (
-        <div className="alert alert-warning">
-          <span className="alert-icon">⚠️</span>
-          <div className="alert-content">
-            <strong>Workspace non connesso</strong>
-            <p>
-              I dati dell'audit non verranno salvati su file system. Connetti
-              una cartella workspace per abilitare il salvataggio automatico.
-            </p>
+        <div className="alert alert-info-compact">
+          <span className="alert-icon">💾</span>
+          <span className="alert-text">
+            Salvataggio locale attivo (localStorage).
             <button
-              className="btn btn-primary btn-sm"
+              className="btn-link"
               onClick={() => setWorkspaceExpanded(true)}
             >
-              📂 Connetti Workspace
+              Connetti cartella per backup su file
             </button>
-          </div>
+          </span>
         </div>
       )}
 
@@ -160,12 +156,23 @@ function AuditSelector() {
         <div className="audit-info-bar">
           <div className="audit-info-item">
             <strong>Data Audit:</strong>{" "}
-            {new Date(currentAudit.metadata.auditDate).toLocaleDateString(
-              "it-IT"
-            )}
+            {(() => {
+              const dateStr =
+                currentAudit.metadata?.generalData?.auditDate ||
+                currentAudit.metadata?.auditDate;
+              if (!dateStr) return "Non specificata";
+              const date = new Date(dateStr);
+              return isNaN(date.getTime())
+                ? "Non valida"
+                : date.toLocaleDateString("it-IT");
+            })()}
           </div>
           <div className="audit-info-item">
-            <strong>Auditor:</strong> {currentAudit.metadata.auditorName}
+            <strong>Auditor:</strong>{" "}
+            {currentAudit.metadata?.generalData?.auditors?.[0] ||
+              currentAudit.metadata?.auditor ||
+              currentAudit.metadata?.auditorName ||
+              "Non specificato"}
           </div>
           <div className="audit-info-item standards-info">
             <strong>Norme:</strong>{" "}

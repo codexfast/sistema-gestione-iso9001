@@ -1,17 +1,20 @@
 import React, { useEffect } from "react";
 import { StorageProvider, useStorage } from "./contexts/StorageContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/SharedComponents";
 import Dashboard from "./components/Dashboard";
+import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import { useCheckpointSaver } from "./hooks/useCheckpointSaver";
 import { checkAndMigrateStorage } from "./utils/storageVersion";
 import "./App.css";
 
 /**
- * AppContent - Componente interno con accesso a StorageContext
+ * AppContent - Componente interno con accesso a StorageContext e Auth
  */
 function AppContent() {
   const { currentAudit, fsProvider, audits } = useStorage();
+  const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
   const [settingsExpanded, setSettingsExpanded] = React.useState(false);
 
   // Auto-save checkpoint ogni 30 secondi quando workspace collegato
@@ -20,13 +23,34 @@ function AppContent() {
     enabled: true,
   });
 
+  // Mostra login se non autenticato
+  if (authLoading) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner"></div>
+        <p>Caricamento...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   // Se nessun audit selezionato E ci sono audit disponibili → mostra selector full-screen
   if (!currentAudit && audits.length > 0) {
     return (
       <div className="app app-selector-mode">
         <header className="app-header">
-          <div className="container">
+          <div className="container header-flex">
             <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
+            <div className="user-info">
+              <span className="user-name">👤 {user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">
+                🚪 Esci
+              </button>
+            </div>
           </div>
         </header>
         <main className="container">
@@ -47,21 +71,32 @@ function AppContent() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="container">
+        <div className="container header-flex">
           <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
 
-          {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}
-          {currentAudit && (
-            <WorkspaceManager compact={true} audit={currentAudit} />
-          )}
+          <div className="header-right">
+            {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}
+            {currentAudit && (
+              <WorkspaceManager compact={true} audit={currentAudit} />
+            )}
 
-          {/* Checkpoint indicator */}
-          {checkpoint.lastCheckpointTime && (
-            <div className="checkpoint-indicator">
-              ✅ Auto-salvato alle{" "}
-              {checkpoint.lastCheckpointTime.toLocaleTimeString("it-IT")}
+            {/* Checkpoint indicator */}
+            {checkpoint.lastCheckpointTime && (
+              <div className="checkpoint-indicator">
+                ✅ Auto-salvato alle{" "}
+                {checkpoint.lastCheckpointTime.toLocaleTimeString("it-IT")}
+              </div>
+            )}
+
+            {/* User info */}
+            <div className="user-info">
+              <span className="user-name">👤 {user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">
+                🚪
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </header>
 
@@ -89,9 +124,11 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <StorageProvider useMockData={true}>
-        <AppContent />
-      </StorageProvider>
+      <AuthProvider>
+        <StorageProvider useMockData={true}>
+          <AppContent />
+        </StorageProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

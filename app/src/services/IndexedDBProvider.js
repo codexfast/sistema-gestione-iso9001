@@ -290,3 +290,46 @@ export class IndexedDBProvider {
         };
     }
 }
+
+// === SINGLETON per sync queue ===
+const SYNC_DB_NAME = 'SGQ_ISO9001_DB';
+const SYNC_DB_VERSION = 1;
+
+let syncDbInstance = null;
+
+/**
+ * Ottiene istanza database per sync queue
+ * Usato da syncService.js
+ */
+export async function getDatabase() {
+    if (syncDbInstance) {
+        return syncDbInstance;
+    }
+
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(SYNC_DB_NAME, SYNC_DB_VERSION);
+
+        request.onerror = () => {
+            console.error('❌ Errore apertura sync database:', request.error);
+            reject(request.error);
+        };
+
+        request.onsuccess = () => {
+            syncDbInstance = request.result;
+            console.log('✅ Sync database connesso');
+            resolve(syncDbInstance);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+
+            // Store per sync queue
+            if (!db.objectStoreNames.contains('syncQueue')) {
+                const store = db.createObjectStore('syncQueue', { keyPath: 'id' });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+                store.createIndex('type', 'type', { unique: false });
+                console.log('📤 Sync queue store creato');
+            }
+        };
+    });
+}

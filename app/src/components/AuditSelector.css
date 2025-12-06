@@ -204,6 +204,43 @@
   border-left: 4px solid #ffc107;
 }
 
+/* Alert Info Compatto - meno invasivo */
+.alert-info-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #e8f4fd;
+  border: 1px solid #bee5eb;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: #0c5460;
+}
+
+.alert-info-compact .alert-icon {
+  font-size: 1rem;
+}
+
+.alert-info-compact .alert-text {
+  flex: 1;
+}
+
+.alert-info-compact .btn-link {
+  background: none;
+  border: none;
+  color: #0066cc;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+.alert-info-compact .btn-link:hover {
+  color: #004499;
+}
+
 .alert-icon {
   font-size: 1.5rem;
   flex-shrink: 0;
