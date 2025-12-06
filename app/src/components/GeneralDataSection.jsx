@@ -3,14 +3,41 @@
  * Form per compilare i dati generali dell'audit
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchStandards } from "../services/standardsService";
 import "./GeneralDataSection.css";
 
-const AVAILABLE_STANDARDS = [
-  { id: "ISO_9001", label: "ISO 9001:2015", description: "Qualità" },
-  { id: "ISO_14001", label: "ISO 14001:2015", description: "Ambiente" },
-  { id: "ISO_45001", label: "ISO 45001:2018", description: "Sicurezza" },
+// Fallback standard se API non disponibile
+const FALLBACK_STANDARDS = [
+  {
+    standard_id: 1,
+    standard_code: "ISO_9001_2015",
+    standard_name: "ISO 9001:2015",
+    category: "quality",
+    description: "Qualità",
+  },
+  {
+    standard_id: 2,
+    standard_code: "ISO_14001_2015",
+    standard_name: "ISO 14001:2015",
+    category: "environment",
+    description: "Ambiente",
+  },
+  {
+    standard_id: 3,
+    standard_code: "ISO_45001_2018",
+    standard_name: "ISO 45001:2018",
+    category: "safety",
+    description: "Sicurezza",
+  },
 ];
+
+// Mappa categoria → descrizione italiana
+const CATEGORY_LABELS = {
+  quality: "Qualità",
+  environment: "Ambiente",
+  safety: "Sicurezza",
+};
 
 function GeneralDataSection({
   generalData,
@@ -18,6 +45,10 @@ function GeneralDataSection({
   onUpdate,
   onStandardsUpdate,
 }) {
+  const [availableStandards, setAvailableStandards] =
+    useState(FALLBACK_STANDARDS);
+  const [loadingStandards, setLoadingStandards] = useState(true);
+
   const [formData, setFormData] = useState(
     generalData || {
       auditObject: "",
@@ -29,6 +60,34 @@ function GeneralDataSection({
       auditors: [],
     }
   );
+
+  // Carica standard dall'API
+  useEffect(() => {
+    loadStandardsFromAPI();
+  }, []);
+
+  const loadStandardsFromAPI = async () => {
+    try {
+      const token = localStorage.getItem("authToken") || "";
+      const data = await fetchStandards(token);
+      if (data && data.length > 0) {
+        // Aggiungi descrizione dalla categoria
+        const standardsWithDesc = data.map((std) => ({
+          ...std,
+          description: CATEGORY_LABELS[std.category] || std.category,
+        }));
+        setAvailableStandards(standardsWithDesc);
+      }
+    } catch (error) {
+      console.warn(
+        "API standard non disponibile, uso fallback:",
+        error.message
+      );
+      // Mantieni fallback già impostato
+    } finally {
+      setLoadingStandards(false);
+    }
+  };
 
   const handleChange = (field, value) => {
     const updated = { ...formData, [field]: value };
@@ -75,28 +134,43 @@ function GeneralDataSection({
             Seleziona i sistemi di gestione da auditare. Solo gli standard
             selezionati appariranno nella sezione Checklist.
           </p>
-          <div className="standards-grid">
-            {AVAILABLE_STANDARDS.map((standard) => (
-              <label key={standard.id} className="standard-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedStandards.includes(standard.id)}
-                  onChange={(e) => {
-                    const updated = e.target.checked
-                      ? [...selectedStandards, standard.id]
-                      : selectedStandards.filter((s) => s !== standard.id);
-                    onStandardsUpdate(updated);
-                  }}
-                />
-                <div className="standard-info">
-                  <span className="standard-label">{standard.label}</span>
-                  <span className="standard-description">
-                    {standard.description}
-                  </span>
-                </div>
-              </label>
-            ))}
-          </div>
+          {loadingStandards ? (
+            <div className="loading-standards">Caricamento standard...</div>
+          ) : (
+            <div className="standards-grid">
+              {availableStandards.map((standard) => {
+                // Supporta sia vecchio formato (id) che nuovo (standard_code)
+                const stdId = standard.standard_code || standard.id;
+                return (
+                  <label
+                    key={stdId}
+                    className={`standard-checkbox category-${standard.category}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedStandards.includes(stdId)}
+                      onChange={(e) => {
+                        const updated = e.target.checked
+                          ? [...selectedStandards, stdId]
+                          : selectedStandards.filter((s) => s !== stdId);
+                        onStandardsUpdate(updated);
+                      }}
+                    />
+                    <div className="standard-info">
+                      <span className="standard-label">
+                        {standard.standard_name || standard.label}
+                      </span>
+                      <span
+                        className={`standard-description category-badge-${standard.category}`}
+                      >
+                        {standard.description}
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Oggetto */}

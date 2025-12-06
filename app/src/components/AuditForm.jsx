@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
+import { fetchStandards } from "../services/standardsService";
 import "./AuditForm.css";
 
 const AuditForm = () => {
   const { addAudit } = useData();
   const [showForm, setShowForm] = useState(false);
+  const [standards, setStandards] = useState([]);
+  const [loadingStandards, setLoadingStandards] = useState(false);
   const [formData, setFormData] = useState({
     dataAudit: "",
     tipo: "interno",
     area: "",
-    puntoISO: "",
+    selectedStandards: [], // Array di standard_id selezionati
     auditor: "",
     criteri: "",
     osservazioni: "",
@@ -17,6 +20,48 @@ const AuditForm = () => {
     nonConformita: [],
     conclusioni: "",
   });
+
+  // Carica standard ISO all'apertura del form
+  useEffect(() => {
+    if (showForm && standards.length === 0) {
+      loadStandards();
+    }
+  }, [showForm]);
+
+  const loadStandards = async () => {
+    setLoadingStandards(true);
+    try {
+      // Per ora uso un token fittizio - in produzione verrà dal context auth
+      const token = localStorage.getItem("authToken") || "";
+      const data = await fetchStandards(token);
+      setStandards(data);
+    } catch (error) {
+      console.error("Errore caricamento standard:", error);
+      // Fallback a standard predefiniti se API non disponibile
+      setStandards([
+        {
+          standard_id: 1,
+          standard_code: "ISO_9001_2015",
+          standard_name: "ISO 9001:2015",
+          category: "quality",
+        },
+        {
+          standard_id: 2,
+          standard_code: "ISO_14001_2015",
+          standard_name: "ISO 14001:2015",
+          category: "environment",
+        },
+        {
+          standard_id: 3,
+          standard_code: "ISO_45001_2018",
+          standard_name: "ISO 45001:2018",
+          category: "safety",
+        },
+      ]);
+    } finally {
+      setLoadingStandards(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,11 +71,35 @@ const AuditForm = () => {
     }));
   };
 
+  // Gestisce selezione/deselezione standard (multi-select con checkbox)
+  const handleStandardToggle = (standardId) => {
+    setFormData((prev) => {
+      const current = prev.selectedStandards || [];
+      if (current.includes(standardId)) {
+        return {
+          ...prev,
+          selectedStandards: current.filter((id) => id !== standardId),
+        };
+      } else {
+        return { ...prev, selectedStandards: [...current, standardId] };
+      }
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     if (!formData.dataAudit || !formData.area) {
       alert("Compilare almeno Data Audit e Area/Processo");
+      return;
+    }
+
+    // Validazione: almeno uno standard selezionato
+    if (
+      !formData.selectedStandards ||
+      formData.selectedStandards.length === 0
+    ) {
+      alert("Selezionare almeno uno standard ISO di riferimento");
       return;
     }
 
@@ -42,7 +111,7 @@ const AuditForm = () => {
         dataAudit: "",
         tipo: "interno",
         area: "",
-        puntoISO: "",
+        selectedStandards: [],
         auditor: "",
         criteri: "",
         osservazioni: "",
@@ -109,15 +178,45 @@ const AuditForm = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Punto ISO 9001:2015</label>
-                <input
-                  type="text"
-                  name="puntoISO"
-                  value={formData.puntoISO}
-                  onChange={handleChange}
-                  placeholder="es. 4.4, 8.5.1, 9.2"
-                />
+              <div className="form-group full-width">
+                <label>Standard ISO di Riferimento *</label>
+                {loadingStandards ? (
+                  <div className="loading-indicator">
+                    Caricamento standard...
+                  </div>
+                ) : (
+                  <div className="standards-multiselect">
+                    {standards.map((std) => (
+                      <label
+                        key={std.standard_id}
+                        className="standard-checkbox"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedStandards.includes(
+                            std.standard_id
+                          )}
+                          onChange={() => handleStandardToggle(std.standard_id)}
+                        />
+                        <span
+                          className={`standard-badge category-${std.category}`}
+                        >
+                          {std.standard_name}
+                        </span>
+                      </label>
+                    ))}
+                    {standards.length === 0 && (
+                      <span className="no-standards">
+                        Nessuno standard disponibile
+                      </span>
+                    )}
+                  </div>
+                )}
+                {formData.selectedStandards.length === 0 && (
+                  <small className="form-hint">
+                    Seleziona almeno uno standard
+                  </small>
+                )}
               </div>
 
               <div className="form-group">

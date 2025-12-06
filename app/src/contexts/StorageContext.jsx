@@ -19,6 +19,7 @@ import {
   createStorageProvider,
   getDeviceInfo,
 } from "../services/storageAdapter";
+import { syncService } from "../services/syncService";
 
 // Crea Context
 const StorageContext = createContext(null);
@@ -121,6 +122,15 @@ export function StorageProvider({ children, useMockData = true }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Sync state
+  const [syncStatus, setSyncStatus] = useState({
+    isSyncing: false,
+    queueSize: 0,
+    lastSync: null,
+    hasConflict: false,
+    conflictData: null,
+  });
+
   // Audit corrente (computed) - supporta sia metadata.id che id top-level
   const currentAudit =
     audits.find((a) => {
@@ -142,6 +152,38 @@ export function StorageProvider({ children, useMockData = true }) {
   // Auto-save multiplo
   const { auditSaveStatus, listSaveStatus, isSaving, allSaved } =
     useAutoSaveMultiple(currentAudit, audits);
+
+  // Auto-sync ogni 5 minuti
+  useEffect(() => {
+    if (!navigator.onLine) return;
+
+    const intervalId = setInterval(async () => {
+      console.log("⏰ [AUTO-SYNC] Avvio sync periodica...");
+      try {
+        setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
+        await syncService.processQueue();
+        const queueSize = await syncService.getQueueSize();
+        setSyncStatus((prev) => ({
+          ...prev,
+          isSyncing: false,
+          queueSize,
+          lastSync: new Date().toISOString(),
+        }));
+        console.log("✅ [AUTO-SYNC] Completata, queue size:", queueSize);
+      } catch (error) {
+        console.error("❌ [AUTO-SYNC] Errore:", error);
+        setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+      }
+    }, 5 * 60 * 1000); // 5 minuti
+
+    // Sync iniziale al mount
+    syncService.processQueue().then(async () => {
+      const queueSize = await syncService.getQueueSize();
+      setSyncStatus((prev) => ({ ...prev, queueSize }));
+    });
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   // === INIZIALIZZAZIONE ===
   useEffect(() => {
@@ -219,6 +261,18 @@ export function StorageProvider({ children, useMockData = true }) {
               console.warn("⚠️ Schema validation errors:", validation.errors);
             }
 
+            // Enqueue sync se online
+            if (navigator.onLine) {
+              syncService
+                .enqueue("update_audit", {
+                  id: updated.metadata?.id || updated.id,
+                  ...updated,
+                })
+                .catch((err) => {
+                  console.error("❌ [SYNC] Errore enqueue update:", err);
+                });
+            }
+
             return updated;
           }
           return audit;
@@ -257,6 +311,13 @@ export function StorageProvider({ children, useMockData = true }) {
 
       setAudits((prevAudits) => [...prevAudits, newAudit]);
       setCurrentAuditId(newAudit.metadata.id);
+
+      // Enqueue sync se online
+      if (navigator.onLine) {
+        syncService.enqueue("create_audit", newAudit).catch((err) => {
+          console.error("❌ [SYNC] Errore enqueue create:", err);
+        });
+      }
 
       console.log(`✅ Created audit: ${newAudit.metadata.auditNumber}`);
       return newAudit;
@@ -384,6 +445,13 @@ export function StorageProvider({ children, useMockData = true }) {
           return id !== auditId;
         })
       );
+
+      // Enqueue sync se online
+      if (navigator.onLine) {
+        syncService.enqueue("delete_audit", { auditId }).catch((err) => {
+          console.error("❌ [SYNC] Errore enqueue delete:", err);
+        });
+      }
 
       // Se elimino audit corrente, switcha al primo disponibile
       if (auditId === currentAuditId) {
@@ -523,6 +591,56 @@ export function StorageProvider({ children, useMockData = true }) {
     console.log("✅ File System disconnected");
   }, []);
 
+  /**
+   * Forza sync manuale
+   */
+  const triggerManualSync = useCallback(async () => {
+    if (!navigator.onLine) {
+      console.warn("⚠️ [SYNC] Impossibile sincronizzare: offline");
+      return { success: false, error: "Offline" };
+    }
+
+    try {
+      setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
+      await syncService.processQueue();
+      const queueSize = await syncService.getQueueSize();
+      setSyncStatus((prev) => ({
+        ...prev,
+        isSyncing: false,
+        queueSize,
+        lastSync: new Date().toISOString(),
+      }));
+      console.log("✅ [SYNC] Sync manuale completata");
+      return { success: true, queueSize };
+    } catch (error) {
+      console.error("❌ [SYNC] Errore sync manuale:", error);
+      setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  /**
+   * Risolvi conflitto manualmente (scelta utente)
+   */
+  const resolveConflict = useCallback((choice) => {
+    if (choice === "keep_local") {
+      // Mantieni versione locale, forza upload
+      console.log("🔧 [CONFLICT] Utente sceglie: mantieni locale");
+      // TODO: Implementare force push
+    } else if (choice === "use_server") {
+      // Scarica versione server, sovrascrivi locale
+      console.log("🔧 [CONFLICT] Utente sceglie: usa server");
+      // TODO: Implementare download + overwrite locale
+    }
+
+    // Chiudi dialog
+    setSyncStatus((prev) => ({
+      ...prev,
+      hasConflict: false,
+      conflictData: null,
+    }));
+  }, []);
+
   // Context value
   const value = {
     // State
@@ -543,6 +661,11 @@ export function StorageProvider({ children, useMockData = true }) {
     allSaved,
     auditSaveStatus,
     listSaveStatus,
+
+    // Sync status
+    syncStatus,
+    triggerManualSync,
+    resolveConflict,
 
     // CRUD operations
     updateCurrentAudit,

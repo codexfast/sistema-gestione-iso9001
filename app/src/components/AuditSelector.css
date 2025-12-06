@@ -87,6 +87,63 @@
   margin-bottom: 15px;
 }
 
+.audit-info-item {
+  font-size: 14px;
+  color: #333;
+}
+
+.audit-info-item strong {
+  color: #555;
+  margin-right: 4px;
+}
+
+/* Standards Badges in Info Bar */
+.standards-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.standards-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.standard-badge-small {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.standard-badge-small.category-quality {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+}
+
+.standard-badge-small.category-environment {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.standard-badge-small.category-safety {
+  background: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffcc80;
+}
+
+.standard-badge-small.category-other {
+  background: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+}
+
 /* Workspace Section */
 .workspace-section {
   margin: 15px 0;

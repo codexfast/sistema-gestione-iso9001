@@ -1,0 +1,608 @@
+/**
+ * Audit Controller
+ * Gestisce operazioni CRUD su audit con isolamento multi-tenant
+ */
+
+const { query } = require('../config/database');
+const logger = require('../utils/logger');
+
+/**
+ * GET /api/v1/audits
+ * Lista audit dell'organizzazione corrente
+ * 
+ * Query params:
+ * - status: filter by status (draft, in_progress, completed, approved)
+ * - year: filter by project_year
+ * - standard_id: filter by standard
+ * - page: pagination (default 1)
+ * - limit: items per page (default 50)
+ */
+async function listAudits(req, res) {
+    try {
+        const { organization_id } = req.user;
+        const {
+            status,
+            year,
+            standard_id,
+            page = 1,
+            limit = 50
+        } = req.query;
+
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build WHERE clause dinamicamente
+        let whereConditions = ['a.organization_id = @organization_id', 'a.is_deleted = 0'];
+        let params = { organization_id, limit: parseInt(limit), offset };
+
+        if (status) {
+            whereConditions.push('a.status = @status');
+            params.status = status;
+        }
+
+        if (year) {
+            whereConditions.push('a.project_year = @year');
+            params.year = parseInt(year);
+        }
+
+        if (standard_id) {
+            whereConditions.push('EXISTS (SELECT 1 FROM audit_standards WHERE audit_id = a.audit_id AND standard_id = @standard_id)');
+            params.standard_id = parseInt(standard_id);
+        }
+
+        const whereClause = whereConditions.join(' AND ');
+
+        // Query principale con paginazione
+        const result = await query(`
+      SELECT 
+        a.audit_id,
+        a.audit_uuid,
+        a.audit_number,
+        a.client_name,
+        a.project_year,
+        a.audit_date,
+        a.auditor_name,
+        a.audit_type,
+        a.status,
+        a.total_questions,
+        a.answered_questions,
+        a.conformities_count,
+        a.non_conformities_count,
+        a.completion_percentage,
+        a.notes,
+        a.created_at,
+        a.updated_at,
+        u.full_name AS created_by_name,
+        o.organization_name,
+        (
+          SELECT STRING_AGG(s.standard_code, ', ')
+          FROM audit_standards ast
+          INNER JOIN standards s ON ast.standard_id = s.standard_id
+          WHERE ast.audit_id = a.audit_id
+        ) AS standards
+      FROM audits a
+      LEFT JOIN users u ON a.created_by = u.user_id
+      INNER JOIN organizations o ON a.organization_id = o.organization_id
+      WHERE ${whereClause}
+      ORDER BY a.audit_date DESC, a.created_at DESC
+      OFFSET @offset ROWS
+      FETCH NEXT @limit ROWS ONLY
+    `, params);
+
+        // Count totale per pagination
+        const countResult = await query(`
+      SELECT COUNT(*) AS total
+      FROM audits a
+      WHERE ${whereClause}
+    `, params);
+
+        const total = countResult.recordset[0].total;
+
+        logger.info('Audit list retrieved', {
+            organization_id,
+            count: result.recordset.length,
+            filters: { status, year, standard_id }
+        });
+
+        res.json({
+            success: true,
+            data: result.recordset,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                totalPages: Math.ceil(total / parseInt(limit))
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error listing audits', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante il recupero degli audit',
+            code: 'AUDIT_LIST_ERROR'
+        });
+    }
+}
+
+/**
+ * GET /api/v1/audits/:id
+ * Recupera dettagli di un singolo audit
+ */
+async function getAuditById(req, res) {
+    try {
+        const { id } = req.params;
+        const { organization_id } = req.user;
+
+        const result = await query(`
+      SELECT 
+        a.*,
+        u.full_name AS created_by_name,
+        u.email AS created_by_email,
+        o.organization_name,
+        o.organization_code
+      FROM audits a
+      LEFT JOIN users u ON a.created_by = u.user_id
+      INNER JOIN organizations o ON a.organization_id = o.organization_id
+      WHERE a.audit_id = @id 
+        AND a.organization_id = @organization_id
+        AND a.is_deleted = 0
+    `, { id: parseInt(id), organization_id });
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({
+                error: 'Audit non trovato',
+                code: 'AUDIT_NOT_FOUND'
+            });
+        }
+
+        const audit = result.recordset[0];
+
+        // Recupera standard associati
+        const standardsResult = await query(`
+      SELECT s.standard_id, s.standard_code, s.standard_name, s.version
+      FROM audit_standards ast
+      INNER JOIN standards s ON ast.standard_id = s.standard_id
+      WHERE ast.audit_id = @id
+    `, { id: parseInt(id) });
+
+        audit.standards = standardsResult.recordset;
+
+        logger.info('Audit retrieved', { audit_id: id, organization_id });
+
+        res.json({
+            success: true,
+            data: audit
+        });
+
+    } catch (error) {
+        logger.error('Error getting audit', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante il recupero dell\'audit',
+            code: 'AUDIT_GET_ERROR'
+        });
+    }
+}
+
+/**
+ * POST /api/v1/audits
+ * Crea nuovo audit
+ * 
+ * Body:
+ * {
+ *   audit_number: string (REQUIRED, unique),
+ *   client_name: string (REQUIRED),
+ *   project_year: number (REQUIRED),
+ *   audit_date: date (REQUIRED),
+ *   auditor_name: string (REQUIRED),
+ *   audit_type: string (REQUIRED),
+ *   standard_ids: number[] (REQUIRED, array of standard IDs),
+ *   notes?: string
+ * }
+ */
+async function createAudit(req, res) {
+    try {
+        const { user_id, organization_id } = req.user;
+        const {
+            audit_number,
+            client_name,
+            project_year,
+            audit_date,
+            auditor_name,
+            audit_type,
+            standard_ids,
+            notes
+        } = req.body;
+
+        // Validazione campi obbligatori
+        if (!audit_number || !client_name || !project_year || !audit_date || !auditor_name || !audit_type) {
+            return res.status(400).json({
+                error: 'Campi obbligatori mancanti',
+                code: 'VALIDATION_ERROR',
+                required: ['audit_number', 'client_name', 'project_year', 'audit_date', 'auditor_name', 'audit_type']
+            });
+        }
+
+        // Verifica standard_ids non vuoto
+        if (!standard_ids || !Array.isArray(standard_ids) || standard_ids.length === 0) {
+            return res.status(400).json({
+                error: 'Almeno uno standard ISO deve essere selezionato',
+                code: 'VALIDATION_ERROR'
+            });
+        }
+
+        // Verifica unicità audit_number per organizzazione
+        const existingAudit = await query(`
+      SELECT audit_id FROM audits
+      WHERE audit_number = @audit_number 
+        AND organization_id = @organization_id
+        AND is_deleted = 0
+    `, { audit_number, organization_id });
+
+        if (existingAudit.recordset.length > 0) {
+            return res.status(409).json({
+                error: 'Numero audit già esistente',
+                code: 'AUDIT_NUMBER_DUPLICATE'
+            });
+        }
+
+        // Crea audit
+        const result = await query(`
+      INSERT INTO audits (
+        audit_number,
+        client_name,
+        project_year,
+        audit_date,
+        auditor_name,
+        audit_type,
+        status,
+        notes,
+        organization_id,
+        created_by,
+        created_at,
+        updated_at
+      )
+      OUTPUT INSERTED.audit_id, INSERTED.audit_uuid
+      VALUES (
+        @audit_number,
+        @client_name,
+        @project_year,
+        @audit_date,
+        @auditor_name,
+        @audit_type,
+        'draft',
+        @notes,
+        @organization_id,
+        @user_id,
+        GETDATE(),
+        GETDATE()
+      )
+    `, {
+            audit_number,
+            client_name,
+            project_year: parseInt(project_year),
+            audit_date,
+            auditor_name,
+            audit_type,
+            notes: notes || null,
+            organization_id,
+            user_id
+        });
+
+        const newAudit = result.recordset[0];
+
+        // Associa standard
+        for (const standard_id of standard_ids) {
+            await query(`
+        INSERT INTO audit_standards (audit_id, standard_id)
+        VALUES (@audit_id, @standard_id)
+      `, { audit_id: newAudit.audit_id, standard_id: parseInt(standard_id) });
+        }
+
+        logger.info('Audit created', {
+            audit_id: newAudit.audit_id,
+            organization_id,
+            standards: standard_ids
+        });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                audit_id: newAudit.audit_id,
+                audit_uuid: newAudit.audit_uuid,
+                audit_number,
+                status: 'draft'
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error creating audit', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante la creazione dell\'audit',
+            code: 'AUDIT_CREATE_ERROR'
+        });
+    }
+}
+
+/**
+ * PUT /api/v1/audits/:id
+ * Aggiorna audit esistente
+ * 
+ * Body: campi opzionali da aggiornare
+ */
+async function updateAudit(req, res) {
+    try {
+        const { id } = req.params;
+        const { organization_id } = req.user;
+        const {
+            client_name,
+            project_year,
+            audit_date,
+            auditor_name,
+            audit_type,
+            status,
+            notes,
+            total_questions,
+            answered_questions,
+            conformities_count,
+            non_conformities_count,
+            completion_percentage,
+            standard_ids
+        } = req.body;
+
+        // Verifica esistenza e ownership (con timestamp corrente per conflict detection)
+        const existingAudit = await query(`
+      SELECT audit_id, updated_at FROM audits
+      WHERE audit_id = @id 
+        AND organization_id = @organization_id
+        AND is_deleted = 0
+    `, { id: parseInt(id), organization_id });
+
+        if (existingAudit.recordset.length === 0) {
+            return res.status(404).json({
+                error: 'Audit non trovato',
+                code: 'AUDIT_NOT_FOUND'
+            });
+        }
+
+        // Conflict detection: verifica timestamp client vs server
+        const currentUpdatedAt = existingAudit.recordset[0].updated_at;
+        const clientUpdatedAt = req.headers['x-last-known-updated-at'];
+
+        if (clientUpdatedAt) {
+            const clientTimestamp = new Date(clientUpdatedAt);
+            const serverTimestamp = new Date(currentUpdatedAt);
+
+            // Se il client ha un timestamp più vecchio del server, c'è conflitto
+            if (clientTimestamp < serverTimestamp) {
+                logger.warn('Conflict detected', {
+                    audit_id: id,
+                    organization_id,
+                    clientTimestamp: clientTimestamp.toISOString(),
+                    serverTimestamp: serverTimestamp.toISOString()
+                });
+
+                return res.status(409).json({
+                    error: 'Conflitto rilevato: l\'audit è stato modificato da un altro utente',
+                    code: 'AUDIT_CONFLICT',
+                    conflict: {
+                        clientVersion: clientTimestamp.toISOString(),
+                        serverVersion: serverTimestamp.toISOString(),
+                        message: 'Recupera la versione più recente prima di sincronizzare le tue modifiche'
+                    }
+                });
+            }
+        }
+
+        // Build UPDATE dinamicamente solo con campi presenti
+        const updates = [];
+        const params = { id: parseInt(id), organization_id };
+
+        if (client_name !== undefined) {
+            updates.push('client_name = @client_name');
+            params.client_name = client_name;
+        }
+        if (project_year !== undefined) {
+            updates.push('project_year = @project_year');
+            params.project_year = parseInt(project_year);
+        }
+        if (audit_date !== undefined) {
+            updates.push('audit_date = @audit_date');
+            params.audit_date = audit_date;
+        }
+        if (auditor_name !== undefined) {
+            updates.push('auditor_name = @auditor_name');
+            params.auditor_name = auditor_name;
+        }
+        if (audit_type !== undefined) {
+            updates.push('audit_type = @audit_type');
+            params.audit_type = audit_type;
+        }
+        if (status !== undefined) {
+            updates.push('status = @status');
+            params.status = status;
+        }
+        if (notes !== undefined) {
+            updates.push('notes = @notes');
+            params.notes = notes;
+        }
+        if (total_questions !== undefined) {
+            updates.push('total_questions = @total_questions');
+            params.total_questions = parseInt(total_questions);
+        }
+        if (answered_questions !== undefined) {
+            updates.push('answered_questions = @answered_questions');
+            params.answered_questions = parseInt(answered_questions);
+        }
+        if (conformities_count !== undefined) {
+            updates.push('conformities_count = @conformities_count');
+            params.conformities_count = parseInt(conformities_count);
+        }
+        if (non_conformities_count !== undefined) {
+            updates.push('non_conformities_count = @non_conformities_count');
+            params.non_conformities_count = parseInt(non_conformities_count);
+        }
+        if (completion_percentage !== undefined) {
+            updates.push('completion_percentage = @completion_percentage');
+            params.completion_percentage = parseFloat(completion_percentage);
+        }
+
+        if (updates.length === 0 && !standard_ids) {
+            return res.status(400).json({
+                error: 'Nessun campo da aggiornare',
+                code: 'VALIDATION_ERROR'
+            });
+        }
+
+        // Update audit
+        if (updates.length > 0) {
+            updates.push('updated_at = GETDATE()');
+
+            await query(`
+        UPDATE audits
+        SET ${updates.join(', ')}
+        WHERE audit_id = @id AND organization_id = @organization_id
+      `, params);
+        }
+
+        // Update standard associations se forniti
+        if (standard_ids && Array.isArray(standard_ids)) {
+            // Remove existing
+            await query(`
+        DELETE FROM audit_standards WHERE audit_id = @id
+      `, { id: parseInt(id) });
+
+            // Add new
+            for (const standard_id of standard_ids) {
+                await query(`
+          INSERT INTO audit_standards (audit_id, standard_id)
+          VALUES (@audit_id, @standard_id)
+        `, { audit_id: parseInt(id), standard_id: parseInt(standard_id) });
+            }
+        }
+
+        logger.info('Audit updated', { audit_id: id, organization_id, updates: Object.keys(params) });
+
+        res.json({
+            success: true,
+            message: 'Audit aggiornato con successo'
+        });
+
+    } catch (error) {
+        logger.error('Error updating audit', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante l\'aggiornamento dell\'audit',
+            code: 'AUDIT_UPDATE_ERROR'
+        });
+    }
+}
+
+/**
+ * DELETE /api/v1/audits/:id
+ * Soft delete di un audit (is_deleted = 1)
+ */
+async function deleteAudit(req, res) {
+    try {
+        const { id } = req.params;
+        const { organization_id } = req.user;
+
+        // Verifica esistenza e ownership
+        const existingAudit = await query(`
+      SELECT audit_id FROM audits
+      WHERE audit_id = @id 
+        AND organization_id = @organization_id
+        AND is_deleted = 0
+    `, { id: parseInt(id), organization_id });
+
+        if (existingAudit.recordset.length === 0) {
+            return res.status(404).json({
+                error: 'Audit non trovato',
+                code: 'AUDIT_NOT_FOUND'
+            });
+        }
+
+        // Soft delete
+        await query(`
+      UPDATE audits
+      SET is_deleted = 1, deleted_at = GETDATE(), updated_at = GETDATE()
+      WHERE audit_id = @id AND organization_id = @organization_id
+    `, { id: parseInt(id), organization_id });
+
+        logger.info('Audit deleted (soft)', { audit_id: id, organization_id });
+
+        res.json({
+            success: true,
+            message: 'Audit eliminato con successo'
+        });
+
+    } catch (error) {
+        logger.error('Error deleting audit', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante l\'eliminazione dell\'audit',
+            code: 'AUDIT_DELETE_ERROR'
+        });
+    }
+}
+
+/**
+ * GET /api/v1/audits/:id/statistics
+ * Statistiche dettagliate audit (conformità per sezione, etc.)
+ */
+async function getAuditStatistics(req, res) {
+    try {
+        const { id } = req.params;
+        const { organization_id } = req.user;
+
+        // Verifica ownership
+        const auditCheck = await query(`
+      SELECT audit_id FROM audits
+      WHERE audit_id = @id AND organization_id = @organization_id AND is_deleted = 0
+    `, { id: parseInt(id), organization_id });
+
+        if (auditCheck.recordset.length === 0) {
+            return res.status(404).json({
+                error: 'Audit non trovato',
+                code: 'AUDIT_NOT_FOUND'
+            });
+        }
+
+        // Statistiche per sezione
+        const sectionStats = await query(`
+      SELECT 
+        cs.section_code,
+        cs.section_title,
+        COUNT(ar.response_id) AS total_responses,
+        SUM(CASE WHEN ar.is_answered = 1 THEN 1 ELSE 0 END) AS answered,
+        SUM(CASE WHEN ar.conformity_status = 'C' THEN 1 ELSE 0 END) AS conformities,
+        SUM(CASE WHEN ar.conformity_status = 'NC' THEN 1 ELSE 0 END) AS non_conformities,
+        SUM(CASE WHEN ar.conformity_status = 'OM' THEN 1 ELSE 0 END) AS observations,
+        SUM(CASE WHEN ar.conformity_status = 'NA' THEN 1 ELSE 0 END) AS not_applicable
+      FROM checklist_sections cs
+      LEFT JOIN checklist_questions cq ON cs.section_code = cq.section_code
+      LEFT JOIN audit_responses ar ON cq.question_id = ar.question_id AND ar.audit_id = @id
+      GROUP BY cs.section_code, cs.section_title
+      ORDER BY cs.section_code
+    `, { id: parseInt(id) });
+
+        logger.info('Audit statistics retrieved', { audit_id: id, organization_id });
+
+        res.json({
+            success: true,
+            data: sectionStats.recordset
+        });
+
+    } catch (error) {
+        logger.error('Error getting audit statistics', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante il recupero delle statistiche',
+            code: 'AUDIT_STATS_ERROR'
+        });
+    }
+}
+
+module.exports = {
+    listAudits,
+    getAuditById,
+    createAudit,
+    updateAudit,
+    deleteAudit,
+    getAuditStatistics
+};

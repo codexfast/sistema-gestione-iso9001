@@ -1,0 +1,334 @@
+/**
+ * Auth Controller - Autenticazione JWT con Multi-Tenant
+ * 
+ * Features:
+ * - Register/Login con organization_id
+ * - JWT payload: { user_id, organization_id, role, email }
+ * - Password hash bcrypt (10 rounds)
+ * - Refresh token per sessioni lunghe
+ */
+
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { query } = require('../config/database');
+const logger = require('../utils/logger');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'sgq-iso9001-secret-change-in-production';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+const REFRESH_TOKEN_EXPIRES_IN = '7d';
+
+/**
+ * POST /api/v1/auth/register
+ * Registra nuovo utente in organizzazione
+ */
+async function register(req, res) {
+    try {
+        const { email, password, full_name, organization_id, role = 'auditor' } = req.body;
+
+        // Validazione
+        if (!email || !password || !full_name || !organization_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Campi obbligatori: email, password, full_name, organization_id'
+            });
+        }
+
+        // Verifica email unica per organizzazione
+        const existing = await query(`
+      SELECT user_id FROM users
+      WHERE email = @email AND organization_id = @organization_id
+    `, { email, organization_id });
+
+        if (existing.recordset.length > 0) {
+            return res.status(409).json({
+                success: false,
+                error: 'Email già registrata per questa organizzazione'
+            });
+        }
+
+        // Verifica organizzazione attiva
+        const orgCheck = await query(`
+      SELECT organization_id FROM organizations
+      WHERE organization_id = @organization_id AND is_active = 1
+    `, { organization_id });
+
+        if (orgCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Organizzazione non trovata o non attiva'
+            });
+        }
+
+        // Hash password
+        const password_hash = await bcrypt.hash(password, 10);
+
+        // Crea utente
+        const result = await query(`
+      INSERT INTO users (email, password_hash, full_name, role, organization_id, is_active)
+      VALUES (@email, @password_hash, @full_name, @role, @organization_id, 1);
+      SELECT SCOPE_IDENTITY() AS user_id;
+    `, { email, password_hash, full_name, role, organization_id });
+
+        const user_id = result.recordset[0].user_id;
+
+        // Genera token
+        const token = generateToken({ user_id, email, role, organization_id });
+        const refreshToken = generateRefreshToken({ user_id, organization_id });
+
+        logger.info(`✅ Utente registrato: ${email} (org: ${organization_id})`);
+
+        res.status(201).json({
+            success: true,
+            user: {
+                user_id,
+                email,
+                full_name,
+                role,
+                organization_id
+            },
+            token,
+            refreshToken
+        });
+
+    } catch (error) {
+        logger.error('Errore registrazione:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore durante la registrazione'
+        });
+    }
+}
+
+/**
+ * POST /api/v1/auth/login
+ * Login con email/password
+ */
+async function login(req, res) {
+    try {
+        const { email, password, organization_id } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email e password obbligatori'
+            });
+        }
+
+        // Query utente con organizzazione
+        let userQuery = `
+      SELECT 
+        u.user_id, u.email, u.password_hash, u.full_name, u.role, 
+        u.organization_id, u.is_active,
+        o.organization_code, o.organization_name, o.is_active AS org_active
+      FROM users u
+      INNER JOIN organizations o ON u.organization_id = o.organization_id
+      WHERE u.email = @email
+    `;
+
+        const params = { email };
+
+        // Se organization_id specificato, filtra anche per quello
+        if (organization_id) {
+            userQuery += ' AND u.organization_id = @organization_id';
+            params.organization_id = organization_id;
+        }
+
+        const result = await query(userQuery, params);
+
+        if (result.recordset.length === 0) {
+            return res.status(401).json({
+                success: false,
+                error: 'Credenziali non valide'
+            });
+        }
+
+        const user = result.recordset[0];
+
+        // Verifica account attivo
+        if (!user.is_active || !user.org_active) {
+            return res.status(403).json({
+                success: false,
+                error: 'Account o organizzazione non attivi'
+            });
+        }
+
+        // Verifica password
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+        if (!passwordMatch) {
+            return res.status(401).json({
+                success: false,
+                error: 'Credenziali non valide'
+            });
+        }
+
+        // Aggiorna last_login
+        await query(`
+      UPDATE users SET last_login = GETDATE()
+      WHERE user_id = @user_id
+    `, { user_id: user.user_id });
+
+        // Genera token
+        const token = generateToken({
+            user_id: user.user_id,
+            email: user.email,
+            role: user.role,
+            organization_id: user.organization_id
+        });
+
+        const refreshToken = generateRefreshToken({
+            user_id: user.user_id,
+            organization_id: user.organization_id
+        });
+
+        logger.info(`✅ Login: ${user.email} (org: ${user.organization_name})`);
+
+        res.json({
+            success: true,
+            user: {
+                user_id: user.user_id,
+                email: user.email,
+                full_name: user.full_name,
+                role: user.role,
+                organization_id: user.organization_id,
+                organization_name: user.organization_name
+            },
+            token,
+            refreshToken
+        });
+
+    } catch (error) {
+        logger.error('Errore login:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore durante il login'
+        });
+    }
+}
+
+/**
+ * POST /api/v1/auth/refresh
+ * Rinnova token JWT con refresh token
+ */
+async function refreshToken(req, res) {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                error: 'Refresh token obbligatorio'
+            });
+        }
+
+        // Verifica refresh token
+        const decoded = jwt.verify(refreshToken, JWT_SECRET);
+
+        // Ottieni dati utente aggiornati
+        const result = await query(`
+      SELECT user_id, email, role, organization_id, is_active
+      FROM users
+      WHERE user_id = @user_id
+    `, { user_id: decoded.user_id });
+
+        if (result.recordset.length === 0 || !result.recordset[0].is_active) {
+            return res.status(401).json({
+                success: false,
+                error: 'Utente non valido o non attivo'
+            });
+        }
+
+        const user = result.recordset[0];
+
+        // Genera nuovo token
+        const newToken = generateToken({
+            user_id: user.user_id,
+            email: user.email,
+            role: user.role,
+            organization_id: user.organization_id
+        });
+
+        res.json({
+            success: true,
+            token: newToken
+        });
+
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                error: 'Refresh token non valido o scaduto'
+            });
+        }
+
+        logger.error('Errore refresh token:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore durante il refresh del token'
+        });
+    }
+}
+
+/**
+ * GET /api/v1/auth/me
+ * Ottieni dati utente corrente (richiede auth)
+ */
+async function getCurrentUser(req, res) {
+    try {
+        const userId = req.user.user_id;
+
+        const result = await query(`
+      SELECT 
+        u.user_id, u.email, u.full_name, u.role, 
+        u.organization_id, u.created_at, u.last_login,
+        o.organization_code, o.organization_name
+      FROM users u
+      INNER JOIN organizations o ON u.organization_id = o.organization_id
+      WHERE u.user_id = @user_id
+    `, { user_id: userId });
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utente non trovato'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: result.recordset[0]
+        });
+
+    } catch (error) {
+        logger.error('Errore get current user:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore recupero dati utente'
+        });
+    }
+}
+
+/**
+ * Helper: Genera JWT token
+ */
+function generateToken(payload) {
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: JWT_EXPIRES_IN
+    });
+}
+
+/**
+ * Helper: Genera refresh token
+ */
+function generateRefreshToken(payload) {
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: REFRESH_TOKEN_EXPIRES_IN
+    });
+}
+
+module.exports = {
+    register,
+    login,
+    refreshToken,
+    getCurrentUser
+};

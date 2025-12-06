@@ -167,11 +167,31 @@ function AuditSelector() {
           <div className="audit-info-item">
             <strong>Auditor:</strong> {currentAudit.metadata.auditorName}
           </div>
-          <div className="audit-info-item">
+          <div className="audit-info-item standards-info">
             <strong>Norme:</strong>{" "}
-            {currentAudit.metadata.selectedStandards
-              .map((n) => n.replace("ISO_", "ISO "))
-              .join(", ")}
+            <div className="standards-badges">
+              {(currentAudit.metadata.selectedStandards || []).map((std) => {
+                // Determina categoria dal codice standard
+                const category = std.includes("9001")
+                  ? "quality"
+                  : std.includes("14001")
+                  ? "environment"
+                  : std.includes("45001")
+                  ? "safety"
+                  : "other";
+                const displayName = std
+                  .replace("ISO_", "ISO ")
+                  .replace("_", ":");
+                return (
+                  <span
+                    key={std}
+                    className={`standard-badge-small category-${category}`}
+                  >
+                    {displayName}
+                  </span>
+                );
+              })}
+            </div>
           </div>
           <div className="audit-info-item">
             <strong>Completamento:</strong>{" "}
