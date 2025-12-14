@@ -3,10 +3,11 @@
  * Sistema Gestione ISO 9001 - QS Studio
  *
  * Funzionalità:
- * - Login/Logout con credenziali
- * - Persistenza sessione in localStorage
+ * - Login/Logout con API backend reale
+ * - Gestione token JWT
  * - Ruoli utente (admin, auditor, viewer)
  * - Protezione route
+ * - Refresh automatico sessione
  */
 
 import React, {
@@ -16,10 +17,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-
-// Chiavi localStorage
-const AUTH_STORAGE_KEY = "sgq_auth_session";
-const USERS_STORAGE_KEY = "sgq_users";
+import apiService, { ApiError } from "../services/apiService";
 
 // Ruoli disponibili
 export const USER_ROLES = {
@@ -27,40 +25,6 @@ export const USER_ROLES = {
   AUDITOR: "auditor",
   VIEWER: "viewer",
 };
-
-// Utenti demo predefiniti (in produzione verrebbero dal backend)
-const DEFAULT_USERS = [
-  {
-    id: "user-001",
-    username: "admin",
-    password: "admin123", // In produzione: hash bcrypt
-    name: "Amministratore Sistema",
-    email: "admin@sgq.local",
-    role: USER_ROLES.ADMIN,
-    organization: "QS Studio",
-    createdAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "user-002",
-    username: "auditor",
-    password: "auditor123",
-    name: "Marco Camellini",
-    email: "marco.camellini@sgq.local",
-    role: USER_ROLES.AUDITOR,
-    organization: "QS Studio",
-    createdAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "user-003",
-    username: "viewer",
-    password: "viewer123",
-    name: "Utente Consultazione",
-    email: "viewer@sgq.local",
-    role: USER_ROLES.VIEWER,
-    organization: "QS Studio",
-    createdAt: "2025-01-01T00:00:00Z",
-  },
-];
 
 // Context
 const AuthContext = createContext(null);
@@ -83,90 +47,118 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Inizializza utenti demo se non esistono
+  // Monitor connessione
   useEffect(() => {
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    if (!storedUsers) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      console.log("✅ Utenti demo inizializzati");
-    }
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
-  // Ripristina sessione da localStorage
+  // Ripristina sessione da token salvato
   useEffect(() => {
-    try {
-      const storedSession = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (storedSession) {
-        const session = JSON.parse(storedSession);
-
-        // Verifica scadenza sessione (24 ore)
-        const sessionAge = Date.now() - new Date(session.loginTime).getTime();
-        const maxAge = 24 * 60 * 60 * 1000; // 24 ore
-
-        if (sessionAge < maxAge) {
-          setUser(session.user);
-          console.log(`✅ Sessione ripristinata: ${session.user.name}`);
-        } else {
-          // Sessione scaduta
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          console.log("⏰ Sessione scaduta, rimossa");
+    const initSession = async () => {
+      try {
+        // Controlla se c'è un token salvato
+        const token = apiService.getToken();
+        if (!token) {
+          setIsLoading(false);
+          return;
         }
+
+        // Prova a recuperare user salvato localmente (per offline)
+        const storedUser = apiService.getStoredUser();
+
+        if (isOnline) {
+          // Verifica sessione con il server
+          const serverUser = await apiService.checkSession();
+          if (serverUser) {
+            setUser(serverUser);
+            apiService.setStoredUser(serverUser);
+            console.log(`✅ Sessione verificata: ${serverUser.full_name}`);
+          } else {
+            // Token non valido
+            apiService.clearToken();
+            console.log("⏰ Token non valido, sessione rimossa");
+          }
+        } else if (storedUser) {
+          // Offline ma abbiamo user salvato
+          setUser(storedUser);
+          console.log(
+            `📴 Offline - usando sessione cache: ${storedUser.full_name}`
+          );
+        }
+      } catch (err) {
+        console.error("Errore ripristino sessione:", err);
+        // In caso di errore, usa cache se disponibile
+        const storedUser = apiService.getStoredUser();
+        if (storedUser) {
+          setUser(storedUser);
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Errore ripristino sessione:", err);
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    initSession();
+  }, [isOnline]);
+
+  // Listener per logout forzato (token scaduto)
+  useEffect(() => {
+    const handleForceLogout = () => {
+      setUser(null);
+      setError("Sessione scaduta. Effettua nuovamente il login.");
+    };
+
+    window.addEventListener("auth:logout", handleForceLogout);
+    return () => window.removeEventListener("auth:logout", handleForceLogout);
   }, []);
 
   /**
-   * Login con username e password
+   * Login con email e password
    */
-  const login = useCallback(async (username, password) => {
+  const login = useCallback(async (email, password) => {
     setError(null);
     setIsLoading(true);
 
     try {
-      // Simula delay network (rimuovere in produzione)
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await apiService.login(email, password);
 
-      // Carica utenti
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const users = storedUsers ? JSON.parse(storedUsers) : DEFAULT_USERS;
-
-      // Cerca utente
-      const foundUser = users.find(
-        (u) =>
-          u.username.toLowerCase() === username.toLowerCase() &&
-          u.password === password
-      );
-
-      if (!foundUser) {
-        setError("Credenziali non valide");
+      if (response.success && response.user) {
+        setUser(response.user);
+        console.log(
+          `✅ Login effettuato: ${response.user.full_name} (${response.user.role})`
+        );
         setIsLoading(false);
-        return false;
+        return true;
       }
 
-      // Crea sessione (senza password!)
-      const { password: _, ...userWithoutPassword } = foundUser;
-      const session = {
-        user: userWithoutPassword,
-        loginTime: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      };
-
-      // Salva sessione
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-      setUser(userWithoutPassword);
-
-      console.log(`✅ Login effettuato: ${foundUser.name} (${foundUser.role})`);
+      setError("Credenziali non valide");
       setIsLoading(false);
-      return true;
+      return false;
     } catch (err) {
       console.error("Errore login:", err);
-      setError("Errore durante il login");
+
+      if (err instanceof ApiError) {
+        if (err.code === "OFFLINE") {
+          setError("Connessione assente. Verifica la rete.");
+        } else if (err.code === "TIMEOUT") {
+          setError("Server non raggiungibile. Riprova.");
+        } else {
+          setError(err.message || "Credenziali non valide");
+        }
+      } else {
+        setError("Errore durante il login");
+      }
+
       setIsLoading(false);
       return false;
     }
@@ -175,8 +167,12 @@ export function AuthProvider({ children }) {
   /**
    * Logout
    */
-  const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+  const logout = useCallback(async () => {
+    try {
+      await apiService.logout();
+    } catch (err) {
+      console.warn("Errore logout API:", err);
+    }
     setUser(null);
     setError(null);
     console.log("👋 Logout effettuato");
@@ -226,6 +222,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     isLoading,
     error,
+    isOnline,
 
     // Azioni
     login,

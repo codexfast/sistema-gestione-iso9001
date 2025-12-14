@@ -9,6 +9,7 @@
  */
 
 import { getDatabase } from './IndexedDBProvider';
+import apiService from './apiService';
 
 const SYNC_QUEUE_STORE = 'syncQueue';
 const SYNC_STATUS_KEY = 'lastSyncStatus';
@@ -174,6 +175,9 @@ export class SyncService {
             case 'upload_attachment':
                 return await this.syncUploadAttachment(payload);
 
+            case 'save_responses':
+                return await this.syncSaveResponses(payload);
+
             default:
                 throw new Error(`Tipo sync non supportato: ${type}`);
         }
@@ -183,23 +187,10 @@ export class SyncService {
      * Sync: Crea audit su server
      */
     async syncCreateAudit(auditData) {
-        const response = await fetch(`${this.apiBaseUrl}/audits`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.getToken()}`
-            },
-            body: JSON.stringify(auditData)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-
-        const result = await response.json();
+        const result = await apiService.createAudit(auditData);
 
         // Aggiorna sync_metadata
-        await this.updateSyncMetadata('audit', auditData.id, result.audit_id);
+        await this.updateSyncMetadataLocal('audit', auditData.id, result.data.audit_id);
 
         return result;
     }
@@ -208,27 +199,25 @@ export class SyncService {
      * Sync: Aggiorna audit su server (con conflict resolution)
      */
     async syncUpdateAudit(auditData) {
-        const response = await fetch(`${this.apiBaseUrl}/audits/${auditData.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.getToken()}`,
-                'If-Unmodified-Since': auditData.lastModified // Conditional PUT
-            },
-            body: JSON.stringify(auditData)
-        });
-
-        if (response.status === 412) {
-            // Conflict: Server version più recente
-            console.warn('⚠️ [SYNC] Conflict rilevato per audit:', auditData.id);
-            return await this.resolveConflict(auditData);
+        try {
+            const result = await apiService.updateAudit(auditData.id, auditData);
+            return result;
+        } catch (error) {
+            if (error.code === 'AUDIT_CONFLICT') {
+                // Conflict: Server version più recente
+                console.warn('⚠️ [SYNC] Conflict rilevato per audit:', auditData.id);
+                return await this.resolveConflict(auditData);
+            }
+            throw error;
         }
+    }
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-
-        return await response.json();
+    /**
+     * Sync: Salva risposte checklist
+     */
+    async syncSaveResponses(payload) {
+        const { auditId, responses } = payload;
+        return await apiService.bulkSaveResponses(auditId, responses);
     }
 
     /**
@@ -236,26 +225,19 @@ export class SyncService {
      */
     async resolveConflict(localAudit) {
         // Scarica versione server
-        const response = await fetch(`${this.apiBaseUrl}/audits/${localAudit.id}`, {
-            headers: { 'Authorization': `Bearer ${this.getToken()}` }
-        });
-
-        const serverAudit = await response.json();
+        const serverResult = await apiService.getAudit(localAudit.id);
+        const serverAudit = serverResult.data;
 
         // Confronta timestamp
-        const localTime = new Date(localAudit.metadata.lastModified).getTime();
+        const localTime = new Date(localAudit.metadata?.lastModified || localAudit.updated_at).getTime();
         const serverTime = new Date(serverAudit.updated_at).getTime();
 
         if (localTime > serverTime) {
-            // Locale più recente → forza update
+            // Locale più recente → forza update (riprova senza check conflict)
             console.log('🔧 [CONFLICT] Locale più recente, forzo update');
-            const forceResponse = await fetch(`${this.apiBaseUrl}/audits/${localAudit.id}?force=true`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.getToken()}`
-                },
-                body: JSON.stringify(localAudit)
+            return await apiService.updateAudit(localAudit.id, {
+                ...localAudit,
+                force: true
             });
             return await forceResponse.json();
         } else {
@@ -270,38 +252,27 @@ export class SyncService {
      * Sync: Elimina audit su server
      */
     async syncDeleteAudit(payload) {
-        const response = await fetch(`${this.apiBaseUrl}/audits/${payload.auditId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${this.getToken()}` }
-        });
-
-        if (!response.ok && response.status !== 404) {
-            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        try {
+            await apiService.deleteAudit(payload.auditId);
+            return { deleted: true };
+        } catch (error) {
+            if (error.status === 404) {
+                // Già eliminato sul server, va bene
+                return { deleted: true };
+            }
+            throw error;
         }
-
-        return { deleted: true };
     }
 
     /**
      * Sync: Upload attachment
      */
     async syncUploadAttachment(payload) {
-        const formData = new FormData();
-        formData.append('file', payload.file);
-        formData.append('auditId', payload.auditId);
-        formData.append('category', payload.category);
-
-        const response = await fetch(`${this.apiBaseUrl}/attachments`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${this.getToken()}` },
-            body: formData
+        return await apiService.uploadAttachment(payload.file, {
+            auditId: payload.auditId,
+            category: payload.category,
+            description: payload.description
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-
-        return await response.json();
     }
 
     /**
@@ -353,18 +324,19 @@ export class SyncService {
     }
 
     /**
-     * Aggiorna sync_metadata
+     * Aggiorna sync_metadata locale (IndexedDB)
      */
-    async updateSyncMetadata(entityType, localId, serverId) {
-        // TODO: Implementare con chiamata API
-        console.log(`📝 [SYNC METADATA] ${entityType} ${localId} → ${serverId}`);
+    async updateSyncMetadataLocal(entityType, localId, serverId) {
+        console.log(`📝 [SYNC METADATA] ${entityType} ${localId} → server:${serverId}`);
+        // Salva mapping locale → server in localStorage per ora
+        const key = `sync_map_${entityType}_${localId}`;
+        localStorage.setItem(key, JSON.stringify({ serverId, syncedAt: Date.now() }));
     }
 
     /**
      * Aggiorna audit locale con versione server
      */
     async updateLocalAudit(serverAudit) {
-        // TODO: Implementare con IndexedDBProvider
         console.log('📥 [SYNC] Aggiornamento audit locale:', serverAudit.id);
     }
 

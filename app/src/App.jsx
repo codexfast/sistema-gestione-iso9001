@@ -45,7 +45,9 @@ function AppContent() {
           <div className="container header-flex">
             <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
             <div className="user-info">
-              <span className="user-name">👤 {user.name}</span>
+              <span className="user-name">
+                👤 {user.full_name || user.name}
+              </span>
               <span className={`user-role role-${user.role}`}>{user.role}</span>
               <button onClick={logout} className="btn-logout" title="Logout">
                 🚪 Esci
@@ -90,7 +92,9 @@ function AppContent() {
 
             {/* User info */}
             <div className="user-info">
-              <span className="user-name">👤 {user.name}</span>
+              <span className="user-name">
+                👤 {user.full_name || user.name}
+              </span>
               <span className={`user-role role-${user.role}`}>{user.role}</span>
               <button onClick={logout} className="btn-logout" title="Logout">
                 🚪

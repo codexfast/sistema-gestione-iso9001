@@ -17,6 +17,7 @@ const { closePool } = require('./config/database');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const auditRoutes = require('./routes/audit.routes');
+const responseRoutes = require('./routes/response.routes');
 const ncRoutes = require('./routes/nc.routes');
 const attachmentRoutes = require('./routes/attachment.routes');
 const checklistRoutes = require('./routes/checklist.routes');
@@ -101,6 +102,7 @@ app.get('/health', async (req, res) => {
 const API_BASE = process.env.API_BASE_PATH || '/api/v1';
 app.use(API_BASE, authRoutes);
 app.use(API_BASE, auditRoutes);
+app.use(API_BASE, responseRoutes);
 app.use(API_BASE, ncRoutes);
 app.use(API_BASE, attachmentRoutes);
 app.use(API_BASE, checklistRoutes);

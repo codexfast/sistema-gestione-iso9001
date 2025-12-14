@@ -11,7 +11,7 @@ function Login() {
   const { login, error, isLoading } = useAuth();
 
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -27,8 +27,8 @@ function Login() {
     e.preventDefault();
 
     // Validazione base
-    if (!formData.username.trim()) {
-      setLocalError("Inserire username");
+    if (!formData.email.trim()) {
+      setLocalError("Inserire email");
       return;
     }
     if (!formData.password) {
@@ -36,7 +36,7 @@ function Login() {
       return;
     }
 
-    const success = await login(formData.username, formData.password);
+    const success = await login(formData.email, formData.password);
 
     if (!success) {
       setFormData((prev) => ({ ...prev, password: "" }));
@@ -65,20 +65,20 @@ function Login() {
             </div>
           )}
 
-          {/* Username */}
+          {/* Email */}
           <div className="form-group">
-            <label htmlFor="username">
-              <span className="field-icon">👤</span>
-              Username
+            <label htmlFor="email">
+              <span className="field-icon">📧</span>
+              Email
             </label>
             <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
               onChange={handleChange}
-              placeholder="Inserisci username"
-              autoComplete="username"
+              placeholder="Inserisci email"
+              autoComplete="email"
               autoFocus
               disabled={isLoading}
             />
@@ -134,15 +134,11 @@ function Login() {
           <div className="credentials-list">
             <div className="credential-item">
               <span className="role-badge admin">Admin</span>
-              <code>admin / admin123</code>
+              <code>admin@sgq.local / Admin123!</code>
             </div>
             <div className="credential-item">
-              <span className="role-badge auditor">Auditor</span>
-              <code>auditor / auditor123</code>
-            </div>
-            <div className="credential-item">
-              <span className="role-badge viewer">Viewer</span>
-              <code>viewer / viewer123</code>
+              <span className="role-badge auditor">Test</span>
+              <code>test@sgq.local / Test123!</code>
             </div>
           </div>
         </div>
