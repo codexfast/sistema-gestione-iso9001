@@ -1,0 +1,998 @@
+openapi: 3.0.3
+info:
+  title: Sistema Gestione ISO 9001 - API
+  description: |
+    API REST per gestione audit, checklist e conformità ISO 9001:2015.
+
+    **Caratteristiche**:
+    - Autenticazione JWT via cookie httpOnly
+    - Multi-tenant isolation su `organization_id`
+    - Offline-first sync con conflict resolution timestamp-based
+    - Master data checklist read-only
+
+    **Conformità ISO 9001:2015**:
+    - Punto 7.5: Informazioni documentate tracciabili
+    - Punto 9.2: Audit interni strutturati
+    - Punto 10.2: Gestione non conformità con azioni correttive
+  version: 1.0.0
+  contact:
+    name: QS Studio
+    email: support@qsstudio.it
+
+servers:
+  - url: https://localhost:10443/api/v1
+    description: Development (local)
+  - url: https://{host}:10443/api/v1
+    description: Production
+    variables:
+      host:
+        default: www.fr-busato.it
+
+tags:
+  - name: auth
+    description: Autenticazione e gestione sessioni JWT
+  - name: audits
+    description: CRUD audit ISO 9001
+  - name: responses
+    description: Risposte checklist audit
+  - name: checklist
+    description: Master data sezioni/domande ISO 9001
+  - name: nc
+    description: Non conformità e azioni correttive
+  - name: attachments
+    description: Upload/download allegati evidenze
+  - name: sync
+    description: Sincronizzazione offline→online
+  - name: standards
+    description: Standard normativi (ISO 9001, ISO 14001, ISO 45001)
+
+security:
+  - cookieAuth: []
+
+paths:
+  # ==========================================
+  # AUTH ENDPOINTS
+  # ==========================================
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login utente
+      description: Autentica utente e imposta cookie JWT httpOnly
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@sgq.local
+                password:
+                  type: string
+                  format: password
+                  example: Admin123!
+      responses:
+        "200":
+          description: Login successo
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: token=eyJhbGci...; HttpOnly; Secure; SameSite=None
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login effettuato
+                  user:
+                    $ref: "#/components/schemas/User"
+                  token:
+                    type: string
+                    description: JWT token (anche in cookie httpOnly)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout utente
+      description: Invalida cookie JWT
+      responses:
+        "200":
+          description: Logout successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logout effettuato
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Profilo utente corrente
+      description: Recupera info utente autenticato
+      responses:
+        "200":
+          description: Profilo utente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ==========================================
+  # AUDIT ENDPOINTS
+  # ==========================================
+  /audits:
+    get:
+      tags: [audits]
+      summary: Lista audit
+      description: Recupera tutti gli audit dell'organizzazione (paginati)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, in_progress, completed, approved]
+        - name: audit_type
+          in: query
+          schema:
+            type: string
+            enum: [internal, certification, surveillance]
+      responses:
+        "200":
+          description: Lista audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Audit"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [audits]
+      summary: Crea audit
+      description: Crea nuovo audit ISO 9001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditCreate"
+      responses:
+        "201":
+          description: Audit creato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  audit:
+                    $ref: "#/components/schemas/Audit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /audits/{auditId}:
+    parameters:
+      - $ref: "#/components/parameters/auditId"
+
+    get:
+      tags: [audits]
+      summary: Dettaglio audit
+      responses:
+        "200":
+          description: Dettagli audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  audit:
+                    $ref: "#/components/schemas/Audit"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    put:
+      tags: [audits]
+      summary: Aggiorna audit
+      description: Aggiorna audit esistente con conflict detection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/AuditCreate"
+                - type: object
+                  properties:
+                    client_updated_at:
+                      type: string
+                      format: date-time
+                      description: Timestamp client per conflict detection
+      responses:
+        "200":
+          description: Audit aggiornato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  audit:
+                    $ref: "#/components/schemas/Audit"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    delete:
+      tags: [audits]
+      summary: Elimina audit (soft delete)
+      responses:
+        "200":
+          description: Audit eliminato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Audit eliminato
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ==========================================
+  # AUDIT RESPONSES ENDPOINTS
+  # ==========================================
+  /audits/{auditId}/responses:
+    parameters:
+      - $ref: "#/components/parameters/auditId"
+
+    get:
+      tags: [responses]
+      summary: Lista risposte checklist
+      description: Recupera tutte le risposte per un audit
+      responses:
+        "200":
+          description: Risposte audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [responses]
+      summary: Salva risposta checklist
+      description: Salva/aggiorna singola risposta (INSERT or UPDATE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResponseSave"
+      responses:
+        "201":
+          description: Risposta salvata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Risposta salvata
+                  action:
+                    type: string
+                    enum: [created, updated]
+                  response_id:
+                    type: integer
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /audits/{auditId}/responses/bulk:
+    parameters:
+      - $ref: "#/components/parameters/auditId"
+
+    post:
+      tags: [responses]
+      summary: Salvataggio batch risposte
+      description: Salva multiple risposte in una sola transazione (sync offline)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [responses]
+              properties:
+                responses:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ResponseSave"
+      responses:
+        "200":
+          description: Batch elaborato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  results:
+                    type: object
+                    properties:
+                      saved:
+                        type: integer
+                        description: Nuove risposte inserite
+                      updated:
+                        type: integer
+                        description: Risposte aggiornate
+                      conflicts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            question_id:
+                              type: integer
+                            serverVersion:
+                              type: string
+                              format: date-time
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            question_id:
+                              type: integer
+                            error:
+                              type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /audits/{auditId}/responses/{questionId}:
+    parameters:
+      - $ref: "#/components/parameters/auditId"
+      - name: questionId
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    delete:
+      tags: [responses]
+      summary: Elimina risposta
+      responses:
+        "200":
+          description: Risposta eliminata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Risposta eliminata
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ==========================================
+  # CHECKLIST ENDPOINTS (Master Data)
+  # ==========================================
+  /checklist/sections:
+    get:
+      tags: [checklist]
+      summary: Lista sezioni checklist
+      description: Recupera sezioni master ISO 9001 (read-only)
+      parameters:
+        - name: standard_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 1
+            description: 1=ISO9001, 2=ISO14001, 3=ISO45001
+      responses:
+        "200":
+          description: Sezioni checklist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  sections:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChecklistSection"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /checklist/questions:
+    get:
+      tags: [checklist]
+      summary: Lista domande checklist
+      description: Recupera domande master ISO 9001 (read-only)
+      parameters:
+        - name: standard_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: section_code
+          in: query
+          schema:
+            type: string
+            example: "4.1"
+            description: Filtra per sezione specifica
+      responses:
+        "200":
+          description: Domande checklist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  questions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChecklistQuestion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # ==========================================
+  # SYNC ENDPOINTS
+  # ==========================================
+  /sync/audits:
+    post:
+      tags: [sync]
+      summary: Sincronizza audit offline→online
+      description: |
+        Sincronizza audit creati/modificati offline con server.
+        Supporta conflict resolution timestamp-based.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audits]
+              properties:
+                audits:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/AuditSync"
+                lastSyncTimestamp:
+                  type: integer
+                  format: int64
+                  description: Unix timestamp ultima sync
+                  example: 1702464000000
+      responses:
+        "200":
+          description: Sync completata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  results:
+                    type: object
+                    properties:
+                      created:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            audit_id:
+                              type: integer
+                            audit_uuid:
+                              type: string
+                              format: uuid
+                      updated:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            audit_id:
+                              type: integer
+                            audit_uuid:
+                              type: string
+                              format: uuid
+                      conflicts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            auditId:
+                              type: string
+                              format: uuid
+                            serverVersion:
+                              type: string
+                              format: date-time
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            auditId:
+                              type: string
+                            error:
+                              type: string
+                  serverChanges:
+                    type: array
+                    description: Audit modificati su server dopo lastSyncTimestamp
+                    items:
+                      $ref: "#/components/schemas/Audit"
+                  syncTimestamp:
+                    type: integer
+                    format: int64
+                    description: Timestamp sync corrente (salvare per prossima sync)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ==========================================
+  # STANDARDS ENDPOINTS
+  # ==========================================
+  /standards:
+    get:
+      tags: [standards]
+      summary: Lista standard normativi
+      description: Recupera standard disponibili (ISO 9001, 14001, 45001)
+      responses:
+        "200":
+          description: Lista standard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  standards:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Standard"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: JWT token in httpOnly cookie
+
+  parameters:
+    auditId:
+      name: auditId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: ID numerico audit
+
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, auditor, viewer]
+        organization_id:
+          type: integer
+        organization_name:
+          type: string
+
+    Audit:
+      type: object
+      properties:
+        audit_id:
+          type: integer
+        audit_uuid:
+          type: string
+          format: uuid
+        audit_number:
+          type: string
+          example: "AUD-2025-001"
+        client_name:
+          type: string
+          example: "Acme Corp SRL"
+        project_year:
+          type: integer
+          example: 2025
+        audit_date:
+          type: string
+          format: date
+          example: "2025-12-14"
+        auditor_name:
+          type: string
+          example: "Mario Rossi"
+        audit_type:
+          type: string
+          enum: [internal, certification, surveillance]
+        status:
+          type: string
+          enum: [draft, in_progress, completed, approved]
+        standard_ids:
+          type: array
+          items:
+            type: integer
+          example: [1]
+        notes:
+          type: string
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: integer
+        updated_by:
+          type: integer
+
+    AuditCreate:
+      type: object
+      required:
+        [
+          client_name,
+          project_year,
+          audit_date,
+          auditor_name,
+          audit_type,
+          standard_ids,
+        ]
+      properties:
+        audit_number:
+          type: string
+          example: "AUD-2025-001"
+        client_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        project_year:
+          type: integer
+          minimum: 2000
+          maximum: 2100
+        audit_date:
+          type: string
+          format: date
+        auditor_name:
+          type: string
+          minLength: 1
+        audit_type:
+          type: string
+          enum: [internal, certification, surveillance]
+        standard_ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+        notes:
+          type: string
+
+    AuditSync:
+      allOf:
+        - type: object
+          required: [id, lastModified]
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: UUID client-side
+            lastModified:
+              type: string
+              format: date-time
+              description: Timestamp modifica client
+        - $ref: "#/components/schemas/AuditCreate"
+
+    AuditResponse:
+      type: object
+      properties:
+        response_id:
+          type: integer
+        response_uuid:
+          type: string
+          format: uuid
+        question_id:
+          type: integer
+        conformity_status:
+          type: string
+          enum: [C, NC, OSS, OM, NA]
+          description: |
+            - C: Conforme
+            - NC: Non Conforme
+            - OSS: Osservazione
+            - OM: Opportunità di Miglioramento
+            - NA: Non Applicabile
+        notes:
+          type: string
+        evidence:
+          type: string
+          description: Riferimenti evidenze (path file, doc ID, etc.)
+        is_answered:
+          type: boolean
+        answered_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        question_text:
+          type: string
+          description: Testo domanda (join checklist_questions)
+        section_code:
+          type: string
+          example: "4.1"
+        question_type:
+          type: string
+          enum: [conformity, observation]
+
+    ResponseSave:
+      type: object
+      required: [question_id]
+      properties:
+        question_id:
+          type: integer
+        conformity_status:
+          type: string
+          enum: [C, NC, OSS, OM, NA]
+        notes:
+          type: string
+        evidence:
+          type: string
+        client_updated_at:
+          type: string
+          format: date-time
+          description: Timestamp client per conflict detection
+
+    ChecklistSection:
+      type: object
+      properties:
+        section_id:
+          type: integer
+        section_code:
+          type: string
+          example: "4.1"
+        section_title:
+          type: string
+          example: "Comprendere l'organizzazione e il suo contesto"
+        parent_section_code:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+        standard_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ChecklistQuestion:
+      type: object
+      properties:
+        question_id:
+          type: integer
+        question_uuid:
+          type: string
+          format: uuid
+        section_code:
+          type: string
+        question_text:
+          type: string
+          example: "L'organizzazione ha determinato i fattori interni ed esterni rilevanti?"
+        question_type:
+          type: string
+          enum: [conformity, observation]
+        display_order:
+          type: integer
+        is_mandatory:
+          type: boolean
+        standard_id:
+          type: integer
+
+    Standard:
+      type: object
+      properties:
+        standard_id:
+          type: integer
+        standard_code:
+          type: string
+          example: "ISO_9001_2015"
+        standard_name:
+          type: string
+          example: "ISO 9001:2015"
+        standard_full_name:
+          type: string
+        version:
+          type: string
+        category:
+          type: string
+          enum: [quality, environment, safety]
+        is_active:
+          type: boolean
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Messaggio errore human-readable
+        code:
+          type: string
+          description: Codice errore machine-readable
+          example: AUDIT_NOT_FOUND
+        details:
+          type: string
+          description: Dettagli tecnici (solo in development)
+
+  responses:
+    BadRequest:
+      description: Richiesta malformata o validazione fallita
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Validazione fallita"
+            code: "VALIDATION_ERROR"
+
+    Unauthorized:
+      description: Token JWT mancante o non valido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Token di autenticazione mancante"
+            code: "AUTH_TOKEN_MISSING"
+
+    NotFound:
+      description: Risorsa non trovata
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Audit non trovato"
+            code: "AUDIT_NOT_FOUND"
+
+    Conflict:
+      description: Conflict resolution - server version più recente
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - type: object
+                properties:
+                  serverVersion:
+                    type: string
+                    format: date-time
+                    description: Timestamp versione server
+          example:
+            error: "Conflitto: audit modificato da altro utente"
+            code: "AUDIT_CONFLICT"
+            serverVersion: "2025-12-14T10:30:00Z"
