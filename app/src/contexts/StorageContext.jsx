@@ -270,18 +270,74 @@ export function StorageProvider({ children, useMockData = true }) {
           console.log(
             `✅ Caricati ${allAudits.length} audit da IndexedDB - selector mode`
           );
+
+          // SYNC RECOVERY: Enqueue audit esistenti se non ancora sul server
+          // Controllo sync_metadata per identificare audit mai sincronizzati
+          console.log("🔄 [SYNC RECOVERY] Verifica audit da sincronizzare...");
+          let enqueuedCount = 0;
+          for (const audit of allAudits) {
+            const auditId = audit.id || audit.metadata?.id;
+            const isSynced = await syncService.isSynced("audit", auditId);
+
+            if (!isSynced && navigator.onLine) {
+              await syncService.enqueue("create_audit", {
+                audit_uuid: auditId,
+                audit_number: audit.metadata?.auditNumber,
+                client_name: audit.metadata?.clientName,
+                project_year: audit.metadata?.projectYear,
+                audit_date: audit.metadata?.auditDate,
+                auditor_name: audit.metadata?.auditorName,
+                audit_type: audit.metadata?.auditType,
+                status: audit.metadata?.status,
+                notes: audit.metadata?.notes,
+                total_questions: audit.metadata?.totalQuestions,
+                answered_questions: audit.metadata?.answeredQuestions,
+                conformities_count: audit.metadata?.conformitiesCount,
+                non_conformities_count: audit.metadata?.nonConformitiesCount,
+                completion_percentage: audit.metadata?.completionPercentage,
+                standard_id: 1, // ISO 9001
+                updated_at: new Date().toISOString(),
+              });
+              enqueuedCount++;
+            }
+          }
+          if (enqueuedCount > 0) {
+            console.log(
+              `✅ [SYNC RECOVERY] ${enqueuedCount} audit enqueued per prima sincronizzazione`
+            );
+          }
         } else if (useMockData) {
-          // Prima inizializzazione: salva mock data in IndexedDB
+          // Prima inizializzazione: salva mock data in IndexedDB + ENQUEUE SYNC
           console.log(
             "🆕 [INIT] Prima inizializzazione, salvo mock data in IndexedDB..."
           );
           for (const audit of MOCK_AUDITS) {
             await fsProvider.saveAudit(audit);
+
+            // ENQUEUE per sync al server (ADR-002: offline-first)
+            await syncService.enqueue("create_audit", {
+              audit_uuid: audit.id || audit.metadata?.id,
+              audit_number: audit.metadata?.auditNumber,
+              client_name: audit.metadata?.clientName,
+              project_year: audit.metadata?.projectYear,
+              audit_date: audit.metadata?.auditDate,
+              auditor_name: audit.metadata?.auditorName,
+              audit_type: audit.metadata?.auditType,
+              status: audit.metadata?.status,
+              notes: audit.metadata?.notes,
+              total_questions: audit.metadata?.totalQuestions,
+              answered_questions: audit.metadata?.answeredQuestions,
+              conformities_count: audit.metadata?.conformitiesCount,
+              non_conformities_count: audit.metadata?.nonConformitiesCount,
+              completion_percentage: audit.metadata?.completionPercentage,
+              standard_id: 1, // ISO 9001
+              updated_at: new Date().toISOString(),
+            });
           }
           setAudits(MOCK_AUDITS);
           setCurrentAuditId(null);
           console.log(
-            `✅ Inizializzato con ${MOCK_AUDITS.length} mock audit in IndexedDB - selector mode`
+            `✅ Inizializzato con ${MOCK_AUDITS.length} mock audit in IndexedDB + ${MOCK_AUDITS.length} enqueued per sync`
           );
         } else {
           setAudits([]);
@@ -361,7 +417,8 @@ export function StorageProvider({ children, useMockData = true }) {
                   total_questions: updated.metadata?.totalQuestions,
                   answered_questions: updated.metadata?.answeredQuestions,
                   conformities_count: updated.metadata?.conformitiesCount,
-                  non_conformities_count: updated.metadata?.nonConformitiesCount,
+                  non_conformities_count:
+                    updated.metadata?.nonConformitiesCount,
                   completion_percentage: updated.metadata?.completionPercentage,
                   standard_id: 1, // ISO 9001
                   updated_at: new Date().toISOString(),

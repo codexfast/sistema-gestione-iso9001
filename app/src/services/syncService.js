@@ -110,6 +110,36 @@ export class SyncService {
     }
 
     /**
+     * Verifica se un'entità è stata sincronizzata al server
+     * @param {string} entityType - Tipo entità ('audit', 'response')
+     * @param {string} localId - ID locale dell'entità
+     * @returns {Promise<boolean>} True se sincronizzato
+     */
+    async isSynced(entityType, localId) {
+        try {
+            const db = await this.initSyncDb();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_SYNC_METADATA], 'readonly');
+                const store = transaction.objectStore(STORE_SYNC_METADATA);
+                const index = store.index('by_entity');
+                const request = index.get([entityType, localId]);
+
+                request.onsuccess = () => {
+                    // Se esiste record in sync_metadata, è già stato sincronizzato
+                    resolve(request.result ? true : false);
+                };
+
+                request.onerror = () => {
+                    reject(request.error);
+                };
+            });
+        } catch (error) {
+            console.error('[SYNC] Errore isSynced check:', error);
+            return false; // Default: assume non sincronizzato
+        }
+    }
+
+    /**
      * Processa sync queue
      */
     async processQueue() {
