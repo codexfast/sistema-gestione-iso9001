@@ -83,9 +83,11 @@ export class IndexedDBProvider {
             const transaction = this.db.transaction([STORE_AUDITS], 'readwrite');
             const store = transaction.objectStore(STORE_AUDITS);
 
+            // Preserva struttura originale con metadata
             const auditData = {
                 ...audit,
-                id: audit.metadata?.id || audit.id,
+                // NON sovrascrivere id se già presente in audit
+                id: audit.id || audit.metadata?.id,
                 lastSaved: new Date().toISOString(),
             };
 

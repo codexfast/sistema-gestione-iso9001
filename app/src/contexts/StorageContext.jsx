@@ -212,15 +212,22 @@ export function StorageProvider({ children, useMockData = true }) {
   }, []); // Solo al mount
 
   // === INIZIALIZZAZIONE: MIGRAZIONE localStorage → IndexedDB + CARICAMENTO ===
+  const [hasInitialized, setHasInitialized] = useState(false);
+
   useEffect(() => {
     async function loadAuditsFromIndexedDB() {
       try {
-        setIsLoading(true);
-
         if (!fsProvider) {
           console.log("⏳ [LOAD] Storage provider non ancora pronto");
+          return; // Non procedere se fsProvider non è inizializzato
+        }
+
+        if (hasInitialized) {
+          console.log("⏭️ [LOAD] Già inizializzato, skip");
           return;
         }
+
+        setIsLoading(true);
 
         // MIGRAZIONE UNA TANTUM: localStorage → IndexedDB
         const storedAudits = localStorage.getItem(STORAGE_KEYS.AUDITS);
@@ -255,7 +262,7 @@ export function StorageProvider({ children, useMockData = true }) {
         }
 
         // CARICAMENTO: Leggi da IndexedDB (Single Source of Truth)
-        const allAudits = await fsProvider.getAllAudits();
+        const allAudits = await fsProvider.loadAllAudits();
 
         if (allAudits && allAudits.length > 0) {
           setAudits(allAudits);
@@ -288,6 +295,7 @@ export function StorageProvider({ children, useMockData = true }) {
         setFsConnected(storedFsConnected);
 
         setIsLoading(false);
+        setHasInitialized(true); // Marca come inizializzato
       } catch (err) {
         console.error("❌ Errore caricamento audit da IndexedDB:", err);
         setError("Errore caricamento dati");
@@ -296,7 +304,7 @@ export function StorageProvider({ children, useMockData = true }) {
     }
 
     loadAuditsFromIndexedDB();
-  }, [fsProvider, useMockData]);
+  }, [fsProvider, useMockData, hasInitialized]);
 
   // === SALVATAGGIO AUTOMATICO IN INDEXEDDB (depreca localStorage) ===
   useEffect(() => {

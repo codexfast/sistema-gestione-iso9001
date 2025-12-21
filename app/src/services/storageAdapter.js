@@ -23,28 +23,20 @@ export function hasFileSystemAccess() {
 
 /**
  * Determina quale storage provider usare
+ * FORZATO: IndexedDB per ADR-002 (offline-first con sync SQL Server)
  */
 export function getRecommendedStorage() {
-    const mobile = isMobileDevice();
-    const hasFS = hasFileSystemAccess();
-
-    if (mobile || !hasFS) {
-        return {
-            type: 'indexeddb',
-            reason: mobile
-                ? 'Dispositivo mobile rilevato'
-                : 'File System Access API non supportata',
-        };
-    }
-
+    // SEMPRE IndexedDB per conformità ADR-002
+    // Single Source of Truth con sync automatico
     return {
-        type: 'filesystem',
-        reason: 'Desktop con File System Access API',
+        type: 'indexeddb',
+        reason: 'Offline-first strategy (ADR-002)',
     };
 }
 
 /**
  * Factory per creare storage provider appropriato
+ * ADR-002: SEMPRE IndexedDB per offline-first
  */
 export async function createStorageProvider() {
     const recommendation = getRecommendedStorage();
@@ -53,14 +45,10 @@ export async function createStorageProvider() {
         `📦 Storage provider: ${recommendation.type} (${recommendation.reason})`
     );
 
-    if (recommendation.type === 'indexeddb') {
-        const provider = new IndexedDBProvider();
-        await provider.initialize();
-        return provider;
-    }
-
-    // Desktop: ritorna LocalFsProvider (non auto-inizializzato)
-    return new LocalFsProvider();
+    // SEMPRE IndexedDB (ADR-002)
+    const provider = new IndexedDBProvider();
+    await provider.initialize();
+    return provider;
 }
 
 /**
