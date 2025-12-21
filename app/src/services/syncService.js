@@ -31,6 +31,14 @@ export class SyncService {
         this.apiBaseUrl = apiBaseUrl;
         this.isOnline = navigator.onLine;
         this.isSyncing = false;
+        this.syncInterval = null;
+        this.retryCount = 0;
+
+        // Configurazione auto-sync
+        this.SYNC_INTERVAL_MS = 30000; // 30 secondi
+        this.MAX_RETRIES = 5;
+        this.MIN_BACKOFF_MS = 1000;
+        this.MAX_BACKOFF_MS = 60000;
 
         // Monitor connessione
         window.addEventListener('online', () => this.handleOnline());
@@ -144,13 +152,34 @@ export class SyncService {
                 itemsProcessed: items.length
             }));
 
+            // Reset retry count dopo successo
+            this.retryCount = 0;
+
         } catch (error) {
             console.error('❌ [SYNC] Errore processamento queue:', error);
+
+            // Incrementa retry count e calcola backoff
+            this.retryCount++;
+            const backoffMs = Math.min(
+                this.MIN_BACKOFF_MS * Math.pow(2, this.retryCount),
+                this.MAX_BACKOFF_MS
+            );
+
+            console.warn(`⚠️ [SYNC] Retry ${this.retryCount}/${this.MAX_RETRIES} in ${backoffMs}ms`);
+
             localStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
                 lastSync: Date.now(),
                 status: 'error',
-                error: error.message
+                error: error.message,
+                retryCount: this.retryCount,
+                nextRetryIn: backoffMs
             }));
+
+            // Ferma auto-sync dopo MAX_RETRIES fallimenti consecutivi
+            if (this.retryCount >= this.MAX_RETRIES) {
+                console.error('❌ [SYNC] Troppi fallimenti, fermo auto-sync');
+                this.stopAutoSync();
+            }
         } finally {
             this.isSyncing = false;
         }
@@ -187,25 +216,35 @@ export class SyncService {
      * Sync: Crea audit su server
      */
     async syncCreateAudit(auditData) {
-        const result = await apiService.createAudit(auditData);
-
-        // Aggiorna sync_metadata
-        await this.updateSyncMetadataLocal('audit', auditData.id, result.data.audit_id);
-
-        return result;
+        // Usa upsert invece di create (gestisce duplicati)
+        return await this.syncUpsertAudit(auditData);
     }
 
     /**
      * Sync: Aggiorna audit su server (con conflict resolution)
      */
     async syncUpdateAudit(auditData) {
+        // Usa upsert invece di update separato
+        return await this.syncUpsertAudit(auditData);
+    }
+
+    /**
+     * Sync: Upsert audit (INSERT or UPDATE)
+     */
+    async syncUpsertAudit(auditData) {
         try {
-            const result = await apiService.updateAudit(auditData.id, auditData);
+            const result = await apiService.upsertAudit(auditData);
+
+            // Aggiorna sync_metadata
+            if (result.data.action === 'created') {
+                await this.updateSyncMetadataLocal('audit', auditData.id || auditData.metadata?.id, result.data.audit_id);
+            }
+
             return result;
         } catch (error) {
-            if (error.code === 'AUDIT_CONFLICT') {
+            if (error.response?.status === 409 && error.response?.data?.code === 'AUDIT_CONFLICT') {
                 // Conflict: Server version più recente
-                console.warn('⚠️ [SYNC] Conflict rilevato per audit:', auditData.id);
+                console.warn('⚠️ [SYNC] Conflict rilevato per audit:', auditData.audit_uuid || auditData.id);
                 return await this.resolveConflict(auditData);
             }
             throw error;
@@ -353,9 +392,13 @@ export class SyncService {
     handleOnline() {
         console.log('🌐 [SYNC] Connessione ripristinata');
         this.isOnline = true;
+        this.retryCount = 0; // Reset retry count
 
         // Avvia sync automatica dopo 2 secondi
         setTimeout(() => this.processQueue(), 2000);
+
+        // Riavvia auto-sync se era stato fermato
+        this.startAutoSync();
     }
 
     /**
@@ -364,6 +407,63 @@ export class SyncService {
     handleOffline() {
         console.log('📵 [SYNC] Connessione persa - modalità offline attiva');
         this.isOnline = false;
+    }
+
+    /**
+     * Avvia auto-sync polling (30s interval)
+     */
+    startAutoSync() {
+        if (this.syncInterval) {
+            console.log('⏩ [SYNC] Auto-sync già attivo');
+            return;
+        }
+
+        console.log(`🔄 [SYNC] Auto-sync avviato (intervallo: ${this.SYNC_INTERVAL_MS}ms)`);
+
+        this.syncInterval = setInterval(async () => {
+            if (!this.isOnline) {
+                console.log('📴 [SYNC] Offline, skip polling');
+                return;
+            }
+
+            try {
+                await this.processQueue();
+            } catch (error) {
+                console.error('❌ [SYNC] Errore auto-sync:', error);
+            }
+        }, this.SYNC_INTERVAL_MS);
+    }
+
+    /**
+     * Ferma auto-sync polling
+     */
+    stopAutoSync() {
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+            console.log('⏸️ [SYNC] Auto-sync fermato');
+        }
+    }
+
+    /**
+     * Verifica se server è raggiungibile (health check)
+     */
+    async isServerReachable() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+            const response = await fetch(`${this.apiBaseUrl}/../health`, {
+                method: 'HEAD',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch (error) {
+            console.warn('⚠️ [SYNC] Server non raggiungibile:', error.message);
+            return false;
+        }
     }
 
     /**

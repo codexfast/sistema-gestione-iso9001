@@ -149,19 +149,42 @@ export function StorageProvider({ children, useMockData = true }) {
     });
   }, [audits, currentAuditId, currentAudit]);
 
-  // Auto-save multiplo
+  // Auto-save multiplo con IndexedDB
   const { auditSaveStatus, listSaveStatus, isSaving, allSaved } =
-    useAutoSaveMultiple(currentAudit, audits);
+    useAutoSaveMultiple(currentAudit, audits, fsProvider);
 
-  // Auto-sync ogni 5 minuti
+  // === SYNC INIZIALE ALL'AVVIO + AUTO-SYNC POLLING ===
   useEffect(() => {
-    if (!navigator.onLine) return;
+    async function initSyncAndPolling() {
+      console.log("🚀 [INIT] Avvio sync iniziale...");
 
-    const intervalId = setInterval(async () => {
-      console.log("⏰ [AUTO-SYNC] Avvio sync periodica...");
       try {
+        // Avvia auto-sync polling (30s)
+        syncService.startAutoSync();
+
+        if (!navigator.onLine) {
+          console.log("📴 [INIT] Offline - carico solo dati locali");
+          setSyncStatus((prev) => ({
+            ...prev,
+            lastSync: null,
+            isSyncing: false,
+          }));
+          return;
+        }
+
+        // Verifica server raggiungibile
+        const serverReachable = await syncService.isServerReachable();
+        if (!serverReachable) {
+          console.warn("⚠️ [INIT] Server non raggiungibile - fallback locale");
+          return;
+        }
+
         setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
+
+        // Processa queue esistente
         await syncService.processQueue();
+
+        // Aggiorna queue size
         const queueSize = await syncService.getQueueSize();
         setSyncStatus((prev) => ({
           ...prev,
@@ -169,69 +192,122 @@ export function StorageProvider({ children, useMockData = true }) {
           queueSize,
           lastSync: new Date().toISOString(),
         }));
-        console.log("✅ [AUTO-SYNC] Completata, queue size:", queueSize);
+
+        console.log(
+          "✅ [INIT] Sync iniziale completata, queue size:",
+          queueSize
+        );
       } catch (error) {
-        console.error("❌ [AUTO-SYNC] Errore:", error);
+        console.error("❌ [INIT] Errore sync iniziale:", error);
         setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
       }
-    }, 5 * 60 * 1000); // 5 minuti
-
-    // Sync iniziale al mount
-    syncService.processQueue().then(async () => {
-      const queueSize = await syncService.getQueueSize();
-      setSyncStatus((prev) => ({ ...prev, queueSize }));
-    });
-
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // === INIZIALIZZAZIONE ===
-  useEffect(() => {
-    try {
-      // Carica da localStorage
-      const storedAudits = localStorage.getItem(STORAGE_KEYS.AUDITS);
-      const storedCurrentId = localStorage.getItem(
-        STORAGE_KEYS.CURRENT_AUDIT_ID
-      );
-      const storedFsConnected =
-        localStorage.getItem(STORAGE_KEYS.FS_CONNECTED) === "true";
-
-      if (storedAudits) {
-        // Usa dati salvati - NORMALIZZA STATUS
-        const parsedAudits = JSON.parse(storedAudits);
-        const normalizedAudits = parsedAudits.map((audit) => ({
-          ...audit,
-          checklist: normalizeChecklistStatus(audit.checklist),
-        }));
-        setAudits(normalizedAudits);
-
-        // NON ripristinare audit selezionato - mostra sempre selector
-        setCurrentAuditId(null);
-        console.log(
-          `✅ Caricati ${normalizedAudits.length} audit da localStorage - selector mode`
-        );
-      } else if (useMockData) {
-        // Prima inizializzazione: usa mock data MA NON selezionare automaticamente
-        setAudits(MOCK_AUDITS);
-        setCurrentAuditId(null); // MODIFICATO: null invece di primo audit
-        console.log(
-          `✅ Inizializzato con ${MOCK_AUDITS.length} mock audit - selector mode`
-        );
-      } else {
-        // Nessun dato
-        setAudits([]);
-        setCurrentAuditId(null);
-        console.log("ℹ️ Nessun audit disponibile");
-      }
-
-      setFsConnected(storedFsConnected);
-      setIsLoading(false);
-    } catch (err) {
-      console.error("Errore caricamento audit:", err);
-      setError("Errore caricamento dati");
-      setIsLoading(false);
     }
-  }, [useMockData]);
+
+    initSyncAndPolling();
+
+    // Cleanup: ferma auto-sync al unmount
+    return () => {
+      syncService.stopAutoSync();
+    };
+  }, []); // Solo al mount
+
+  // === INIZIALIZZAZIONE: MIGRAZIONE localStorage → IndexedDB + CARICAMENTO ===
+  useEffect(() => {
+    async function loadAuditsFromIndexedDB() {
+      try {
+        setIsLoading(true);
+
+        if (!fsProvider) {
+          console.log("⏳ [LOAD] Storage provider non ancora pronto");
+          return;
+        }
+
+        // MIGRAZIONE UNA TANTUM: localStorage → IndexedDB
+        const storedAudits = localStorage.getItem(STORAGE_KEYS.AUDITS);
+        if (storedAudits) {
+          console.log(
+            "🔄 [MIGRATION] Rilevati audit in localStorage, migrazione in corso..."
+          );
+          try {
+            const parsedAudits = JSON.parse(storedAudits);
+
+            for (const audit of parsedAudits) {
+              const normalizedAudit = {
+                ...audit,
+                checklist: normalizeChecklistStatus(audit.checklist),
+              };
+              await fsProvider.saveAudit(normalizedAudit);
+
+              // Enqueue per sync server
+              await syncService.enqueue("create_audit", normalizedAudit);
+            }
+
+            console.log(
+              `✅ [MIGRATION] Migrati ${parsedAudits.length} audit in IndexedDB + sync queue`
+            );
+
+            // Rimuovi da localStorage dopo migrazione
+            localStorage.removeItem(STORAGE_KEYS.AUDITS);
+            localStorage.removeItem(STORAGE_KEYS.CURRENT_AUDIT_ID);
+          } catch (migrationError) {
+            console.error("❌ [MIGRATION] Errore migrazione:", migrationError);
+          }
+        }
+
+        // CARICAMENTO: Leggi da IndexedDB (Single Source of Truth)
+        const allAudits = await fsProvider.getAllAudits();
+
+        if (allAudits && allAudits.length > 0) {
+          setAudits(allAudits);
+          setCurrentAuditId(null); // Mostra sempre selector all'avvio
+          console.log(
+            `✅ Caricati ${allAudits.length} audit da IndexedDB - selector mode`
+          );
+        } else if (useMockData) {
+          // Prima inizializzazione: salva mock data in IndexedDB
+          console.log(
+            "🆕 [INIT] Prima inizializzazione, salvo mock data in IndexedDB..."
+          );
+          for (const audit of MOCK_AUDITS) {
+            await fsProvider.saveAudit(audit);
+          }
+          setAudits(MOCK_AUDITS);
+          setCurrentAuditId(null);
+          console.log(
+            `✅ Inizializzato con ${MOCK_AUDITS.length} mock audit in IndexedDB - selector mode`
+          );
+        } else {
+          setAudits([]);
+          setCurrentAuditId(null);
+          console.log("ℹ️ Nessun audit disponibile");
+        }
+
+        // FS Connected status (backward compatibility)
+        const storedFsConnected =
+          localStorage.getItem(STORAGE_KEYS.FS_CONNECTED) === "true";
+        setFsConnected(storedFsConnected);
+
+        setIsLoading(false);
+      } catch (err) {
+        console.error("❌ Errore caricamento audit da IndexedDB:", err);
+        setError("Errore caricamento dati");
+        setIsLoading(false);
+      }
+    }
+
+    loadAuditsFromIndexedDB();
+  }, [fsProvider, useMockData]);
+
+  // === SALVATAGGIO AUTOMATICO IN INDEXEDDB (depreca localStorage) ===
+  useEffect(() => {
+    if (audits.length === 0 || !fsProvider) return;
+
+    // NO più localStorage.setItem! IndexedDB è il Single Source of Truth
+    // Salvataggio gestito da useAutoSaveMultiple → fsProvider.saveAudit()
+    console.log(
+      `📊 [STATE] ${audits.length} audit in memoria (IndexedDB è il primary storage)`
+    );
+  }, [audits, fsProvider]);
 
   // === SALVA CURRENT AUDIT ID ===
   // RIMOSSO: Non salvare più currentAuditId - mostra sempre selector all'avvio

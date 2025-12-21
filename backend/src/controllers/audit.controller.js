@@ -598,11 +598,216 @@ async function getAuditStatistics(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/audits/sync
+ * Upsert audit (INSERT se nuovo, UPDATE se esiste)
+ * Usato da sync service per offline-first
+ */
+async function upsertAudit(req, res) {
+    try {
+        const { organization_id, user_id } = req.user;
+        const {
+            audit_uuid,
+            audit_number,
+            client_name,
+            project_year,
+            audit_date,
+            auditor_name,
+            audit_type,
+            status,
+            notes,
+            total_questions,
+            answered_questions,
+            conformities_count,
+            non_conformities_count,
+            completion_percentage,
+            standard_id,
+            updated_at
+        } = req.body;
+
+        // Validazione campi obbligatori
+        if (!audit_uuid || !audit_number || !client_name) {
+            return res.status(400).json({
+                error: 'Campi obbligatori mancanti',
+                code: 'VALIDATION_ERROR',
+                required: ['audit_uuid', 'audit_number', 'client_name']
+            });
+        }
+
+        // Check esistenza per audit_uuid
+        const existing = await query(`
+      SELECT audit_id, updated_at, status
+      FROM audits
+      WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id
+    `, { audit_uuid, organization_id });
+
+        if (existing.recordset.length > 0) {
+            // ========== UPDATE ESISTENTE ==========
+            const existingAudit = existing.recordset[0];
+            const audit_id = existingAudit.audit_id;
+
+            // Conflict detection: se server updated_at > client updated_at
+            const serverTime = new Date(existingAudit.updated_at).getTime();
+            const clientTime = updated_at ? new Date(updated_at).getTime() : 0;
+
+            if (serverTime > clientTime && !req.body.force) {
+                logger.warn(`[UPSERT] Conflict rilevato per audit ${audit_uuid}: server=${serverTime}, client=${clientTime}`);
+                return res.status(409).json({
+                    error: 'Conflict',
+                    code: 'AUDIT_CONFLICT',
+                    message: 'Versione server più recente. Usa force=true per sovrascrivere.',
+                    serverData: {
+                        audit_id,
+                        updated_at: existingAudit.updated_at,
+                        status: existingAudit.status
+                    }
+                });
+            }
+
+            // UPDATE
+            await query(`
+        UPDATE audits
+        SET 
+          audit_number = @audit_number,
+          client_name = @client_name,
+          project_year = @project_year,
+          audit_date = @audit_date,
+          auditor_name = @auditor_name,
+          audit_type = @audit_type,
+          status = @status,
+          notes = @notes,
+          total_questions = @total_questions,
+          answered_questions = @answered_questions,
+          conformities_count = @conformities_count,
+          non_conformities_count = @non_conformities_count,
+          completion_percentage = @completion_percentage,
+          standard_id = @standard_id,
+          updated_at = GETDATE()
+        WHERE audit_id = @audit_id AND organization_id = @organization_id
+      `, {
+                audit_id,
+                audit_number,
+                client_name,
+                project_year: project_year || new Date().getFullYear(),
+                audit_date: audit_date || new Date().toISOString(),
+                auditor_name: auditor_name || 'Non specificato',
+                audit_type: audit_type || 'internal',
+                status: status || 'draft',
+                notes: notes || null,
+                total_questions: total_questions || 78,
+                answered_questions: answered_questions || 0,
+                conformities_count: conformities_count || 0,
+                non_conformities_count: non_conformities_count || 0,
+                completion_percentage: completion_percentage || 0,
+                standard_id: standard_id || 1, // Default ISO 9001
+                organization_id
+            });
+
+            logger.info(`[UPSERT] Audit aggiornato: ${audit_id} (${audit_uuid})`);
+
+            return res.json({
+                audit_id,
+                audit_uuid,
+                action: 'updated',
+                message: 'Audit aggiornato con successo'
+            });
+
+        } else {
+            // ========== INSERT NUOVO ==========
+            const result = await query(`
+        INSERT INTO audits (
+          audit_uuid,
+          audit_number,
+          client_name,
+          project_year,
+          audit_date,
+          auditor_name,
+          audit_type,
+          status,
+          notes,
+          total_questions,
+          answered_questions,
+          conformities_count,
+          non_conformities_count,
+          completion_percentage,
+          standard_id,
+          organization_id,
+          created_by,
+          created_at,
+          updated_at,
+          is_deleted
+        )
+        OUTPUT INSERTED.audit_id, INSERTED.audit_uuid
+        VALUES (
+          @audit_uuid,
+          @audit_number,
+          @client_name,
+          @project_year,
+          @audit_date,
+          @auditor_name,
+          @audit_type,
+          @status,
+          @notes,
+          @total_questions,
+          @answered_questions,
+          @conformities_count,
+          @non_conformities_count,
+          @completion_percentage,
+          @standard_id,
+          @organization_id,
+          @user_id,
+          GETDATE(),
+          GETDATE(),
+          0
+        )
+      `, {
+                audit_uuid,
+                audit_number,
+                client_name,
+                project_year: project_year || new Date().getFullYear(),
+                audit_date: audit_date || new Date().toISOString(),
+                auditor_name: auditor_name || 'Non specificato',
+                audit_type: audit_type || 'internal',
+                status: status || 'draft',
+                notes: notes || null,
+                total_questions: total_questions || 78,
+                answered_questions: answered_questions || 0,
+                conformities_count: conformities_count || 0,
+                non_conformities_count: non_conformities_count || 0,
+                completion_percentage: completion_percentage || 0,
+                standard_id: standard_id || 1, // Default ISO 9001
+                organization_id,
+                user_id
+            });
+
+            const newAudit = result.recordset[0];
+
+            logger.info(`[UPSERT] Audit creato: ${newAudit.audit_id} (${newAudit.audit_uuid})`);
+
+            return res.status(201).json({
+                audit_id: newAudit.audit_id,
+                audit_uuid: newAudit.audit_uuid,
+                action: 'created',
+                message: 'Audit creato con successo'
+            });
+        }
+
+    } catch (error) {
+        logger.error('[UPSERT] Errore upsert audit:', error);
+        return res.status(500).json({
+            error: 'Errore server durante upsert audit',
+            code: 'SERVER_ERROR',
+            details: error.message
+        });
+    }
+}
+
 module.exports = {
     listAudits,
     getAuditById,
     createAudit,
     updateAudit,
     deleteAudit,
-    getAuditStatistics
+    getAuditStatistics,
+    upsertAudit
 };

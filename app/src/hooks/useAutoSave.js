@@ -1,26 +1,27 @@
 /**
  * Hook Auto-Save
- * Gestisce il salvataggio automatico su localStorage con debounce
+ * Gestisce il salvataggio automatico su IndexedDB (via storageProvider) con debounce
  * Sistema Gestione ISO 9001 - QS Studio
  */
 
 import { useState, useEffect, useRef } from 'react';
 
 /**
- * Hook per auto-save con debounce
+ * Hook per auto-save con debounce (IndexedDB)
  * @param {Object} data - Dati da salvare
- * @param {string} storageKey - Chiave localStorage
+ * @param {Object} storageProvider - Provider IndexedDB (fsProvider)
+ * @param {string} entityType - Tipo entità: 'audit' | 'audits'
  * @param {number} delay - Delay debounce in ms (default 2000)
  * @returns {string} saveStatus - 'idle' | 'saving' | 'saved' | 'error'
  */
-export function useAutoSave(data, storageKey, delay = 2000) {
+export function useAutoSave(data, storageProvider, entityType, delay = 2000) {
     const [saveStatus, setSaveStatus] = useState('idle');
     const timeoutRef = useRef(null);
     const previousDataRef = useRef(null);
 
     useEffect(() => {
-        // Skip se dati non forniti
-        if (!data || !storageKey) {
+        // Skip se dati non forniti o provider non pronto
+        if (!data || !storageProvider) {
             return;
         }
 
@@ -39,9 +40,20 @@ export function useAutoSave(data, storageKey, delay = 2000) {
         setSaveStatus('saving');
 
         // Debounce save
-        timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = setTimeout(async () => {
             try {
-                localStorage.setItem(storageKey, currentDataString);
+                // Salva in IndexedDB via storageProvider
+                if (entityType === 'audit' && data.metadata?.id) {
+                    await storageProvider.saveAudit(data);
+                    console.log(`💾 [AUTO-SAVE] Audit ${data.metadata.id} salvato in IndexedDB`);
+                } else if (entityType === 'audits' && Array.isArray(data)) {
+                    // Salva ogni audit individualmente (più robusto)
+                    for (const audit of data) {
+                        await storageProvider.saveAudit(audit);
+                    }
+                    console.log(`💾 [AUTO-SAVE] ${data.length} audit salvati in IndexedDB`);
+                }
+
                 previousDataRef.current = currentDataString;
                 setSaveStatus('saved');
 
@@ -51,7 +63,7 @@ export function useAutoSave(data, storageKey, delay = 2000) {
                 }, 1000);
 
             } catch (error) {
-                console.error('Auto-save error:', error);
+                console.error('❌ Auto-save error (IndexedDB):', error);
                 setSaveStatus('error');
 
                 // Reset a idle dopo 2s
@@ -67,28 +79,31 @@ export function useAutoSave(data, storageKey, delay = 2000) {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [data, storageKey, delay]);
+    }, [data, storageProvider, entityType, delay]);
 
     return saveStatus;
 }
 
 /**
- * Hook per auto-save multipli (audit + lista audits)
+ * Hook per auto-save multipli (audit + lista audits) in IndexedDB
  * @param {Object} currentAudit - Audit corrente
  * @param {Array} audits - Lista tutti gli audit
- * @returns {Object} { auditSaveStatus, listSaveStatus }
+ * @param {Object} storageProvider - Provider IndexedDB
+ * @returns {Object} { auditSaveStatus, listSaveStatus, isSaving, allSaved }
  */
-export function useAutoSaveMultiple(currentAudit, audits) {
+export function useAutoSaveMultiple(currentAudit, audits, storageProvider) {
     const auditSaveStatus = useAutoSave(
         currentAudit,
-        currentAudit ? `audit_${currentAudit.metadata.id}` : null,
+        storageProvider,
+        'audit',
         2000
     );
 
     const listSaveStatus = useAutoSave(
         audits,
+        storageProvider,
         'audits',
-        2000
+        3000 // Delay maggiore per batch save
     );
 
     return {

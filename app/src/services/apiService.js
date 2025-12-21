@@ -316,6 +316,14 @@ class ApiService {
         return this.put(`/audits/${id}`, data);
     }
 
+    /**
+     * Upsert audit (INSERT or UPDATE per sync offline-first)
+     * Usa audit_uuid come chiave stabile
+     */
+    async upsertAudit(auditData) {
+        return this.post('/audits/sync', auditData);
+    }
+
     async deleteAudit(id) {
         return this.delete(`/audits/${id}`);
     }

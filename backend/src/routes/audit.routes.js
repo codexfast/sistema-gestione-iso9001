@@ -19,6 +19,10 @@ router.get('/audits/:id', auditController.getAuditById);
 // GET /api/v1/audits/:id/statistics - Statistiche audit (conformità per sezione)
 router.get('/audits/:id/statistics', auditController.getAuditStatistics);
 
+// POST /api/v1/audits/sync - Upsert audit (INSERT or UPDATE)
+// Usato da sync service offline-first (DEVE STARE PRIMA DI /audits/:id)
+router.post('/audits/sync', auditController.upsertAudit);
+
 // POST /api/v1/audits - Crea nuovo audit
 router.post('/audits', auditController.createAudit);
 
