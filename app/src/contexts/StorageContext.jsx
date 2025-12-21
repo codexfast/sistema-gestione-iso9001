@@ -349,8 +349,22 @@ export function StorageProvider({ children, useMockData = true }) {
             if (navigator.onLine) {
               syncService
                 .enqueue("update_audit", {
-                  id: updated.metadata?.id || updated.id,
-                  ...updated,
+                  audit_uuid: updated.id || updated.metadata?.id, // Backend richiede audit_uuid
+                  audit_number: updated.metadata?.auditNumber,
+                  client_name: updated.metadata?.clientName,
+                  project_year: updated.metadata?.projectYear,
+                  audit_date: updated.metadata?.auditDate,
+                  auditor_name: updated.metadata?.auditorName,
+                  audit_type: updated.metadata?.auditType,
+                  status: updated.metadata?.status,
+                  notes: updated.metadata?.notes,
+                  total_questions: updated.metadata?.totalQuestions,
+                  answered_questions: updated.metadata?.answeredQuestions,
+                  conformities_count: updated.metadata?.conformitiesCount,
+                  non_conformities_count: updated.metadata?.nonConformitiesCount,
+                  completion_percentage: updated.metadata?.completionPercentage,
+                  standard_id: 1, // ISO 9001
+                  updated_at: new Date().toISOString(),
                 })
                 .catch((err) => {
                   console.error("❌ [SYNC] Errore enqueue update:", err);
