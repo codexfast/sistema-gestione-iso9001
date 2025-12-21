@@ -304,7 +304,7 @@ export function StorageProvider({ children, useMockData = true }) {
     }
 
     loadAuditsFromIndexedDB();
-  }, [fsProvider, useMockData, hasInitialized]);
+  }, [fsProvider, useMockData]); // hasInitialized NON deve essere dependency (causa loop)
 
   // === SALVATAGGIO AUTOMATICO IN INDEXEDDB (depreca localStorage) ===
   useEffect(() => {

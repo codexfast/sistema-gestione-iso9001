@@ -106,6 +106,16 @@ export class IndexedDBProvider {
     }
 
     /**
+     * Salva checkpoint audit (alias per saveAudit)
+     * Compatibility layer per useCheckpointSaver hook
+     * @param {Object} audit - Audit da salvare
+     * @returns {Promise<Object>} Audit salvato
+     */
+    async saveCheckpoint(audit) {
+        return this.saveAudit(audit);
+    }
+
+    /**
      * Carica audit per ID
      */
     async loadAudit(auditId) {
