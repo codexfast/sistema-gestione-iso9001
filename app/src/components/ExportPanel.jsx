@@ -73,10 +73,19 @@ const ExportPanel = () => {
       try {
         setIsExporting(true);
         const result = await exportAuditToWorkspace(currentAudit, fsProvider);
-        showMessage(
-          `✅ Report salvato in workspace: ${result.fileName}`,
-          "success"
-        );
+
+        // Notifica diversa se fallback Android
+        if (result.fallback) {
+          showMessage(
+            `📱 Android: file salvato in Download (${result.fileName})`,
+            "info"
+          );
+        } else {
+          showMessage(
+            `✅ Report salvato in workspace: ${result.fileName}`,
+            "success"
+          );
+        }
       } catch (error) {
         console.error("Errore salvataggio workspace:", error);
         showMessage(`❌ Errore: ${error.message}`, "error");
@@ -90,7 +99,16 @@ const ExportPanel = () => {
     try {
       setIsExporting(true);
       const result = await exportAuditToFileSystem(currentAudit);
-      showMessage(`✅ File salvato in: ${result.path}`, "success");
+
+      // Notifica diversa se fallback Android
+      if (result.fallback) {
+        showMessage(
+          `📱 Android: file salvato in Download (${result.fileName})`,
+          "info"
+        );
+      } else {
+        showMessage(`✅ File salvato in: ${result.path}`, "success");
+      }
     } catch (error) {
       console.error("Errore salvataggio file system:", error);
       if (error.message.includes("annullato")) {

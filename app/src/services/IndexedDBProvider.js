@@ -305,7 +305,7 @@ export class IndexedDBProvider {
 
 // === SINGLETON per sync queue ===
 const SYNC_DB_NAME = 'SGQ_ISO9001_DB';
-const SYNC_DB_VERSION = 1;
+const SYNC_DB_VERSION = 2;  // Incrementata per aggiungere sync_metadata store
 
 let syncDbInstance = null;
 
@@ -341,6 +341,14 @@ export async function getDatabase() {
                 store.createIndex('timestamp', 'timestamp', { unique: false });
                 store.createIndex('type', 'type', { unique: false });
                 console.log('📤 Sync queue store creato');
+            }
+
+            // Store per sync metadata (tracking entity sync status)
+            if (!db.objectStoreNames.contains('sync_metadata')) {
+                const metaStore = db.createObjectStore('sync_metadata', { keyPath: 'id', autoIncrement: true });
+                metaStore.createIndex('by_entity', ['entityType', 'localId'], { unique: true });
+                metaStore.createIndex('serverId', 'serverId', { unique: false });
+                console.log('📋 Sync metadata store creato');
             }
         };
     });

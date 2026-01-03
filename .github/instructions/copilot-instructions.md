@@ -41,15 +41,16 @@ La norma è organizzata secondo il ciclo Plan-Do-Check-Act:
 
 **NON utilizzare terminologia generica**. Adotta questi termini conformi alla ISO 9001:2015:
 
-| ❌ Evitare | ✅ Usare (ISO 9001:2015) |
-|-----------|-------------------------|
-| Documentazione, procedure, registrazioni | **Informazioni documentate** |
-| Fornitore | **Fornitore esterno** |
-| Prodotto | **Prodotti e servizi** |
-| Ambiente di lavoro | **Ambiente per il funzionamento dei processi** |
-| Preventive action | **Azioni per affrontare rischi e opportunità** (punto 6.1) |
+| ❌ Evitare                               | ✅ Usare (ISO 9001:2015)                                   |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| Documentazione, procedure, registrazioni | **Informazioni documentate**                               |
+| Fornitore                                | **Fornitore esterno**                                      |
+| Prodotto                                 | **Prodotti e servizi**                                     |
+| Ambiente di lavoro                       | **Ambiente per il funzionamento dei processi**             |
+| Preventive action                        | **Azioni per affrontare rischi e opportunità** (punto 6.1) |
 
 ### Modalità Verbali della Norma
+
 - **"deve"** = requisito obbligatorio
 - **"dovrebbe"** = raccomandazione
 - **"può"** (may) = permesso; **"può"** (can) = possibilità/capacità
@@ -57,29 +58,36 @@ La norma è organizzata secondo il ciclo Plan-Do-Check-Act:
 ## Linee Guida per la Creazione/Modifica di Documenti
 
 ### Checklist e Report di Audit
+
 - **Formato**: MS Word (.doc/.docx) per compatibilità con workflow esistente
 - **Struttura requisiti audit**: Mappare su punti specifici ISO 9001:2015 (es. 4.4, 7.1.5, 8.5.1)
 - **Terminologia conformità**: "Non conformità" (non "deviazione"), "Azioni correttive" (punto 10.2)
 
 ### Materiali di Supporto
+
 - Consultare i **Quaderni Qualità** esistenti per allineamento stilistico
 - Includere riferimenti espliciti ai punti ISO pertinenti (es. "vedere punto 4.1")
 - Le note vanno indicate come "Nota:" in corsivo (stile ISO)
 
 ### Gestione Versioni
+
 - Specificare sempre "Rev. X" nel titolo/nome file
 - Indicare data di modifica in formato italiano (es. "23 settembre 2015")
 
 ## Pattern Architetturali
 
 ### Organizzazione Documentale
+
 **Separazione netta tra**:
+
 1. **Normative** (testi ufficiali, immutabili) → `/Normative/`
 2. **Materiali operativi** (guide, quaderni) → `/Quaderni/`
 3. **Strumenti attuativi** (checklist, template) → root o sottocartelle dedicate
 
 ### Riferimenti Incrociati
+
 Quando crei documenti, utilizza questo pattern per citazioni:
+
 ```
 "Come richiesto dal punto 7.5.3 della UNI EN ISO 9001:2015..."
 "In conformità ai requisiti di cui al punto 8.4 (Controllo dei processi forniti dall'esterno)..."
@@ -88,6 +96,7 @@ Quando crei documenti, utilizza questo pattern per citazioni:
 ## Workflow Operativi
 
 ### Audit Interno (Sezione 9.2)
+
 1. Pianificare audit considerando: importanza processi, cambiamenti, risultati precedenti
 2. Definire criteri e campo applicazione
 3. Selezionare auditor garantendo obiettività
@@ -98,7 +107,9 @@ Quando crei documenti, utilizza questo pattern per citazioni:
 **Riferimento guida**: ISO 19011 (citata nella norma al punto 9.2)
 
 ### Gestione Non Conformità (Sezione 10.2)
+
 Pattern obbligatorio:
+
 1. **Reagire**: controllare e correggere la non conformità
 2. **Valutare**: analizzare cause e determinare se esistono NC simili
 3. **Attuare**: implementare azioni necessarie
@@ -109,11 +120,13 @@ Pattern obbligatorio:
 ## Integrazione con Sistemi Esterni
 
 ### Riferimenti Normativi
+
 - **ISO 9000:2015**: Fondamenti e vocabolario (background essenziale)
 - **ISO 9004**: Gestione per il successo durevole (oltre i requisiti base)
 - **ISO 19011**: Linee guida audit di sistemi di gestione
 
 ### Norme Correlate Utilizzabili
+
 - ISO 10002 (Trattamento reclami)
 - ISO 10007 (Gestione configurazione per rintracciabilità)
 - ISO 31000 (Risk management - per approfondimento risk-based thinking)

@@ -182,8 +182,19 @@ function ChecklistModule() {
             ...Object.values(CHECKLIST_STATUS), // Legacy: compliant, partial, non_compliant, not_applicable
             ...Object.values(STATUS), // Nuovo: C, NC, OSS, OM, NA, NOT_ANSWERED
           ];
+
+          // DEBUG: Log per verificare validazione
+          console.log(
+            `🔍 [VALIDATION] Status ricevuto: "${sanitizedValue}", Valid: ${validStatuses.includes(
+              sanitizedValue
+            )}`,
+            validStatuses
+          );
+
           if (!validStatuses.includes(sanitizedValue)) {
-            console.error(`Status non valido: ${sanitizedValue}`);
+            console.error(`Status non valido: ${sanitizedValue}`, {
+              validStatuses,
+            });
             return audit; // Non salvare se status invalido
           }
         }

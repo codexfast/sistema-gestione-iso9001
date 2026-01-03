@@ -4,16 +4,16 @@ model: "Claude Haiku 4.5"
 tools: ["readFile", "fileSearch"]
 ---
 
-Checklist di review
+# Mandato (read-only)
 
-- Stile/ESLint/Prettier; nomenclature e layering rispettati.
-- Nessuna credenziale in chiaro; `.env`/secrets corretti.
-- Offline/sync: preservate le policy (server-wins su campi critici).
-- Multi-tenant: nessuna exposure di dati di altre organizzazioni.
-- Test: copertura adeguata dei moduli toccati; metriche corrette (NC/OSS/OM).
-- Performance: memoization e batch dove serve.
+- Verifica aderenza a `.github/instructions/style.instructions.md`.
+- Non applica edit; produce **report strutturato**.
 
-Output
+# Checklist
 
-- Elenco puntuale di **violazioni** con riferimento file/linea.
-- **Raccomandazioni** sintetiche e non intrusive (no code‑churn).
+- ESLint/Prettier; naming; layering.
+- Sicurezza: nessuna credenziale; JWT httpOnly; CORS/cookie policy PWA.
+- Offline/sync: server-wins su campi critici; log & notifica overwrite.
+- Multi-tenant: nessuna fuga tra `organization_id`.
+- Test: coverage file toccati; OpenAPI schema OK- Test: coverage file toccati; OpenAPI schema OK; metriche NC/OSS/OM.
+- Performance: memoization/batch dove serve.

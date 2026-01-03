@@ -1448,10 +1448,27 @@ export async function exportAuditToWord(audit) {
 
 /**
  * Funzione avanzata: salva con File System Access API
+ * ANDROID FALLBACK: se File System Access API non disponibile (mobile),
+ * usa blob download automatico (ISO 9001:2015 punto 6.1 - risk mitigation)
  */
 export async function exportAuditToFileSystem(audit) {
     if (!audit || !audit.metadata) {
         throw new Error('Audit non valido: metadata mancante');
+    }
+
+    // ANDROID/MOBILE FALLBACK: File System Access API non supportato
+    if (!window.showDirectoryPicker) {
+        console.warn('⚠️ [ANDROID] File System Access API non disponibile - fallback blob download');
+        
+        // Usa exportAuditToWord() che già gestisce blob download via file-saver
+        const fileName = await exportAuditToWord(audit);
+        
+        return {
+            success: true,
+            path: 'Download/' + fileName, // Percorso tipico Android
+            fileName,
+            fallback: true // Flag per notifica utente
+        };
     }
 
     try {
@@ -1507,6 +1524,9 @@ export async function exportAuditToFileSystem(audit) {
 
 /**
  * Esporta report usando LocalFsProvider (struttura ISO 9001)
+ * ANDROID FALLBACK: se workspace non disponibile o File System API non supportato,
+ * usa blob download (ISO 9001:2015 punto 6.1 - risk mitigation)
+ * 
  * @param {Object} audit - Audit corrente
  * @param {LocalFsProvider} fsProvider - File System Provider
  * @returns {Promise<Object>} Risultato con success/path/fileName
@@ -1516,8 +1536,23 @@ export async function exportAuditToWorkspace(audit, fsProvider) {
         throw new Error('Audit non valido: metadata mancante');
     }
 
-    if (!fsProvider?.ready()) {
-        throw new Error('Nessuna cartella workspace collegata. Usa Impostazioni per configurare workspace.');
+    // ANDROID/MOBILE FALLBACK: File System Access API non supportato
+    if (!window.showDirectoryPicker || !fsProvider?.ready()) {
+        const reason = !window.showDirectoryPicker 
+            ? 'File System Access API non disponibile (mobile)'
+            : 'Workspace non configurato';
+        
+        console.warn(`⚠️ [ANDROID] ${reason} - fallback blob download`);
+        
+        // Usa exportAuditToWord() con blob download
+        const fileName = await exportAuditToWord(audit);
+        
+        return {
+            success: true,
+            path: 'Download/' + fileName,
+            fileName,
+            fallback: true
+        };
     }
 
     try {

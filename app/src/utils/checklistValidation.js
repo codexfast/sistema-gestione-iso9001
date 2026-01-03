@@ -30,24 +30,24 @@ export function validateQuestion(question) {
         errors.push('Riferimento clausola mancante');
     }
 
-    // Status deve essere valido
-    const validStatuses = Object.values(CHECKLIST_STATUS);
-    if (!validStatuses.includes(question.status)) {
+    // Status deve essere valido (supporta sia nuovo formato che legacy)
+    const validStatusesLegacy = Object.values(CHECKLIST_STATUS); // compliant, non_compliant, etc.
+    const validStatusesNew = ['C', 'NC', 'OSS', 'OM', 'NA', 'NOT_ANSWERED']; // Nuovo formato ISO 9001:2015
+    const allValidStatuses = [...validStatusesLegacy, ...validStatusesNew];
+
+    if (!allValidStatuses.includes(question.status)) {
         errors.push(`Status non valido: ${question.status}`);
     }
 
-    // Se status è COMPLIANT o PARTIAL, dovrebbe avere evidenza
-    if (
-        (question.status === CHECKLIST_STATUS.COMPLIANT ||
-            question.status === CHECKLIST_STATUS.PARTIAL) &&
-        !hasEvidence(question)
-    ) {
+    // Se status è COMPLIANT/C o PARTIAL/OSS, dovrebbe avere evidenza
+    const conformantStatuses = [CHECKLIST_STATUS.COMPLIANT, 'C', CHECKLIST_STATUS.PARTIAL, 'OSS'];
+    if (conformantStatuses.includes(question.status) && !hasEvidence(question)) {
         errors.push('Manca evidenza per domanda conforme/parzialmente conforme');
     }
 
-    // Se status è NON_COMPLIANT, dovrebbe avere note
-    if (
-        question.status === CHECKLIST_STATUS.NON_COMPLIANT &&
+    // Se status è NON_COMPLIANT/NC, dovrebbe avere note
+    const nonConformantStatuses = [CHECKLIST_STATUS.NON_COMPLIANT, 'NC'];
+    if (nonConformantStatuses.includes(question.status) &&
         (!question.notes || question.notes.trim() === '')
     ) {
         errors.push('Mancano note per domanda non conforme');

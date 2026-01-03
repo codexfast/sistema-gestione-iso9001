@@ -12,6 +12,7 @@ import { getDatabase } from './IndexedDBProvider';
 import apiService from './apiService';
 
 const SYNC_QUEUE_STORE = 'syncQueue';
+const STORE_SYNC_METADATA = 'sync_metadata';  // Store per tracking sync status
 const SYNC_STATUS_KEY = 'lastSyncStatus';
 
 /**
@@ -47,31 +48,10 @@ export class SyncService {
 
     /**
      * Inizializza sync queue in IndexedDB
+     * Stores creati da IndexedDBProvider.getDatabase()
      */
     async init() {
-        const db = await getDatabase();
-
-        // Crea object store per sync queue se non esiste
-        if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
-            db.close();
-            const request = indexedDB.open('SGQ_ISO9001_DB', db.version + 1);
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
-                    const store = db.createObjectStore(SYNC_QUEUE_STORE, { keyPath: 'id' });
-                    store.createIndex('timestamp', 'timestamp', { unique: false });
-                    store.createIndex('type', 'type', { unique: false });
-                }
-            };
-
-            return new Promise((resolve, reject) => {
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        return db;
+        return await getDatabase();
     }
 
     /**
@@ -117,7 +97,7 @@ export class SyncService {
      */
     async isSynced(entityType, localId) {
         try {
-            const db = await this.initSyncDb();
+            const db = await this.init();
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([STORE_SYNC_METADATA], 'readonly');
                 const store = transaction.objectStore(STORE_SYNC_METADATA);
@@ -265,9 +245,12 @@ export class SyncService {
         try {
             const result = await apiService.upsertAudit(auditData);
 
+            // Backend risponde con {data: {action, audit_id}}
+            const responseData = result.data || result;
+
             // Aggiorna sync_metadata
-            if (result.data.action === 'created') {
-                await this.updateSyncMetadataLocal('audit', auditData.id || auditData.metadata?.id, result.data.audit_id);
+            if (responseData.action === 'created') {
+                await this.updateSyncMetadataLocal('audit', auditData.audit_uuid || auditData.id, responseData.audit_id);
             }
 
             return result;
@@ -397,9 +380,32 @@ export class SyncService {
      */
     async updateSyncMetadataLocal(entityType, localId, serverId) {
         console.log(`📝 [SYNC METADATA] ${entityType} ${localId} → server:${serverId}`);
-        // Salva mapping locale → server in localStorage per ora
-        const key = `sync_map_${entityType}_${localId}`;
-        localStorage.setItem(key, JSON.stringify({ serverId, syncedAt: Date.now() }));
+
+        const db = await this.init();
+        const transaction = db.transaction([STORE_SYNC_METADATA], 'readwrite');
+        const store = transaction.objectStore(STORE_SYNC_METADATA);
+
+        // Usa index per trovare record esistente
+        const index = store.index('by_entity');
+        const getRequest = index.get([entityType, localId]);
+
+        return new Promise((resolve, reject) => {
+            getRequest.onsuccess = () => {
+                const existing = getRequest.result;
+                const record = {
+                    ...existing,
+                    entityType,
+                    localId,
+                    serverId,
+                    syncedAt: Date.now()
+                };
+
+                const saveRequest = existing ? store.put(record) : store.add(record);
+                saveRequest.onsuccess = () => resolve();
+                saveRequest.onerror = () => reject(saveRequest.error);
+            };
+            getRequest.onerror = () => reject(getRequest.error);
+        });
     }
 
     /**

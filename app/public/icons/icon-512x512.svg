@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  
+  <g transform="translate(0, 0)">
+    <!-- Cerchio sfondo -->
+    <circle cx="256" cy="256" r="192" fill="#1976d2"/>
+    
+    <!-- Lettera Q stilizzata -->
+    <g>
+      <!-- Cerchio esterno Q -->
+      <circle cx="256" cy="256" r="109.71428571428572" 
+              fill="none" stroke="#ffffff" stroke-width="25.6"/>
+      
+      <!-- Buco interno Q -->
+      <circle cx="256" cy="256" r="51.19999999999999" fill="#1976d2"/>
+      
+      <!-- Coda Q -->
+      <line x1="332.8" y1="332.8" 
+            x2="399.36" y2="399.36" 
+            stroke="#ffffff" stroke-width="25.6" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Testo SGQ (opzionale per icone grandi) -->
+    
+    <text x="256" y="426.6666666666667" 
+          text-anchor="middle" 
+          fill="#ffffff" 
+          font-family="Arial, sans-serif" 
+          font-size="42.666666666666664" 
+          font-weight="bold">SGQ</text>
+    
+  </g>
+</svg>

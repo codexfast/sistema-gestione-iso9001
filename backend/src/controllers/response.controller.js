@@ -273,7 +273,7 @@ async function saveResponse(req, res) {
  */
 async function bulkSaveResponses(req, res) {
     try {
-        const { auditId } = req.params;
+        const { auditId } = req.params; // Può essere audit_uuid o audit_id numerico
         const { organization_id, user_id } = req.user;
         const { responses } = req.body;
 
@@ -284,17 +284,38 @@ async function bulkSaveResponses(req, res) {
             });
         }
 
-        // Verifica ownership audit
-        const auditCheck = await query(`
-            SELECT audit_id FROM audits
-            WHERE audit_id = @audit_id AND organization_id = @organization_id AND is_deleted = 0
-        `, { audit_id: parseInt(auditId), organization_id });
+        // Lookup audit_id: supporta sia UUID che ID numerico
+        let auditIdNumeric;
+        const parsedId = parseInt(auditId);
 
-        if (auditCheck.recordset.length === 0) {
-            return res.status(404).json({
-                error: 'Audit non trovato',
-                code: 'AUDIT_NOT_FOUND'
-            });
+        if (isNaN(parsedId)) {
+            // È un UUID stringa → lookup audit_id
+            const uuidLookup = await query(`
+                SELECT audit_id FROM audits
+                WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0
+            `, { audit_uuid: auditId, organization_id });
+
+            if (uuidLookup.recordset.length === 0) {
+                return res.status(404).json({
+                    error: 'Audit non trovato',
+                    code: 'AUDIT_NOT_FOUND'
+                });
+            }
+            auditIdNumeric = uuidLookup.recordset[0].audit_id;
+        } else {
+            // È già un ID numerico → verifica ownership
+            const auditCheck = await query(`
+                SELECT audit_id FROM audits
+                WHERE audit_id = @audit_id AND organization_id = @organization_id AND is_deleted = 0
+            `, { audit_id: parsedId, organization_id });
+
+            if (auditCheck.recordset.length === 0) {
+                return res.status(404).json({
+                    error: 'Audit non trovato',
+                    code: 'AUDIT_NOT_FOUND'
+                });
+            }
+            auditIdNumeric = parsedId;
         }
 
         const results = {
@@ -304,13 +325,33 @@ async function bulkSaveResponses(req, res) {
             errors: []
         };
 
+        logger.info(`[DEBUG] bulkSaveResponses: processing ${responses.length} responses for audit ${auditId}`);
+
         // Processa ogni risposta
         for (const resp of responses) {
+            let finalQuestionId = null; // Dichiarato fuori try-catch per logging errori
             try {
-                const { question_id, conformity_status, notes, evidence, client_updated_at } = resp;
+                const { question_id, clause_ref, conformity_status, notes, evidence, client_updated_at } = resp;
 
-                if (!question_id) {
-                    results.errors.push({ question_id: null, error: 'question_id mancante' });
+                // LOOKUP question_id da clause_ref se non fornito direttamente
+                finalQuestionId = question_id;
+
+                if (!finalQuestionId && clause_ref) {
+                    const questionLookup = await query(`
+                        SELECT question_id FROM checklist_questions
+                        WHERE section_code = @section_code AND standard_id = 1
+                    `, { section_code: clause_ref });
+
+                    if (questionLookup.recordset.length === 0) {
+                        logger.warn(`[DEBUG] Question lookup failed: clause_ref=${clause_ref}, standard_id=1`);
+                        results.errors.push({ clause_ref, error: `Question not found for clause ${clause_ref}` });
+                        continue;
+                    }
+
+                    finalQuestionId = questionLookup.recordset[0].question_id;
+                    logger.info(`[DEBUG] Lookup OK: clause_ref=${clause_ref} → question_id=${finalQuestionId}`);
+                } else if (!finalQuestionId) {
+                    results.errors.push({ question_id: null, clause_ref: null, error: 'question_id o clause_ref obbligatorio' });
                     continue;
                 }
 
@@ -318,7 +359,7 @@ async function bulkSaveResponses(req, res) {
                 const existing = await query(`
                     SELECT response_id, updated_at FROM audit_responses
                     WHERE audit_id = @audit_id AND question_id = @question_id
-                `, { audit_id: parseInt(auditId), question_id: parseInt(question_id) });
+                `, { audit_id: auditIdNumeric, question_id: parseInt(finalQuestionId) });
 
                 const isAnswered = conformity_status && conformity_status !== 'NOT_ANSWERED';
 
@@ -329,7 +370,8 @@ async function bulkSaveResponses(req, res) {
 
                     if (clientTime < serverTime) {
                         results.conflicts.push({
-                            question_id,
+                            question_id: finalQuestionId,
+                            clause_ref: clause_ref || null,
                             serverVersion: existing.recordset[0].updated_at
                         });
                         continue;
@@ -348,8 +390,8 @@ async function bulkSaveResponses(req, res) {
                             updated_by = @user_id
                         WHERE audit_id = @audit_id AND question_id = @question_id
                     `, {
-                        audit_id: parseInt(auditId),
-                        question_id: parseInt(question_id),
+                        audit_id: auditIdNumeric,
+                        question_id: parseInt(finalQuestionId),
                         conformity_status: conformity_status || null,
                         notes: notes || null,
                         evidence: evidence || null,
@@ -367,12 +409,13 @@ async function bulkSaveResponses(req, res) {
                         )
                         VALUES (
                             @audit_id, @question_id, @conformity_status, @notes, @evidence,
-                            @is_answered, CASE WHEN @is_answered = 1 THEN GETDATE() ELSE NULL END,
+                            @is_answered, 
+                            CASE WHEN @is_answered = 1 THEN GETDATE() ELSE NULL END,
                             @user_id, GETDATE(), GETDATE()
                         )
                     `, {
-                        audit_id: parseInt(auditId),
-                        question_id: parseInt(question_id),
+                        audit_id: auditIdNumeric,
+                        question_id: parseInt(finalQuestionId),
                         conformity_status: conformity_status || null,
                         notes: notes || null,
                         evidence: evidence || null,
@@ -384,21 +427,38 @@ async function bulkSaveResponses(req, res) {
                 }
 
             } catch (error) {
+                console.error(`[SQL ERROR] clause_ref=${resp.clause_ref}, finalQuestionId=${finalQuestionId}`, error);
+                logger.error(`[DEBUG] Error processing response: clause_ref=${resp.clause_ref}, question_id=${resp.question_id}`, {
+                    errorMessage: error.message,
+                    errorStack: error.stack,
+                    auditId: auditIdNumeric,
+                    finalQuestionId
+                });
                 results.errors.push({
                     question_id: resp.question_id,
+                    clause_ref: resp.clause_ref,
                     error: error.message
                 });
             }
         }
 
         // Aggiorna statistiche audit
-        await updateAuditStatistics(parseInt(auditId));
+        await updateAuditStatistics(auditIdNumeric);
 
         logger.info('Bulk responses saved', {
             audit_id: auditId,
+            audit_id_numeric: auditIdNumeric,
             total: responses.length,
             results
         });
+
+        // Log dettagliato se 0 salvati
+        if (results.saved === 0 && results.updated === 0) {
+            logger.warn(`[DEBUG] Zero responses written! Errors: ${results.errors.length}, Conflicts: ${results.conflicts.length}`, {
+                errors: results.errors.slice(0, 3),
+                conflicts: results.conflicts.slice(0, 3)
+            });
+        }
 
         res.json({
             success: true,
@@ -476,10 +536,14 @@ async function updateAuditStatistics(auditId) {
                     SELECT COUNT(*) FROM audit_responses WHERE audit_id = @audit_id AND is_answered = 1
                 ),
                 conformities_count = (
-                    SELECT COUNT(*) FROM audit_responses WHERE audit_id = @audit_id AND conformity_status = 'C'
+                    SELECT COUNT(*) FROM audit_responses 
+                    WHERE audit_id = @audit_id 
+                    AND conformity_status IN ('C', 'compliant')
                 ),
                 non_conformities_count = (
-                    SELECT COUNT(*) FROM audit_responses WHERE audit_id = @audit_id AND conformity_status = 'NC'
+                    SELECT COUNT(*) FROM audit_responses 
+                    WHERE audit_id = @audit_id 
+                    AND conformity_status IN ('NC', 'non_compliant')
                 ),
                 completion_percentage = CASE 
                     WHEN (SELECT COUNT(*) FROM audit_responses WHERE audit_id = @audit_id) > 0

@@ -426,8 +426,9 @@ export function createReportChapter(id, title) {
 export function validateAuditSchema(audit) {
     const errors = [];
 
-    // Valida metadata
-    if (!audit.metadata?.id) errors.push('Missing metadata.id');
+    // Valida metadata - accetta id sia in metadata che root
+    const auditId = audit.metadata?.id || audit.id;
+    if (!auditId) errors.push('Missing id (metadata.id or root id)');
     if (!audit.metadata?.clientName) errors.push('Missing metadata.clientName');
     if (!audit.metadata?.projectYear) errors.push('Missing metadata.projectYear');
     if (!audit.metadata?.selectedStandards?.length) errors.push('Missing selectedStandards');

@@ -384,6 +384,78 @@ export function StorageProvider({ children, useMockData = true }) {
   // === CRUD OPERATIONS ===
 
   /**
+   * Estrae risposte checklist da audit per sync
+   * @param {Object} audit - Audit con checklist compilata
+   * @returns {Array} Array di risposte nel formato backend
+   */
+  function extractChecklistResponses(audit) {
+    const responses = [];
+    const checklist = audit.checklist;
+
+    if (!checklist) return responses;
+
+    // Itera su ogni norma (ISO_9001, ISO_14001, ecc.)
+    Object.entries(checklist).forEach(([normKey, normData]) => {
+      // Itera su ogni clausola
+      Object.entries(normData).forEach(([clauseKey, clauseData]) => {
+        if (!clauseData.questions || !Array.isArray(clauseData.questions))
+          return;
+
+        // Itera su ogni domanda
+        clauseData.questions.forEach((question) => {
+          // Includi solo domande con risposta (status diverso da NOT_ANSWERED)
+          if (question.status && question.status !== "NOT_ANSWERED") {
+            responses.push({
+              clause_ref: question.clauseRef || question.id, // es: '4.1', '5.2.1'
+              conformity_status: question.status, // 'C', 'NC', 'OSS', 'OM', 'NA'
+              notes: question.notes || null,
+              evidence: question.evidenceRef || null,
+              client_updated_at: new Date().toISOString(),
+            });
+          }
+        });
+      });
+    });
+
+    return responses;
+  }
+
+  /**
+   * Calcola metriche checklist da struttura audit
+   * @param {Object} checklist - Struttura checklist audit
+   * @returns {Object} Metriche: {total, answered, conformities, nonConformities}
+   */
+  function calculateChecklistMetrics(checklist) {
+    let total = 0;
+    let answered = 0;
+    let conformities = 0;
+    let nonConformities = 0;
+
+    if (!checklist) return { total, answered, conformities, nonConformities };
+
+    // Itera su ogni norma (ISO_9001, ISO_14001, ecc.)
+    Object.values(checklist).forEach((normData) => {
+      // Itera su ogni clausola
+      Object.values(normData).forEach((clauseData) => {
+        if (!clauseData.questions || !Array.isArray(clauseData.questions))
+          return;
+
+        // Conta domande
+        clauseData.questions.forEach((q) => {
+          total++;
+          if (q.status && q.status !== "NOT_ANSWERED") {
+            answered++;
+            if (q.status === "C") conformities++;
+            if (q.status === "NC") nonConformities++;
+          }
+        });
+      });
+    });
+
+    return { total, answered, conformities, nonConformities };
+  }
+
+  /**
    * Aggiorna audit corrente
    */
   const updateCurrentAudit = useCallback(
@@ -401,7 +473,21 @@ export function StorageProvider({ children, useMockData = true }) {
               console.warn("⚠️ Schema validation errors:", validation.errors);
             }
 
-            // Enqueue sync se online
+            // Calcola metriche da checklist per sync accurato
+            const metrics = calculateChecklistMetrics(updated.checklist);
+            const calculatedMetrics = {
+              total_questions: metrics.total,
+              answered_questions: metrics.answered,
+              conformities_count: metrics.conformities,
+              non_conformities_count: metrics.nonConformities,
+              completion_percentage:
+                metrics.total > 0
+                  ? Math.round((metrics.answered / metrics.total) * 100 * 100) /
+                    100
+                  : 0,
+            };
+
+            // Enqueue sync audit metadata se online
             if (navigator.onLine) {
               syncService
                 .enqueue("update_audit", {
@@ -414,18 +500,31 @@ export function StorageProvider({ children, useMockData = true }) {
                   audit_type: updated.metadata?.auditType,
                   status: updated.metadata?.status,
                   notes: updated.metadata?.notes,
-                  total_questions: updated.metadata?.totalQuestions,
-                  answered_questions: updated.metadata?.answeredQuestions,
-                  conformities_count: updated.metadata?.conformitiesCount,
-                  non_conformities_count:
-                    updated.metadata?.nonConformitiesCount,
-                  completion_percentage: updated.metadata?.completionPercentage,
+                  ...calculatedMetrics, // Metriche calcolate da checklist
                   standard_id: 1, // ISO 9001
                   updated_at: new Date().toISOString(),
                 })
                 .catch((err) => {
                   console.error("❌ [SYNC] Errore enqueue update:", err);
                 });
+
+              // Enqueue sync risposte checklist
+              const responses = extractChecklistResponses(updated);
+              if (responses.length > 0) {
+                syncService
+                  .enqueue("save_responses", {
+                    auditId: updated.metadata?.id || updated.id,
+                    responses: responses,
+                  })
+                  .then(() => {
+                    console.log(
+                      `📤 [SYNC] ${responses.length} risposte enqueued per sync`
+                    );
+                  })
+                  .catch((err) => {
+                    console.error("❌ [SYNC] Errore enqueue risposte:", err);
+                  });
+              }
             }
 
             return updated;
