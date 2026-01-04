@@ -39,7 +39,6 @@ async function getAuditResponses(req, res) {
                 ar.question_id,
                 ar.conformity_status,
                 ar.notes,
-                ar.evidence,
                 ar.is_answered,
                 ar.answered_at,
                 ar.updated_at,
@@ -79,9 +78,10 @@ async function getAuditResponses(req, res) {
  *   question_id: number (REQUIRED),
  *   conformity_status: 'C' | 'NC' | 'OSS' | 'OM' | 'NA' | null,
  *   notes: string,
- *   evidence: string,
  *   client_updated_at: ISO timestamp (per conflict detection)
  * }
+ * 
+ * NOTA: Evidenze (foto/documenti) vanno salvate tramite POST /attachments
  */
 async function saveResponse(req, res) {
     try {
@@ -91,7 +91,6 @@ async function saveResponse(req, res) {
             question_id,
             conformity_status,
             notes,
-            evidence,
             client_updated_at
         } = req.body;
 
@@ -159,7 +158,6 @@ async function saveResponse(req, res) {
                 SET 
                     conformity_status = @conformity_status,
                     notes = @notes,
-                    evidence = @evidence,
                     is_answered = @is_answered,
                     answered_at = CASE WHEN @is_answered = 1 AND answered_at IS NULL THEN GETDATE() ELSE answered_at END,
                     updated_at = GETDATE(),
@@ -170,7 +168,6 @@ async function saveResponse(req, res) {
                 question_id: parseInt(question_id),
                 conformity_status: conformity_status || null,
                 notes: notes || null,
-                evidence: evidence || null,
                 is_answered: isAnswered ? 1 : 0,
                 user_id
             });
@@ -191,7 +188,6 @@ async function saveResponse(req, res) {
                     question_id,
                     conformity_status,
                     notes,
-                    evidence,
                     is_answered,
                     answered_at,
                     created_by,
@@ -203,7 +199,6 @@ async function saveResponse(req, res) {
                     @question_id,
                     @conformity_status,
                     @notes,
-                    @evidence,
                     @is_answered,
                     CASE WHEN @is_answered = 1 THEN GETDATE() ELSE NULL END,
                     @user_id,
@@ -215,7 +210,6 @@ async function saveResponse(req, res) {
                 question_id: parseInt(question_id),
                 conformity_status: conformity_status || null,
                 notes: notes || null,
-                evidence: evidence || null,
                 is_answered: isAnswered ? 1 : 0,
                 user_id
             });
@@ -266,10 +260,11 @@ async function saveResponse(req, res) {
  *     question_id: number,
  *     conformity_status: string,
  *     notes: string,
- *     evidence: string,
  *     client_updated_at: ISO timestamp
  *   }]
  * }
+ * 
+ * NOTA: Evidenze salvate separatamente via POST /attachments
  */
 async function bulkSaveResponses(req, res) {
     try {
@@ -331,7 +326,7 @@ async function bulkSaveResponses(req, res) {
         for (const resp of responses) {
             let finalQuestionId = null; // Dichiarato fuori try-catch per logging errori
             try {
-                const { question_id, clause_ref, conformity_status, notes, evidence, client_updated_at } = resp;
+                const { question_id, clause_ref, conformity_status, notes, client_updated_at } = resp;
 
                 // LOOKUP question_id da clause_ref se non fornito direttamente
                 finalQuestionId = question_id;
@@ -383,7 +378,6 @@ async function bulkSaveResponses(req, res) {
                         SET 
                             conformity_status = @conformity_status,
                             notes = @notes,
-                            evidence = @evidence,
                             is_answered = @is_answered,
                             answered_at = CASE WHEN @is_answered = 1 AND answered_at IS NULL THEN GETDATE() ELSE answered_at END,
                             updated_at = GETDATE(),
@@ -394,7 +388,6 @@ async function bulkSaveResponses(req, res) {
                         question_id: parseInt(finalQuestionId),
                         conformity_status: conformity_status || null,
                         notes: notes || null,
-                        evidence: evidence || null,
                         is_answered: isAnswered ? 1 : 0,
                         user_id
                     });
@@ -404,11 +397,11 @@ async function bulkSaveResponses(req, res) {
                     // INSERT
                     await query(`
                         INSERT INTO audit_responses (
-                            audit_id, question_id, conformity_status, notes, evidence,
+                            audit_id, question_id, conformity_status, notes,
                             is_answered, answered_at, created_by, created_at, updated_at
                         )
                         VALUES (
-                            @audit_id, @question_id, @conformity_status, @notes, @evidence,
+                            @audit_id, @question_id, @conformity_status, @notes,
                             @is_answered, 
                             CASE WHEN @is_answered = 1 THEN GETDATE() ELSE NULL END,
                             @user_id, GETDATE(), GETDATE()
@@ -418,7 +411,6 @@ async function bulkSaveResponses(req, res) {
                         question_id: parseInt(finalQuestionId),
                         conformity_status: conformity_status || null,
                         notes: notes || null,
-                        evidence: evidence || null,
                         is_answered: isAnswered ? 1 : 0,
                         user_id
                     });
