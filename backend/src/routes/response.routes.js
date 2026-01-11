@@ -12,6 +12,7 @@ const responseController = require('../controllers/response.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
 // Tutti gli endpoint richiedono autenticazione
+// NOTA: /response-options è pubblico e registrato direttamente in server.js
 router.use(authenticate);
 
 // GET /api/v1/audits/:auditId/responses - Lista tutte le risposte per un audit

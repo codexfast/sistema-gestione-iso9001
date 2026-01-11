@@ -4,10 +4,72 @@
  * 
  * Le risposte sono isolate per audit, che a sua volta è isolato per organization_id
  * Supporta sync offline con timestamp-based conflict resolution
+ * 
+ * UPDATE 10/01/2026: Aggiunta validazione conformity_status con tabella response_options
  */
 
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
+
+/**
+ * GET /api/v1/response-options
+ * Recupera opzioni di risposta disponibili (C, NC, OSS, OM, NA, NV)
+ */
+async function getResponseOptions(req, res) {
+    try {
+        const result = await query(`
+            SELECT 
+                option_code,
+                option_name_it,
+                option_name_en,
+                option_description,
+                severity_level,
+                weight_percentage,
+                exclude_from_calc,
+                display_order
+            FROM response_options
+            WHERE is_active = 1
+            ORDER BY display_order
+        `);
+
+        logger.info('Response options retrieved', { count: result.recordset.length });
+
+        res.json({
+            success: true,
+            data: result.recordset
+        });
+
+    } catch (error) {
+        logger.error('Error getting response options', { error: error.message });
+        res.status(500).json({
+            error: 'Errore durante il recupero delle opzioni di risposta',
+            code: 'OPTIONS_GET_ERROR'
+        });
+    }
+}
+
+/**
+ * Helper: Valida conformity_status contro tabella response_options
+ * @param {string} status - Codice status da validare (es: 'C', 'NC', 'OSS')
+ * @returns {Promise<boolean>} true se valido, false altrimenti
+ */
+async function validateConformityStatus(status) {
+    if (!status || status === 'NOT_ANSWERED') {
+        return true; // null/NOT_ANSWERED sempre validi
+    }
+
+    try {
+        const result = await query(`
+            SELECT option_code FROM response_options
+            WHERE option_code = @status AND is_active = 1
+        `, { status });
+
+        return result.recordset.length > 0;
+    } catch (error) {
+        logger.error('Error validating conformity status', { status, error: error.message });
+        return false; // In caso di errore DB, rifiuta per sicurezza
+    }
+}
 
 /**
  * GET /api/v1/audits/:auditId/responses
@@ -356,6 +418,20 @@ async function bulkSaveResponses(req, res) {
                     WHERE audit_id = @audit_id AND question_id = @question_id
                 `, { audit_id: auditIdNumeric, question_id: parseInt(finalQuestionId) });
 
+                // ✅ VALIDAZIONE conformity_status
+                if (conformity_status && conformity_status !== 'NOT_ANSWERED') {
+                    const isValid = await validateConformityStatus(conformity_status);
+                    if (!isValid) {
+                        logger.warn(`[VALIDATION] Invalid conformity_status: ${conformity_status}`, { clause_ref });
+                        results.errors.push({
+                            clause_ref,
+                            question_id: finalQuestionId,
+                            error: `Status '${conformity_status}' non valido. Valori ammessi: C, NC, OSS, OM, NA, NV`
+                        });
+                        continue;
+                    }
+                }
+
                 const isAnswered = conformity_status && conformity_status !== 'NOT_ANSWERED';
 
                 if (existing.recordset.length > 0) {
@@ -515,6 +591,7 @@ async function deleteResponse(req, res) {
 
 /**
  * Helper: Aggiorna statistiche audit (contatori conformità)
+ * UPDATE 10/01/2026: Calcolo basato su response_options.weight_percentage
  */
 async function updateAuditStatistics(auditId) {
     try {
@@ -530,12 +607,22 @@ async function updateAuditStatistics(auditId) {
                 conformities_count = (
                     SELECT COUNT(*) FROM audit_responses 
                     WHERE audit_id = @audit_id 
-                    AND conformity_status IN ('C', 'compliant')
+                    AND conformity_status = 'C'
                 ),
                 non_conformities_count = (
                     SELECT COUNT(*) FROM audit_responses 
                     WHERE audit_id = @audit_id 
-                    AND conformity_status IN ('NC', 'non_compliant')
+                    AND conformity_status = 'NC'
+                ),
+                observations_count = (
+                    SELECT COUNT(*) FROM audit_responses 
+                    WHERE audit_id = @audit_id 
+                    AND conformity_status = 'OSS'
+                ),
+                opportunities_count = (
+                    SELECT COUNT(*) FROM audit_responses 
+                    WHERE audit_id = @audit_id 
+                    AND conformity_status = 'OM'
                 ),
                 completion_percentage = CASE 
                     WHEN (SELECT COUNT(*) FROM audit_responses WHERE audit_id = @audit_id) > 0
@@ -547,6 +634,8 @@ async function updateAuditStatistics(auditId) {
             WHERE audit_id = @audit_id
         `, { audit_id: auditId });
 
+        logger.info('Audit statistics updated', { audit_id: auditId });
+
     } catch (error) {
         logger.error('Error updating audit statistics', { audit_id: auditId, error: error.message });
         // Non lanciare errore - le statistiche sono secondarie
@@ -557,5 +646,6 @@ module.exports = {
     getAuditResponses,
     saveResponse,
     bulkSaveResponses,
-    deleteResponse
+    deleteResponse,
+    getResponseOptions
 };

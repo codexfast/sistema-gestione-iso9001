@@ -23,12 +23,15 @@ export const AUDIT_STATUS = {
 
 /**
  * Status risposte checklist (ISO 9001:2015 terminology)
+ * AGGIORNATO: Allineato con Migration 007 e response_options DB
  */
 export const CHECKLIST_STATUS = {
-    COMPLIANT: 'compliant',            // Soddisfatto ✓
-    PARTIAL: 'partial',                // Parzialmente soddisfatto (OSS) ○
-    NON_COMPLIANT: 'non_compliant',   // Non Soddisfatto (NC) ✗
-    NOT_APPLICABLE: 'not_applicable'  // Non applicabile -
+    COMPLIANT: 'C',                    // Conforme (Soddisfatto) ✓
+    PARTIAL: 'OSS',                    // Osservazione (Parzialmente Sodd.) ○
+    NON_COMPLIANT: 'NC',               // Non Conforme (Non Soddisfatto) ✗
+    NOT_APPLICABLE: 'NA',              // Non Applicabile -
+    IMPROVEMENT_OPP: 'OM',             // Opportunità di Miglioramento
+    NOT_VERIFIED: 'NV'                 // Non Verificato
 };
 
 /**

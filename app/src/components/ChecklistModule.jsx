@@ -4,13 +4,14 @@
  * Sistema Gestione ISO 9001 - QS Studio
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
 import AttachmentSection from "./AttachmentSection";
 import { CHECKLIST_STATUS } from "../data/auditDataModel";
 import { calculateNormCompletion } from "../utils/auditUtils";
 import { validateQuestion } from "../utils/checklistValidation";
+import apiService from "../services/apiService";
 import "./ChecklistModule.css";
 
 // Nuovi status ISO 9001:2015 (sovrascrivono il legacy format)
@@ -35,9 +36,42 @@ function ChecklistModule() {
   const [expandedClauses, setExpandedClauses] = useState(new Set([])); // Tutti chiusi
   const [selectedNorm, setSelectedNorm] = useState("ISO_9001");
   const [searchTerm, setSearchTerm] = useState("");
+  const [responseOptions, setResponseOptions] = useState(null); // Opzioni dal backend
+  const [loadingOptions, setLoadingOptions] = useState(true);
 
   // Hook gestione allegati
   const attachments = useAttachmentManager(currentAudit, updateCurrentAudit);
+
+  // Carica opzioni di risposta dal backend (Step 1.6)
+  useEffect(() => {
+    async function loadResponseOptions() {
+      try {
+        setLoadingOptions(true);
+        const response = await apiService.get("/response-options");
+
+        if (response.success && response.data) {
+          setResponseOptions(response.data);
+          console.log(
+            "✅ [API] Response options caricate:",
+            response.data.length,
+            "opzioni"
+          );
+        } else {
+          console.warn("⚠️ [API] Response options: risposta senza dati");
+          // Fallback a opzioni hardcoded se API fallisce
+          setResponseOptions(null);
+        }
+      } catch (error) {
+        console.error("❌ [API] Errore caricamento response options:", error);
+        // Fallback a opzioni hardcoded (STATUS locale)
+        setResponseOptions(null);
+      } finally {
+        setLoadingOptions(false);
+      }
+    }
+
+    loadResponseOptions();
+  }, []); // Esegui solo al mount
 
   // TUTTI gli hooks devono essere prima degli early returns
   const stats = useMemo(() => {
