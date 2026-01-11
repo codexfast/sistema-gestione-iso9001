@@ -22,9 +22,11 @@ Ogni ADR segue il template standard:
 
 ## Indice ADR
 
-| ID                                           | Titolo                                 | Stato     | Data       |
-| -------------------------------------------- | -------------------------------------- | --------- | ---------- |
-| [ADR-001](./ADR-001-multi-agent-workflow.md) | Multi-Agent Workflow con Tool Approval | Accettato | 2025-12-14 |
+| ID                                                  | Titolo                                          | Stato        | Data       |
+| --------------------------------------------------- | ----------------------------------------------- | ------------ | ---------- |
+| [ADR-001](./ADR-001-multi-agent-workflow.md)        | Multi-Agent Workflow con Tool Approval          | Accettato    | 2025-12-14 |
+| [ADR-002](./ADR-002-offline-first-sync.md)          | Offline-First Sync Strategy                     | Accettato    | 2025-12-21 |
+| [ADR-003](./ADR-003-pwa-mobile-android-strategy.md) | PWA Mobile Android Strategy per Audit sul Campo | ✅ Accettato | 2026-01-11 |
 
 ## Convenzioni
 
