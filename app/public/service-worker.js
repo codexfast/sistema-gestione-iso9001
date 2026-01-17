@@ -1,0 +1,141 @@
+// Service Worker - SGQ ISO 9001 PWA
+// Strategia: Cache-First per assets, Network-First per API
+
+const CACHE_NAME = 'sgq-iso9001-v1.0.0';
+const API_CACHE = 'sgq-api-v1';
+
+// Assets da cachare per offline
+const STATIC_ASSETS = [
+    '/',
+    '/index.html',
+    '/manifest.json',
+    '/icons/icon-192x192.png',
+    '/icons/icon-512x512.png'
+];
+
+// Install: Pre-cache assets critici
+self.addEventListener('install', (event) => {
+    console.log('[SW] Install event');
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            console.log('[SW] Caching static assets');
+            return cache.addAll(STATIC_ASSETS);
+        }).then(() => {
+            self.skipWaiting(); // Attiva subito nuovo SW
+        })
+    );
+});
+
+// Activate: Cleanup vecchie cache
+self.addEventListener('activate', (event) => {
+    console.log('[SW] Activate event');
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME && cacheName !== API_CACHE) {
+                        console.log('[SW] Deleting old cache:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => {
+            self.clients.claim(); // Prendi controllo di tutti i client
+        })
+    );
+});
+
+// Fetch: Strategia ibrida
+self.addEventListener('fetch', (event) => {
+    const { request } = event;
+    const url = new URL(request.url);
+
+    // API requests: Network-First (con fallback cache)
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    // Cache successful API responses
+                    if (response.ok) {
+                        const responseClone = response.clone();
+                        caches.open(API_CACHE).then((cache) => {
+                            cache.put(request, responseClone);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    // Fallback to cache se network fail
+                    return caches.match(request).then((cached) => {
+                        if (cached) {
+                            console.log('[SW] Serving API from cache (offline):', url.pathname);
+                            return cached;
+                        }
+                        // Se nemmeno in cache, return error response
+                        return new Response(
+                            JSON.stringify({ error: 'Offline - no cached data' }),
+                            {
+                                status: 503,
+                                headers: { 'Content-Type': 'application/json' }
+                            }
+                        );
+                    });
+                })
+        );
+        return;
+    }
+
+    // Static assets: Cache-First
+    event.respondWith(
+        caches.match(request).then((cached) => {
+            if (cached) {
+                console.log('[SW] Serving from cache:', url.pathname);
+                return cached;
+            }
+
+            // Se non in cache, fetch from network
+            return fetch(request).then((response) => {
+                // Cache solo successful responses
+                if (response.ok && request.method === 'GET') {
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(request, responseClone);
+                    });
+                }
+                return response;
+            });
+        })
+    );
+});
+
+// Sync event: Background sync per queue pending
+self.addEventListener('sync', (event) => {
+    console.log('[SW] Background sync event:', event.tag);
+
+    if (event.tag === 'sync-audits') {
+        event.waitUntil(
+            // Frontend gestisce sync tramite SyncService
+            self.clients.matchAll().then((clients) => {
+                clients.forEach((client) => {
+                    client.postMessage({ type: 'SYNC_TRIGGER' });
+                });
+            })
+        );
+    }
+});
+
+// Push notifications (future implementation)
+self.addEventListener('push', (event) => {
+    console.log('[SW] Push received:', event.data?.text());
+
+    const options = {
+        body: event.data?.text() || 'Nuova notifica SGQ',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/badge-72x72.png',
+        vibrate: [200, 100, 200]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification('SGQ ISO 9001', options)
+    );
+});

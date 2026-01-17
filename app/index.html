@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
@@ -76,7 +76,7 @@
     <script>
       // Attiva Eruda solo su mobile o con ?debug=true
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(
-        navigator.userAgent
+        navigator.userAgent,
       );
       const debugMode = window.location.search.includes("debug=true");
 
@@ -86,7 +86,7 @@
         script.onload = () => {
           eruda.init();
           console.log(
-            "🔧 Eruda Mobile Console attivata - Tap icona per aprire"
+            "🔧 Eruda Mobile Console attivata - Tap icona per aprire",
           );
         };
         document.head.appendChild(script);
@@ -96,5 +96,34 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/service-worker.js")
+            .then((reg) => {
+              console.log("✅ Service Worker registered:", reg.scope);
+
+              // Check for updates
+              reg.addEventListener("updatefound", () => {
+                const newWorker = reg.installing;
+                console.log("🔄 New Service Worker installing...");
+                newWorker.addEventListener("statechange", () => {
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
+                    console.log("⚠️ New version available - refresh to update");
+                    // Opzionale: mostra toast per reload
+                  }
+                });
+              });
+            })
+            .catch((err) => console.error("❌ SW registration failed:", err));
+        });
+      }
+    </script>
   </body>
 </html>
