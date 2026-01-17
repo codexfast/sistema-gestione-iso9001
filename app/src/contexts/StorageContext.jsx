@@ -14,7 +14,10 @@ import React, {
 import { MOCK_AUDITS } from "../data/mockAudits";
 import { createNewAudit, validateAuditSchema } from "../data/auditDataModel";
 import { useAutoSaveMultiple } from "../hooks/useAutoSave";
-import { initializeISO9001Checklist } from "../utils/checklistInitializer";
+import {
+  fetchChecklistQuestions,
+  buildChecklistStructure,
+} from "../services/checklistService";
 import {
   createStorageProvider,
   getDeviceInfo,
@@ -109,7 +112,7 @@ export function StorageProvider({ children, useMockData = true }) {
       provider._triggerUpdate = () => forceUpdate({});
 
       console.log(
-        `✅ Storage provider inizializzato: ${deviceInfo.recommendedStorage}`
+        `✅ Storage provider inizializzato: ${deviceInfo.recommendedStorage}`,
       );
     }
     initStorage();
@@ -195,7 +198,7 @@ export function StorageProvider({ children, useMockData = true }) {
 
         console.log(
           "✅ [INIT] Sync iniziale completata, queue size:",
-          queueSize
+          queueSize,
         );
       } catch (error) {
         console.error("❌ [INIT] Errore sync iniziale:", error);
@@ -233,7 +236,7 @@ export function StorageProvider({ children, useMockData = true }) {
         const storedAudits = localStorage.getItem(STORAGE_KEYS.AUDITS);
         if (storedAudits) {
           console.log(
-            "🔄 [MIGRATION] Rilevati audit in localStorage, migrazione in corso..."
+            "🔄 [MIGRATION] Rilevati audit in localStorage, migrazione in corso...",
           );
           try {
             const parsedAudits = JSON.parse(storedAudits);
@@ -250,7 +253,7 @@ export function StorageProvider({ children, useMockData = true }) {
             }
 
             console.log(
-              `✅ [MIGRATION] Migrati ${parsedAudits.length} audit in IndexedDB + sync queue`
+              `✅ [MIGRATION] Migrati ${parsedAudits.length} audit in IndexedDB + sync queue`,
             );
 
             // Rimuovi da localStorage dopo migrazione
@@ -268,7 +271,7 @@ export function StorageProvider({ children, useMockData = true }) {
           setAudits(allAudits);
           setCurrentAuditId(null); // Mostra sempre selector all'avvio
           console.log(
-            `✅ Caricati ${allAudits.length} audit da IndexedDB - selector mode`
+            `✅ Caricati ${allAudits.length} audit da IndexedDB - selector mode`,
           );
 
           // SYNC RECOVERY: Enqueue audit esistenti se non ancora sul server
@@ -303,13 +306,13 @@ export function StorageProvider({ children, useMockData = true }) {
           }
           if (enqueuedCount > 0) {
             console.log(
-              `✅ [SYNC RECOVERY] ${enqueuedCount} audit enqueued per prima sincronizzazione`
+              `✅ [SYNC RECOVERY] ${enqueuedCount} audit enqueued per prima sincronizzazione`,
             );
           }
         } else if (useMockData) {
           // Prima inizializzazione: salva mock data in IndexedDB + ENQUEUE SYNC
           console.log(
-            "🆕 [INIT] Prima inizializzazione, salvo mock data in IndexedDB..."
+            "🆕 [INIT] Prima inizializzazione, salvo mock data in IndexedDB...",
           );
           for (const audit of MOCK_AUDITS) {
             await fsProvider.saveAudit(audit);
@@ -337,7 +340,7 @@ export function StorageProvider({ children, useMockData = true }) {
           setAudits(MOCK_AUDITS);
           setCurrentAuditId(null);
           console.log(
-            `✅ Inizializzato con ${MOCK_AUDITS.length} mock audit in IndexedDB + ${MOCK_AUDITS.length} enqueued per sync`
+            `✅ Inizializzato con ${MOCK_AUDITS.length} mock audit in IndexedDB + ${MOCK_AUDITS.length} enqueued per sync`,
           );
         } else {
           setAudits([]);
@@ -369,7 +372,7 @@ export function StorageProvider({ children, useMockData = true }) {
     // NO più localStorage.setItem! IndexedDB è il Single Source of Truth
     // Salvataggio gestito da useAutoSaveMultiple → fsProvider.saveAudit()
     console.log(
-      `📊 [STATE] ${audits.length} audit in memoria (IndexedDB è il primary storage)`
+      `📊 [STATE] ${audits.length} audit in memoria (IndexedDB è il primary storage)`,
     );
   }, [audits, fsProvider]);
 
@@ -380,6 +383,29 @@ export function StorageProvider({ children, useMockData = true }) {
   //     localStorage.setItem(STORAGE_KEYS.CURRENT_AUDIT_ID, currentAuditId);
   //   }
   // }, [currentAuditId]);
+
+  // === AUTO-INIZIALIZZAZIONE CHECKLIST ===
+  // Quando un nuovo audit viene creato/selezionato, auto-inizializza checklist ISO_9001
+  useEffect(() => {
+    if (
+      currentAudit &&
+      currentAudit.metadata?.selectedStandards?.includes("ISO_9001") &&
+      (!currentAudit.checklist?.ISO_9001 ||
+        Object.keys(currentAudit.checklist.ISO_9001).length === 0)
+    ) {
+      // Ritarda per evitare race condition
+      const timer = setTimeout(() => {
+        console.log(
+          "[StorageContext] Auto-inizializzazione checklist ISO_9001...",
+        );
+        // Usa la reference alla funzione, sarà definita dopo
+        if (typeof window.__initializeChecklistRef === "function") {
+          window.__initializeChecklistRef("ISO_9001");
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [currentAudit]);
 
   // === CRUD OPERATIONS ===
 
@@ -518,7 +544,7 @@ export function StorageProvider({ children, useMockData = true }) {
                   })
                   .then(() => {
                     console.log(
-                      `📤 [SYNC] ${responses.length} risposte enqueued per sync`
+                      `📤 [SYNC] ${responses.length} risposte enqueued per sync`,
                     );
                   })
                   .catch((err) => {
@@ -533,7 +559,7 @@ export function StorageProvider({ children, useMockData = true }) {
         });
       });
     },
-    [currentAuditId]
+    [currentAuditId],
   );
 
   /**
@@ -553,7 +579,7 @@ export function StorageProvider({ children, useMockData = true }) {
       console.warn(`⚠️ Audit not found: ${auditId}`);
       return false;
     },
-    [audits]
+    [audits],
   );
 
   /**
@@ -619,7 +645,7 @@ export function StorageProvider({ children, useMockData = true }) {
         return null;
       }
     },
-    [audits]
+    [audits],
   );
 
   /**
@@ -639,7 +665,7 @@ export function StorageProvider({ children, useMockData = true }) {
         for (const audit of backupData.audits) {
           if (!validateAuditSchema(audit)) {
             console.warn(
-              `⚠️ Audit ${audit.metadata?.auditNumber} non valido, saltato`
+              `⚠️ Audit ${audit.metadata?.auditNumber} non valido, saltato`,
             );
             continue;
           }
@@ -652,14 +678,14 @@ export function StorageProvider({ children, useMockData = true }) {
           // Aggiungi a stato se non esiste già
           setAudits((prev) => {
             const exists = prev.some(
-              (a) => a.metadata?.id === audit.metadata?.id
+              (a) => a.metadata?.id === audit.metadata?.id,
             );
             if (exists) {
               console.log(
-                `ℹ️ Audit ${audit.metadata?.auditNumber} già esistente, aggiornato`
+                `ℹ️ Audit ${audit.metadata?.auditNumber} già esistente, aggiornato`,
               );
               return prev.map((a) =>
-                a.metadata?.id === audit.metadata?.id ? audit : a
+                a.metadata?.id === audit.metadata?.id ? audit : a,
               );
             }
             return [...prev, audit];
@@ -667,7 +693,7 @@ export function StorageProvider({ children, useMockData = true }) {
         }
 
         console.log(
-          `✅ Import completato: ${backupData.audits.length} audit ripristinati`
+          `✅ Import completato: ${backupData.audits.length} audit ripristinati`,
         );
         return { success: true, count: backupData.audits.length };
       } catch (err) {
@@ -676,7 +702,7 @@ export function StorageProvider({ children, useMockData = true }) {
         return { success: false, error: err.message };
       }
     },
-    [fsProvider]
+    [fsProvider],
   );
 
   /**
@@ -697,7 +723,7 @@ export function StorageProvider({ children, useMockData = true }) {
         prevAudits.filter((a) => {
           const id = a.metadata?.id || a.id;
           return id !== auditId;
-        })
+        }),
       );
 
       // Enqueue sync se online
@@ -723,7 +749,7 @@ export function StorageProvider({ children, useMockData = true }) {
       console.log(`✅ Deleted audit: ${audit.metadata.auditNumber}`);
       return true;
     },
-    [audits, currentAuditId]
+    [audits, currentAuditId],
   );
 
   /**
@@ -731,7 +757,7 @@ export function StorageProvider({ children, useMockData = true }) {
    * @param {string} standard - ISO_9001, ISO_14001, ISO_45001
    */
   const initializeChecklist = useCallback(
-    (standard = "ISO_9001") => {
+    async (standard = "ISO_9001") => {
       if (!currentAudit) {
         console.warn("⚠️ No current audit to initialize checklist");
         return false;
@@ -743,41 +769,81 @@ export function StorageProvider({ children, useMockData = true }) {
         return false;
       }
 
-      updateCurrentAudit((audit) => {
-        const updatedAudit = { ...audit };
+      // Verifica se checklist già inizializzata
+      if (
+        currentAudit.checklist?.ISO_9001 &&
+        Object.keys(currentAudit.checklist.ISO_9001).length > 0
+      ) {
+        console.log("ℹ️ Checklist already initialized");
+        return true;
+      }
 
-        // Inizializza checklist ISO 9001 se non esiste
-        if (!updatedAudit.checklist) {
-          updatedAudit.checklist = {};
-        }
+      // Carica checklist dinamicamente da API
+      try {
+        console.log("[StorageContext] Caricamento checklist da API...");
+        const questions = await fetchChecklistQuestions(1); // 1 = ISO 9001
+        const structuredChecklist = buildChecklistStructure(questions);
 
-        if (
-          !updatedAudit.checklist.ISO_9001 ||
-          Object.keys(updatedAudit.checklist.ISO_9001).length === 0
-        ) {
-          updatedAudit.checklist.ISO_9001 = initializeISO9001Checklist();
+        // Converti array in oggetto per compatibilità con struttura esistente
+        const checklistObj = {};
+        structuredChecklist.forEach((clause) => {
+          checklistObj[clause.clauseId] = clause;
+        });
+
+        const totalQuestions = Object.values(checklistObj).reduce(
+          (sum, clause) => sum + (clause.questions?.length || 0),
+          0,
+        );
+
+        // Aggiorna audit con checklist caricata
+        updateCurrentAudit((audit) => {
+          const updatedAudit = { ...audit };
+
+          if (!updatedAudit.checklist) {
+            updatedAudit.checklist = {};
+          }
+
+          updatedAudit.checklist.ISO_9001 = checklistObj;
           updatedAudit.metadata.lastModified = new Date().toISOString();
-
-          // Aggiorna metriche
-          const totalQuestions = Object.values(
-            updatedAudit.checklist.ISO_9001
-          ).reduce((sum, clause) => sum + (clause.questions?.length || 0), 0);
           updatedAudit.metrics.totalQuestions = totalQuestions;
 
-          console.log(
-            `✅ Initialized ISO 9001 checklist (${totalQuestions} questions)`
-          );
-        } else {
-          console.log("ℹ️ Checklist already initialized");
-        }
+          return updatedAudit;
+        });
 
-        return updatedAudit;
-      });
+        console.log(
+          `✅ Initialized ISO 9001 checklist from API (${totalQuestions} questions)`,
+        );
+        return true;
+      } catch (error) {
+        console.error("❌ Errore caricamento checklist da API:", error);
 
-      return true;
+        // Fallback: inizializza con struttura vuota
+        updateCurrentAudit((audit) => {
+          const updatedAudit = { ...audit };
+
+          if (!updatedAudit.checklist) {
+            updatedAudit.checklist = {};
+          }
+
+          updatedAudit.checklist.ISO_9001 = {};
+          updatedAudit.metrics.totalQuestions = 0;
+
+          return updatedAudit;
+        });
+
+        return false;
+      }
     },
-    [currentAudit, updateCurrentAudit]
+    [currentAudit, updateCurrentAudit],
   );
+
+  // Registra reference globale per useEffect
+  useEffect(() => {
+    window.__initializeChecklistRef = initializeChecklist;
+    return () => {
+      delete window.__initializeChecklistRef;
+    };
+  }, [initializeChecklist]);
 
   /**
    * Reset a mock data (per testing)

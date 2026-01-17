@@ -19,4 +19,7 @@ router.get('/standards/statistics/overview', standardController.getStandardsStat
 // GET /api/v1/standards/:id - Dettagli singolo standard
 router.get('/standards/:id', standardController.getStandardById);
 
+// GET /api/v1/standards/:id/questions - Checklist questions per standard
+router.get('/standards/:id/questions', standardController.getQuestions);
+
 module.exports = router;

@@ -176,10 +176,96 @@ async function getStandardsStatistics(req, res) {
     }
 }
 
+/**
+ * GET /api/v1/standards/:id/questions
+ * Ottiene tutte le domande della checklist per uno standard specifico
+ * 
+ * @param {number} id - standard_id (1 = ISO 9001, 2 = ISO 14001, etc.)
+ * @returns {Array} Lista domande con section_code, question_text, display_order
+ */
+async function getQuestions(req, res) {
+    try {
+        const { id } = req.params;
+
+        // Verifica esistenza standard
+        const standardCheck = await query(`
+            SELECT standard_id, standard_name, is_active
+            FROM standards
+            WHERE standard_id = @standardId
+        `, { standardId: id });
+
+        if (standardCheck.recordset.length === 0) {
+            return res.status(404).json({
+                error: 'Standard non trovato',
+                code: 'STANDARD_NOT_FOUND'
+            });
+        }
+
+        if (!standardCheck.recordset[0].is_active) {
+            return res.status(400).json({
+                error: 'Standard non attivo',
+                code: 'STANDARD_INACTIVE'
+            });
+        }
+
+        // Ottieni domande checklist
+        const questionsResult = await query(`
+            SELECT 
+                cq.question_id,
+                cq.section_code,
+                cs.section_title,
+                cq.question_text,
+                cq.question_type,
+                cq.is_mandatory,
+                cq.display_order,
+                cq.created_at,
+                cq.updated_at
+            FROM checklist_questions cq
+            LEFT JOIN checklist_sections cs ON cq.section_code = cs.section_code 
+                AND cs.standard_id = cq.standard_id
+            WHERE cq.standard_id = @standardId 
+                AND cq.is_active = 1
+            ORDER BY cq.display_order
+        `, { standardId: id });
+
+        const questions = questionsResult.recordset;
+
+        logger.info('Checklist questions retrieved', {
+            standardId: id,
+            standardName: standardCheck.recordset[0].standard_name,
+            questionCount: questions.length
+        });
+
+        res.json({
+            success: true,
+            data: {
+                standard: {
+                    id: parseInt(id),
+                    name: standardCheck.recordset[0].standard_name
+                },
+                questions: questions,
+                count: questions.length
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error getting questions for standard', {
+            standardId: req.params.id,
+            error: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({
+            error: 'Errore durante il recupero delle domande',
+            code: 'QUESTIONS_GET_ERROR'
+        });
+    }
+}
+
 module.exports = {
     listStandards,
     getStandardById,
-    getStandardsStatistics
+    getStandardsStatistics,
+    getQuestions
 };
 
 
