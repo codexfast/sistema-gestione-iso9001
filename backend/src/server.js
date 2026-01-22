@@ -85,8 +85,8 @@ app.get('/', (req, res) => {
     });
 });
 
-// Health check
-app.get('/health', async (req, res) => {
+// Health check (root e API)
+const healthCheckHandler = async (req, res) => {
     const { healthCheck } = require('./config/database');
     const dbHealth = await healthCheck();
 
@@ -96,12 +96,15 @@ app.get('/health', async (req, res) => {
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
     });
-});
+};
+
+app.get('/health', healthCheckHandler);
 
 // API routes
 const API_BASE = process.env.API_BASE_PATH || '/api/v1';
 
 // Endpoint pubblici (no auth) - DEVONO venire PRIMA delle altre routes
+app.get(`${API_BASE}/health`, healthCheckHandler); // Health check API
 const responseController = require('./controllers/response.controller');
 app.get(`${API_BASE}/response-options`, responseController.getResponseOptions);
 
