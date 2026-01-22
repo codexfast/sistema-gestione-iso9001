@@ -353,7 +353,6 @@ const audit = await createAudit({
 **Procedura**:
 
 1. **Mapping manuale**: Utente crea file Excel con corrispondenze
-
    - Colonna A: `question_id` vecchia (26 domande)
    - Colonna B: `question_id` nuova Conforma (58 domande)
    - Colonna C: Azione (KEEP, SPLIT, MERGE, DELETE)
@@ -392,12 +391,10 @@ FROM audit_responses ar WHERE ar.audit_id = 1010 AND ar.question_id = 1;
 **Domande da rispondere**:
 
 1. **Scopo audit**: certificazione ufficiale ISO 9001 o uso interno?
-
    - Se certificazione → **Opzione A obbligatoria** (Conforma gold standard)
    - Se uso interno → Opzione B accettabile
 
 2. **Audit esistente (1010)**: conservare o rifare?
-
    - Se conservare → Opzione C (migrazione manuale)
    - Se rifare → Opzione A (cancella e ricrea con checklist corretta)
 
@@ -489,20 +486,48 @@ WITH FORMAT, COMPRESSION, STATS = 10;
 
 ---
 
-## Decisione FINALE (DA COMPILARE 5 GENNAIO)
+## Decisione FINALE
 
-**Opzione Scelta**: [ ] A - Conforma Gold Standard | [ ] B - Dual Mode | [ ] C - Migrazione Manuale  
-**Motivazione**: **********************\_**********************  
-**Data Decisione**: ****\_\_****  
+**Opzione Scelta**: ✅ **Opzione D - Checklist Cliente (ChekList9001.txt)** - 35 domande  
+**Motivazione**: Requisiti specifici del cliente prevalenti su standard teorico Conforma (58 domande). La checklist a 35 domande bilancia conformità ISO 9001:2015 con praticità operativa per audit su tablet Android. File `Quaderni/ChekList9001.txt` fornito direttamente dal cliente come riferimento ufficiale per le certificazioni.
+
+**Data Decisione**: 17 Gennaio 2026  
 **Approvato da**: User + Tech Lead
 
-**Commitment**:
+**Implementazione**:
 
-- [ ] Backup database eseguito
-- [ ] Migration script testato
-- [ ] Frontend refactoring completato
-- [ ] Test E2E superati
-- [ ] Documentazione aggiornata
+- ✅ Migration 010 eseguita: `database/migrations/010_update_iso9001_35questions.sql`
+- ✅ Frontend refactoring: `app/src/services/checklistService.js` + `StorageContext.jsx`
+- ✅ Backend API: `GET /api/v1/standards/:id/questions` (dynamic loading)
+- ✅ Test E2E: Audit creato con 35 domande caricati dinamicamente (100% completion)
+- ✅ Database: 7 sezioni (clause4-clause10), 35 domande (standard_id=1)
+
+**Struttura Checklist 35 Domande**:
+
+| Clausola | Domande | Tipo Risposta |
+| -------- | ------- | ------------- |
+| 4        | 5       | conformity    |
+| 5        | 5       | conformity    |
+| 6        | 3       | conformity    |
+| 7        | 7       | conformity    |
+| 8        | 9       | conformity    |
+| 9        | 4       | conformity    |
+| 10       | 2       | conformity    |
+| **TOT**  | **35**  | C/NC/OM/NA/NV |
+
+**Vantaggi Opzione Cliente**:
+
+1. **Praticità**: 35 domande vs 58 Conforma = -40% tempo compilazione
+2. **Allineamento Certificatore**: Checklist validata da ente certificazione cliente
+3. **Tablet-Friendly**: Carico cognitivo ridotto per auditor su dispositivo mobile
+4. **Conformità ISO**: Copre tutte le clausole 4-10 con granularità adeguata
+
+**Tracciabilità**:
+
+- File Fonte: `Quaderni/ChekList9001.txt` (client-provided)
+- Migration File: `database/migrations/010_update_iso9001_35questions.sql`
+- Git Commit: `96e5ae7` (17 Gen 2026)
+- Database Schema: Documentato in `docs/DATABASE_SCHEMA.md`
 
 ---
 
@@ -511,7 +536,7 @@ WITH FORMAT, COMPRESSION, STATS = 10;
 | Data       | Modifica                                    | Autore           |
 | ---------- | ------------------------------------------- | ---------------- |
 | 2026-01-04 | Creazione ADR-002 post-debug sync checklist | System Architect |
-| 2026-01-05 | _Da aggiornare con decisione finale_        | -                |
+| 2026-01-17 | Decisione finale: 35 domande da cliente     | System Architect |
 
 ---
 

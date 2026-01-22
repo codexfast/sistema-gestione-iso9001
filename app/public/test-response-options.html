@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Response Options API - Step 1.6</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 900px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .test-container {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+      }
+      .status {
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .status.loading {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .options-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .option-card {
+        background: #f8f9fa;
+        border-left: 4px solid;
+        padding: 15px;
+        border-radius: 4px;
+      }
+      .option-card.C {
+        border-left-color: #28a745;
+      }
+      .option-card.NC {
+        border-left-color: #dc3545;
+      }
+      .option-card.OSS {
+        border-left-color: #ffc107;
+      }
+      .option-card.OM {
+        border-left-color: #17a2b8;
+      }
+      .option-card.NA {
+        border-left-color: #6c757d;
+      }
+      .option-card.NV {
+        border-left-color: #6c757d;
+      }
+      .option-code {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .option-name {
+        font-size: 14px;
+        color: #495057;
+      }
+      .option-details {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 10px;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        max-height: 400px;
+      }
+      button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px 5px;
+      }
+      button:hover {
+        background: #2980b9;
+      }
+      button:disabled {
+        background: #95a5a6;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>🧪 Test API Response Options - Step 1.6</h1>
+
+      <div id="status" class="status loading">⏳ Inizializzazione test...</div>
+
+      <div style="margin: 20px 0">
+        <button onclick="testAPI()">🔄 Ricarica Opzioni</button>
+        <button onclick="showRawJSON()">📄 Mostra JSON Raw</button>
+      </div>
+
+      <div id="results"></div>
+    </div>
+
+    <script>
+      // Configurazione API
+      const API_BASE =
+        window.location.hostname === "localhost"
+          ? "http://localhost:10443/api/v1"
+          : "https://www.fr-busato.it:10443/api/v1";
+
+      let cachedOptions = null;
+
+      async function testAPI() {
+        const statusDiv = document.getElementById("status");
+        const resultsDiv = document.getElementById("results");
+
+        try {
+          statusDiv.className = "status loading";
+          statusDiv.textContent =
+            "⏳ Caricamento opzioni da " + API_BASE + "...";
+          resultsDiv.innerHTML = "";
+
+          const response = await fetch(`${API_BASE}/response-options`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.data) {
+            cachedOptions = data.data;
+            displayOptions(data.data);
+            statusDiv.className = "status success";
+            statusDiv.innerHTML = `✅ <strong>${data.data.length} opzioni caricate con successo</strong> dal backend`;
+          } else {
+            throw new Error("Risposta senza dati validi");
+          }
+        } catch (error) {
+          statusDiv.className = "status error";
+          statusDiv.innerHTML = `❌ <strong>Errore:</strong> ${error.message}`;
+          resultsDiv.innerHTML = `
+                    <pre style="background: #fff3cd; color: #856404; padding: 15px;">
+<strong>Possibili Cause:</strong>
+1. Backend non in esecuzione su porta 10443
+2. CORS non configurato correttamente
+3. Endpoint non disponibile
+
+<strong>Comando per avviare backend:</strong>
+cd backend
+npm start
+
+<strong>Verifica endpoint:</strong>
+curl http://localhost:10443/api/v1/response-options
+                    </pre>
+                `;
+          console.error("Test API Error:", error);
+        }
+      }
+
+      function displayOptions(options) {
+        const resultsDiv = document.getElementById("results");
+
+        let html = "<h2>📊 Opzioni Caricate</h2>";
+        html += '<div class="options-grid">';
+
+        options.forEach((opt) => {
+          html += `
+                    <div class="option-card ${opt.option_code}">
+                        <div class="option-code">${opt.option_code}</div>
+                        <div class="option-name">${opt.option_name_it}</div>
+                        <div class="option-details">
+                            <strong>EN:</strong> ${opt.option_name_en}<br>
+                            <strong>Severity:</strong> ${opt.severity_level}<br>
+                            <strong>Weight:</strong> ${
+                              opt.weight_percentage !== null
+                                ? opt.weight_percentage + "%"
+                                : "N/A"
+                            }<br>
+                            <strong>Exclude:</strong> ${
+                              opt.exclude_from_calc ? "Sì" : "No"
+                            }<br>
+                            <strong>Order:</strong> ${opt.display_order}
+                        </div>
+                    </div>
+                `;
+        });
+
+        html += "</div>";
+
+        // Verifica copertura
+        html += '<h3 style="margin-top: 30px;">✅ Checklist Validazione</h3>';
+        html += "<ul>";
+
+        const codes = options.map((o) => o.option_code);
+        const expectedCodes = ["C", "NC", "OSS", "OM", "NA", "NV"];
+
+        expectedCodes.forEach((code) => {
+          const found = codes.includes(code);
+          html += `<li>${
+            found ? "✅" : "❌"
+          } Opzione <strong>${code}</strong> ${
+            found ? "presente" : "MANCANTE"
+          }</li>`;
+        });
+
+        const ordered = options.every(
+          (opt, i) =>
+            i === 0 || opt.display_order >= options[i - 1].display_order
+        );
+        html += `<li>${ordered ? "✅" : "❌"} Ordinamento per display_order ${
+          ordered ? "corretto" : "ERRATO"
+        }</li>`;
+
+        const hasColors = options.every(
+          (opt) =>
+            opt.color_hex ||
+            opt.option_code === "NV" ||
+            opt.option_code === "NA"
+        );
+        html += `<li>${hasColors ? "✅" : "⚠️"} Colori UI ${
+          hasColors ? "presenti" : "da verificare"
+        }</li>`;
+
+        html += "</ul>";
+
+        resultsDiv.innerHTML = html;
+      }
+
+      function showRawJSON() {
+        if (!cachedOptions) {
+          alert('Carica prima le opzioni cliccando "Ricarica Opzioni"');
+          return;
+        }
+
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = `
+                <h2>📄 JSON Raw Response</h2>
+                <pre>${JSON.stringify(
+                  { success: true, data: cachedOptions },
+                  null,
+                  2
+                )}</pre>
+                <button onclick="displayOptions(cachedOptions)">← Torna a Vista Griglia</button>
+            `;
+      }
+
+      // Esegui test automaticamente al caricamento
+      window.addEventListener("DOMContentLoaded", () => {
+        console.log("🧪 Test Response Options API - Step 1.6");
+        console.log("API Base URL:", API_BASE);
+        testAPI();
+      });
+    </script>
+  </body>
+</html>

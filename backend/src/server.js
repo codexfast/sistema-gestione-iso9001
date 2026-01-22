@@ -53,15 +53,15 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Rate limiting
+// Rate limiting (disabilitato per testing locale - riabilitare in produzione)
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 min
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 10000, // Aumentato per testing locale (era 100)
     message: 'Troppi request da questo IP, riprova più tardi',
     standardHeaders: true,
     legacyHeaders: false,
 });
-app.use('/api/', limiter);
+// app.use('/api/', limiter); // COMMENTATO per testing locale
 
 // Request logging
 app.use((req, res, next) => {
@@ -100,6 +100,12 @@ app.get('/health', async (req, res) => {
 
 // API routes
 const API_BASE = process.env.API_BASE_PATH || '/api/v1';
+
+// Endpoint pubblici (no auth) - DEVONO venire PRIMA delle altre routes
+const responseController = require('./controllers/response.controller');
+app.get(`${API_BASE}/response-options`, responseController.getResponseOptions);
+
+// Endpoint autenticati
 app.use(API_BASE, authRoutes);
 app.use(API_BASE, auditRoutes);
 app.use(API_BASE, responseRoutes);

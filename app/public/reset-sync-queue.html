@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reset Sync Queue - SGQ ISO 9001</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 100%;
+        padding: 40px;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+
+      .warning {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+      }
+
+      .warning strong {
+        color: #856404;
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .warning p {
+        color: #856404;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .info {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        padding: 15px;
+        margin-bottom: 30px;
+        border-radius: 4px;
+      }
+
+      .info p {
+        color: #0c5460;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+
+      .info p:last-child {
+        margin-bottom: 0;
+      }
+
+      button {
+        width: 100%;
+        padding: 15px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 10px;
+      }
+
+      button:hover:not(:disabled) {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .success {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
+        margin-top: 20px;
+      }
+
+      .success p {
+        color: #155724;
+        font-weight: 500;
+      }
+
+      .error {
+        background: #f8d7da;
+        border-left: 4px solid #dc3545;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
+        margin-top: 20px;
+      }
+
+      .error p {
+        color: #721c24;
+        font-weight: 500;
+      }
+
+      .log {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        display: none;
+      }
+
+      .log-entry {
+        margin-bottom: 5px;
+        color: #495057;
+      }
+
+      .log-entry.success {
+        color: #28a745;
+      }
+
+      .log-entry.error {
+        color: #dc3545;
+      }
+
+      .back-button {
+        background: #6c757d;
+        margin-top: 10px;
+      }
+
+      .back-button:hover:not(:disabled) {
+        background: #5a6268;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔧 Reset Sync Queue</h1>
+      <p class="subtitle">Utility per risolvere problemi di sincronizzazione</p>
+
+      <div class="warning">
+        <strong>⚠️ Attenzione</strong>
+        <p>
+          Questa operazione cancellerà tutti gli elementi in attesa di
+          sincronizzazione dalla coda locale. I dati già sincronizzati con il
+          server NON saranno eliminati.
+        </p>
+      </div>
+
+      <div class="info">
+        <p><strong>Quando usare questa utility:</strong></p>
+        <p>• Errori HTTP 429 (Too Many Requests)</p>
+        <p>• Errori 409 (Conflict) ripetuti</p>
+        <p>• Sync queue corrotta con item duplicati</p>
+        <p>• Sincronizzazione bloccata</p>
+      </div>
+
+      <button id="resetBtn" onclick="resetSyncQueue()">
+        🗑️ Pulisci Sync Queue
+      </button>
+
+      <button class="back-button" onclick="goBack()">
+        ← Torna all'applicazione
+      </button>
+
+      <div id="successMsg" class="success">
+        <p>
+          ✅ Sync queue pulita con successo! La pagina verrà ricaricata tra 3
+          secondi...
+        </p>
+      </div>
+
+      <div id="errorMsg" class="error">
+        <p id="errorText"></p>
+      </div>
+
+      <div id="log" class="log"></div>
+    </div>
+
+    <script>
+      function log(message, type = "info") {
+        const logDiv = document.getElementById("log");
+        logDiv.style.display = "block";
+
+        const entry = document.createElement("div");
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logDiv.appendChild(entry);
+
+        // Auto-scroll to bottom
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      async function resetSyncQueue() {
+        const button = document.getElementById("resetBtn");
+        const successMsg = document.getElementById("successMsg");
+        const errorMsg = document.getElementById("errorMsg");
+        const errorText = document.getElementById("errorText");
+
+        // Reset UI
+        button.disabled = true;
+        button.textContent = "⏳ Pulizia in corso...";
+        successMsg.style.display = "none";
+        errorMsg.style.display = "none";
+        document.getElementById("log").innerHTML = "";
+
+        try {
+          log("🔍 Apertura database IndexedDB...");
+
+          const request = indexedDB.open("SGQ_ISO9001");
+
+          request.onerror = () => {
+            throw new Error("Impossibile aprire il database IndexedDB");
+          };
+
+          request.onsuccess = async (event) => {
+            try {
+              const db = event.target.result;
+              log("✅ Database aperto", "success");
+
+              // Verifica che esista l'object store syncQueue
+              if (!db.objectStoreNames.contains("syncQueue")) {
+                throw new Error('Object store "syncQueue" non trovato');
+              }
+
+              log("🔍 Lettura sync queue corrente...");
+
+              // Prima leggiamo quanti item ci sono
+              const readTx = db.transaction(["syncQueue"], "readonly");
+              const readStore = readTx.objectStore("syncQueue");
+              const countRequest = readStore.count();
+
+              countRequest.onsuccess = async () => {
+                const count = countRequest.result;
+                log(`📊 Trovati ${count} item in sync queue`);
+
+                if (count === 0) {
+                  log("ℹ️ Sync queue già vuota", "info");
+                  successMsg.style.display = "block";
+                  button.textContent = "✅ Completato";
+                  button.disabled = false;
+
+                  setTimeout(() => {
+                    window.location.href = "/";
+                  }, 3000);
+                  return;
+                }
+
+                // Procediamo con la cancellazione
+                log(`🗑️ Cancellazione ${count} item...`);
+
+                const tx = db.transaction(["syncQueue"], "readwrite");
+                const store = tx.objectStore("syncQueue");
+                const clearRequest = store.clear();
+
+                clearRequest.onsuccess = () => {
+                  log(`✅ ${count} item rimossi con successo`, "success");
+                  log("✅ Sync queue pulita!", "success");
+
+                  successMsg.style.display = "block";
+                  button.textContent = "✅ Completato";
+
+                  // Ricarica la pagina dopo 3 secondi
+                  setTimeout(() => {
+                    log("🔄 Reindirizzamento...", "info");
+                    window.location.href = "/";
+                  }, 3000);
+                };
+
+                clearRequest.onerror = () => {
+                  throw new Error(
+                    "Errore durante la cancellazione della sync queue"
+                  );
+                };
+              };
+
+              countRequest.onerror = () => {
+                throw new Error("Errore durante il conteggio degli item");
+              };
+            } catch (error) {
+              throw error;
+            }
+          };
+        } catch (error) {
+          log(`❌ Errore: ${error.message}`, "error");
+          errorText.textContent = `❌ Errore: ${error.message}`;
+          errorMsg.style.display = "block";
+          button.textContent = "🔧 Riprova";
+          button.disabled = false;
+        }
+      }
+
+      function goBack() {
+        window.location.href = "/";
+      }
+
+      // Log iniziale
+      window.addEventListener("DOMContentLoaded", () => {
+        log("🚀 Utility di reset pronta");
+        log("ℹ️ Questa pagina pulirà la sync queue locale");
+      });
+    </script>
+  </body>
+</html>

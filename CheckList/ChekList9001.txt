@@ -1,0 +1,37 @@
+Colonna1	Colonna2	Colonna3
+ID	P.to Norma	Quesito
+1	4.1 	Comprendere l'Organizzazione e il suo contesto
+2	4.2 	Esigenze e aspettative delle parti interessate
+3	4.3 	Campo di applicazione 
+4	4.4 	Informazioni necessarie per supportare l’attuazione dei processi
+5	5.1 	Leadership E Impegno
+6	5.2.1 	Politica per la Qualità
+7	5.2.2 	Comunicazione della Politica per la Qualità
+8	5.3 	Ruoli organizzativi, responsabilità e autorità
+9	6.1 	Azioni per affrontare rischi e opportunita
+10	6.2 	Obiettivi per la Qualità
+11	7.1.2 	Persone
+12	7.1.3 	Infrastruttura
+13	7.1.4 	Ambiente
+14	7.1.5.1 	Idoneità allo scopo delle risorse per il monitoraggio e la misurazione
+15	7.1.5.2 	Riferibilità metrologica per la taratura/verifica delle apparecchiature di misura
+16	7.2 	Evidenza delle competenze del personale
+17	7.3 	Consapevolezza
+18	7.4 	Comunicazione
+19	7.5 	Informazioni Documentate
+20	8.2 	Requisiti per prodotti e servizi
+21	8.2.3 	Riesame dei requisiti
+22	8.3. 	Progettazione
+23	8.4.1 	Valutazione, selezione, monitoraggio delle prestazioni e rivalutazione dei fornitori esterni
+24	8.5.2 	Rintracciabilità degli output
+25	8.5.3 	Proprietà del cliente/fornitore
+26	8.5.5 	Post vendita
+27	8.5.6 	Controllo delle modifiche
+28	8.6 	Rilascio dei prodotti/servizi
+29	8.7.2 	Descrizione delle Non Conformità, Azioni adottate, concessioni ottenute.
+30	9.1.1 	Valutazione delle prestazioni del SGQ (KPI)
+31	9.1.2 	Customer Satisfaction
+32	9.2.2 	Attuazione del programma di audit e risultati di audit
+33	9.3.3 	Risultati dei Riesami di Direzione
+34	10.2 	Non conformità e Azioni Correttive
+35	10.3 	Miglioramento continuo

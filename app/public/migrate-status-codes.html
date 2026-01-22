@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrazione Codici Status - SGQ ISO 9001</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 700px;
+        width: 100%;
+        padding: 40px;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+      .warning {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+      }
+      .warning strong {
+        color: #856404;
+        display: block;
+        margin-bottom: 5px;
+      }
+      .info {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+      }
+      .info p {
+        color: #0c5460;
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      .mapping {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .mapping-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+      .mapping-row:last-child {
+        border-bottom: none;
+      }
+      .old-value {
+        color: #dc3545;
+        font-family: monospace;
+      }
+      .new-value {
+        color: #28a745;
+        font-family: monospace;
+        font-weight: 600;
+      }
+      button {
+        width: 100%;
+        padding: 15px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 10px;
+      }
+      button:hover:not(:disabled) {
+        background: #218838;
+        transform: translateY(-2px);
+      }
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+      #log {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 20px;
+        display: none;
+      }
+      .log-entry {
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .log-info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      .log-success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .log-warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .log-error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .timestamp {
+        font-size: 12px;
+        color: #6c757d;
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔄 Migrazione Codici Status</h1>
+      <p class="subtitle">
+        Migration 007: Allineamento con response_options DB
+      </p>
+
+      <div class="warning">
+        <strong>⚠️ Attenzione</strong>
+        <p>
+          Questa utility migra i codici status obsoleti in IndexedDB ai nuovi
+          valori conformi alla Migration 007.
+        </p>
+      </div>
+
+      <div class="info">
+        <p><strong>Cosa fa questa migrazione:</strong></p>
+        <p>• Converte 'compliant' → 'C' (Conforme)</p>
+        <p>• Converte 'non_compliant' → 'NC' (Non Conforme)</p>
+        <p>• Converte 'partial' → 'OSS' (Osservazione)</p>
+        <p>• Converte 'not_applicable' → 'NA' (Non Applicabile)</p>
+        <p>• Rimuove elementi dalla sync queue con status obsoleti</p>
+      </div>
+
+      <div class="mapping">
+        <h3 style="margin-bottom: 15px; color: #333">Mapping Conversione:</h3>
+        <div class="mapping-row">
+          <span class="old-value">compliant</span>
+          <span>→</span>
+          <span class="new-value">C</span>
+        </div>
+        <div class="mapping-row">
+          <span class="old-value">non_compliant</span>
+          <span>→</span>
+          <span class="new-value">NC</span>
+        </div>
+        <div class="mapping-row">
+          <span class="old-value">partial</span>
+          <span>→</span>
+          <span class="new-value">OSS</span>
+        </div>
+        <div class="mapping-row">
+          <span class="old-value">not_applicable</span>
+          <span>→</span>
+          <span class="new-value">NA</span>
+        </div>
+      </div>
+
+      <button id="migrateBtn">🚀 Avvia Migrazione</button>
+
+      <div id="log"></div>
+    </div>
+
+    <script>
+      const STATUS_MAPPING = {
+        compliant: "C",
+        non_compliant: "NC",
+        partial: "OSS",
+        not_applicable: "NA",
+      };
+
+      function log(message, type = "info") {
+        const logContainer = document.getElementById("log");
+        logContainer.style.display = "block";
+
+        const entry = document.createElement("div");
+        entry.className = `log-entry log-${type}`;
+
+        const timestamp = new Date().toLocaleTimeString("it-IT");
+        entry.innerHTML = `<span class="timestamp">${timestamp}</span>${message}`;
+
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      function migrateQuestionStatus(question) {
+        if (question.status && STATUS_MAPPING[question.status]) {
+          const oldStatus = question.status;
+          question.status = STATUS_MAPPING[oldStatus];
+          return { migrated: true, from: oldStatus, to: question.status };
+        }
+        return { migrated: false };
+      }
+
+      function migrateAuditChecklist(audit) {
+        let migratedCount = 0;
+        const migrations = [];
+
+        if (!audit.checklist) return { count: 0, details: [] };
+
+        // Itera su ogni norma (ISO_9001, ISO_14001, ecc.)
+        Object.entries(audit.checklist).forEach(([normKey, normData]) => {
+          // Itera su ogni clausola
+          Object.entries(normData).forEach(([clauseKey, clauseData]) => {
+            if (!clauseData.questions || !Array.isArray(clauseData.questions))
+              return;
+
+            // Itera su ogni domanda
+            clauseData.questions.forEach((question) => {
+              const result = migrateQuestionStatus(question);
+              if (result.migrated) {
+                migratedCount++;
+                migrations.push({
+                  clause: clauseKey,
+                  from: result.from,
+                  to: result.to,
+                });
+              }
+            });
+          });
+        });
+
+        return { count: migratedCount, details: migrations };
+      }
+
+      async function migrateDatabase() {
+        log("🔍 Apertura database IndexedDB...", "info");
+
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open("SGQ_ISO9001");
+
+          request.onerror = () => {
+            log("❌ Errore apertura database: " + request.error, "error");
+            reject(request.error);
+          };
+
+          request.onsuccess = async (event) => {
+            const db = event.target.result;
+            log("✅ Database aperto con successo", "success");
+
+            try {
+              // STEP 1: Migra audits
+              log("📋 Migrazione audits in corso...", "info");
+              const auditsTx = db.transaction(["audits"], "readwrite");
+              const auditsStore = auditsTx.objectStore("audits");
+              const auditsRequest = auditsStore.getAll();
+
+              auditsRequest.onsuccess = async () => {
+                const audits = auditsRequest.result;
+                log(`📊 Trovati ${audits.length} audit da controllare`, "info");
+
+                let totalMigrated = 0;
+
+                for (const audit of audits) {
+                  const result = migrateAuditChecklist(audit);
+                  if (result.count > 0) {
+                    totalMigrated += result.count;
+                    log(
+                      `🔄 Audit "${audit.metadata?.auditNumber || audit.id}": ${
+                        result.count
+                      } status migrati`,
+                      "info"
+                    );
+
+                    // Salva audit aggiornato
+                    auditsStore.put(audit);
+                  }
+                }
+
+                if (totalMigrated > 0) {
+                  log(`✅ Totale status migrati: ${totalMigrated}`, "success");
+                } else {
+                  log("ℹ️ Nessun status da migrare (già aggiornato)", "info");
+                }
+
+                // STEP 2: Pulisci sync queue
+                log("🗑️ Pulizia sync queue...", "info");
+                const syncTx = db.transaction(["syncQueue"], "readwrite");
+                const syncStore = syncTx.objectStore("syncQueue");
+                const syncRequest = syncStore.clear();
+
+                syncRequest.onsuccess = () => {
+                  log("✅ Sync queue pulita", "success");
+                  log("", "info");
+                  log("🎉 Migrazione completata con successo!", "success");
+                  log("Redirect alla home in 3 secondi...", "info");
+
+                  setTimeout(() => {
+                    window.location.href = "/";
+                  }, 3000);
+
+                  resolve({ totalMigrated });
+                };
+
+                syncRequest.onerror = () => {
+                  log(
+                    "❌ Errore pulizia sync queue: " + syncRequest.error,
+                    "error"
+                  );
+                  reject(syncRequest.error);
+                };
+              };
+
+              auditsRequest.onerror = () => {
+                log(
+                  "❌ Errore lettura audits: " + auditsRequest.error,
+                  "error"
+                );
+                reject(auditsRequest.error);
+              };
+            } catch (error) {
+              log("❌ Errore durante migrazione: " + error.message, "error");
+              reject(error);
+            }
+          };
+        });
+      }
+
+      document
+        .getElementById("migrateBtn")
+        .addEventListener("click", async () => {
+          const btn = document.getElementById("migrateBtn");
+          btn.disabled = true;
+          btn.textContent = "⏳ Migrazione in corso...";
+
+          try {
+            await migrateDatabase();
+          } catch (error) {
+            log("❌ Migrazione fallita: " + error.message, "error");
+            btn.textContent = "🚀 Riprova Migrazione";
+            btn.disabled = false;
+          }
+        });
+    </script>
+  </body>
+</html>

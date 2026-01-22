@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndexedDB Inspector - SGQ ISO 9001</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1000px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+      }
+      .db-info {
+        background: #e7f3ff;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .store-list {
+        margin: 20px 0;
+      }
+      .store-item {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .store-name {
+        font-weight: bold;
+        color: #28a745;
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      .store-details {
+        font-size: 14px;
+        color: #6c757d;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+      button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px 5px 10px 0;
+      }
+      button:hover {
+        background: #2980b9;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 IndexedDB Inspector</h1>
+
+      <div id="results"></div>
+
+      <button onclick="inspectDatabase()">🔄 Ispeziona Database</button>
+      <button onclick="listAllDatabases()">📊 Elenca Tutti i Database</button>
+    </div>
+
+    <script>
+      async function listAllDatabases() {
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "<h2>📚 Database Disponibili</h2>";
+
+        try {
+          const databases = await indexedDB.databases();
+
+          if (databases.length === 0) {
+            resultsDiv.innerHTML +=
+              '<div class="error">❌ Nessun database IndexedDB trovato</div>';
+            return;
+          }
+
+          resultsDiv.innerHTML += `<div class="success">✅ Trovati ${databases.length} database</div>`;
+
+          databases.forEach((db) => {
+            resultsDiv.innerHTML += `
+                        <div class="store-item">
+                            <div class="store-name">${db.name}</div>
+                            <div class="store-details">Versione: ${
+                              db.version || "N/A"
+                            }</div>
+                        </div>
+                    `;
+          });
+        } catch (error) {
+          resultsDiv.innerHTML += `<div class="error">❌ Errore: ${error.message}</div>`;
+        }
+      }
+
+      async function inspectDatabase() {
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = '<h2>🔍 Ispezione Database "SGQ_ISO9001"</h2>';
+        resultsDiv.innerHTML += "<p>⏳ Apertura database...</p>";
+
+        const request = indexedDB.open("SGQ_ISO9001");
+
+        request.onerror = () => {
+          resultsDiv.innerHTML += `<div class="error">❌ Errore apertura database: ${request.error}</div>`;
+        };
+
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+
+          resultsDiv.innerHTML = "<h2>✅ Database Aperto</h2>";
+
+          resultsDiv.innerHTML += `
+                    <div class="db-info">
+                        <strong>Nome:</strong> ${db.name}<br>
+                        <strong>Versione:</strong> ${db.version}<br>
+                        <strong>Object Stores:</strong> ${db.objectStoreNames.length}
+                    </div>
+                `;
+
+          if (db.objectStoreNames.length === 0) {
+            resultsDiv.innerHTML +=
+              '<div class="error">❌ Nessun Object Store trovato nel database!</div>';
+            resultsDiv.innerHTML +=
+              "<p><strong>Possibile causa:</strong> Database non inizializzato. Prova ad aprire l'app principale prima.</p>";
+            db.close();
+            return;
+          }
+
+          resultsDiv.innerHTML += "<h3>📦 Object Stores Disponibili:</h3>";
+          resultsDiv.innerHTML += '<div class="store-list">';
+
+          const storeNames = Array.from(db.objectStoreNames);
+
+          storeNames.forEach((storeName) => {
+            resultsDiv.innerHTML += `
+                        <div class="store-item">
+                            <div class="store-name">📁 ${storeName}</div>
+                            <button onclick="inspectStore('${storeName}')">🔍 Ispeziona Contenuto</button>
+                        </div>
+                    `;
+          });
+
+          resultsDiv.innerHTML += "</div>";
+
+          // Verifica stores necessari per migrazione
+          resultsDiv.innerHTML += "<h3>✅ Verifica Stores per Migrazione:</h3>";
+
+          const requiredStores = ["audits", "syncQueue"];
+          const missingStores = requiredStores.filter(
+            (store) => !storeNames.includes(store)
+          );
+
+          if (missingStores.length > 0) {
+            resultsDiv.innerHTML += `
+                        <div class="error">
+                            ❌ <strong>Stores mancanti:</strong> ${missingStores.join(
+                              ", "
+                            )}<br>
+                            <strong>Soluzione:</strong> Il database ha una struttura diversa. 
+                            Verificare i nomi corretti degli object stores.
+                        </div>
+                    `;
+          } else {
+            resultsDiv.innerHTML +=
+              '<div class="success">✅ Tutti gli stores necessari sono presenti</div>';
+          }
+
+          db.close();
+        };
+
+        request.onupgradeneeded = (event) => {
+          resultsDiv.innerHTML +=
+            '<div class="error">⚠️ Database richiede upgrade (prima apertura)</div>';
+        };
+      }
+
+      async function inspectStore(storeName) {
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = `<h2>🔍 Ispezione Store: ${storeName}</h2>`;
+
+        const request = indexedDB.open("SGQ_ISO9001");
+
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+
+          try {
+            const tx = db.transaction([storeName], "readonly");
+            const store = tx.objectStore(storeName);
+            const countRequest = store.count();
+
+            countRequest.onsuccess = () => {
+              const count = countRequest.result;
+              resultsDiv.innerHTML += `<div class="db-info"><strong>Record totali:</strong> ${count}</div>`;
+
+              if (count === 0) {
+                resultsDiv.innerHTML +=
+                  '<div class="error">⚠️ Store vuoto</div>';
+                db.close();
+                return;
+              }
+
+              // Ottieni primi 5 record
+              const getAllRequest = store.getAll(undefined, 5);
+
+              getAllRequest.onsuccess = () => {
+                const records = getAllRequest.result;
+
+                resultsDiv.innerHTML += "<h3>📄 Primi 5 Record:</h3>";
+                resultsDiv.innerHTML += `<pre>${JSON.stringify(
+                  records,
+                  null,
+                  2
+                )}</pre>`;
+
+                // Se è store audits, analizza struttura checklist
+                if (storeName === "audits" && records.length > 0) {
+                  const firstAudit = records[0];
+                  resultsDiv.innerHTML +=
+                    "<h3>🔍 Struttura Checklist (primo audit):</h3>";
+
+                  if (firstAudit.checklist) {
+                    const checklistKeys = Object.keys(firstAudit.checklist);
+                    resultsDiv.innerHTML += `<div class="success">✅ Checklist presente con norme: ${checklistKeys.join(
+                      ", "
+                    )}</div>`;
+
+                    // Verifica status codes
+                    let oldStatusFound = false;
+                    let newStatusFound = false;
+
+                    Object.values(firstAudit.checklist).forEach((norm) => {
+                      Object.values(norm).forEach((clause) => {
+                        if (clause.questions) {
+                          clause.questions.forEach((q) => {
+                            if (
+                              [
+                                "compliant",
+                                "non_compliant",
+                                "partial",
+                                "not_applicable",
+                              ].includes(q.status)
+                            ) {
+                              oldStatusFound = true;
+                            }
+                            if (
+                              ["C", "NC", "OSS", "OM", "NA", "NV"].includes(
+                                q.status
+                              )
+                            ) {
+                              newStatusFound = true;
+                            }
+                          });
+                        }
+                      });
+                    });
+
+                    if (oldStatusFound) {
+                      resultsDiv.innerHTML +=
+                        '<div class="error">⚠️ <strong>Trovati status LEGACY</strong> (compliant, non_compliant...) → Migrazione NECESSARIA</div>';
+                    }
+                    if (newStatusFound) {
+                      resultsDiv.innerHTML +=
+                        '<div class="success">✅ <strong>Trovati status NUOVI</strong> (C, NC, OSS...) → Già migrato</div>';
+                    }
+                    if (!oldStatusFound && !newStatusFound) {
+                      resultsDiv.innerHTML +=
+                        '<div class="db-info">ℹ️ Nessun status trovato (checklist vuota o non inizializzata)</div>';
+                    }
+                  } else {
+                    resultsDiv.innerHTML +=
+                      '<div class="error">❌ Checklist assente</div>';
+                  }
+                }
+
+                db.close();
+              };
+
+              getAllRequest.onerror = () => {
+                resultsDiv.innerHTML += `<div class="error">❌ Errore lettura record: ${getAllRequest.error}</div>`;
+                db.close();
+              };
+            };
+
+            countRequest.onerror = () => {
+              resultsDiv.innerHTML += `<div class="error">❌ Errore conteggio: ${countRequest.error}</div>`;
+              db.close();
+            };
+          } catch (error) {
+            resultsDiv.innerHTML += `<div class="error">❌ Errore transazione: ${error.message}</div>`;
+            db.close();
+          }
+        };
+
+        request.onerror = () => {
+          resultsDiv.innerHTML += `<div class="error">❌ Errore apertura database: ${request.error}</div>`;
+        };
+      }
+
+      // Auto-esegui all'avvio
+      window.addEventListener("DOMContentLoaded", () => {
+        inspectDatabase();
+      });
+    </script>
+  </body>
+</html>
