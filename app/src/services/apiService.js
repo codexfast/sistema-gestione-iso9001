@@ -9,14 +9,14 @@
  * - Supporto offline con fallback
  */
 
-// Configurazione ambiente
+// Configurazione ambiente - usa VITE_API_URL se presente
 const API_CONFIG = {
     development: {
-        baseUrl: 'http://localhost:10443/api/v1',
+        baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:10443/api/v1',
         timeout: 10000
     },
     production: {
-        baseUrl: 'https://www.fr-busato.it:10443/api/v1',
+        baseUrl: import.meta.env.VITE_API_URL || 'https://www.fr-busato.it:8443/api/v1',
         timeout: 15000
     }
 };
