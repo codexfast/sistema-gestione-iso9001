@@ -50,7 +50,14 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // API requests: Network-First (con fallback cache)
+    // BYPASS: Richieste API verso backend esterno (fr-busato.it)
+    // Lascia che il browser gestisca direttamente, senza intercettare
+    if (url.hostname.includes('fr-busato.it') || url.port === '8443') {
+        console.log('[SW] Bypass API request to external backend:', url.href);
+        return; // Nessuna intercettazione, fetch nativa del browser
+    }
+
+    // API requests locali: Network-First (con fallback cache)
     if (url.pathname.startsWith('/api/')) {
         event.respondWith(
             fetch(request)
@@ -71,14 +78,8 @@ self.addEventListener('fetch', (event) => {
                             console.log('[SW] Serving API from cache (offline):', url.pathname);
                             return cached;
                         }
-                        // Se nemmeno in cache, return error response
-                        return new Response(
-                            JSON.stringify({ error: 'Offline - no cached data' }),
-                            {
-                                status: 503,
-                                headers: { 'Content-Type': 'application/json' }
-                            }
-                        );
+                        // Nessun 503, lascia che la richiesta fallisca naturalmente
+                        throw new Error('Network error and no cache available');
                     });
                 })
         );
