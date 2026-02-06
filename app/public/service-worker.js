@@ -1,7 +1,7 @@
 // Service Worker - SGQ ISO 9001 PWA
 // Strategia: Cache-First per assets, Network-First per API
 
-const CACHE_NAME = 'sgq-iso9001-v1.0.0';
+const CACHE_NAME = 'sgq-iso9001-v1.0.1';  // Incrementata per forced update
 const API_CACHE = 'sgq-api-v1';
 
 // Assets da cachare per offline

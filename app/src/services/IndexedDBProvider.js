@@ -294,7 +294,7 @@ export class IndexedDBProvider {
         return {
             auditsCount: audits.length,
             attachmentsCount: attachments.length,
-            totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
+            totalSizeMB: totalSize / (1024 * 1024),  // Numero (non string) per permettere .toFixed() nei componenti
             lastUpdate: audits.reduce((latest, audit) => {
                 const auditDate = new Date(audit.lastSaved || 0);
                 return auditDate > latest ? auditDate : latest;

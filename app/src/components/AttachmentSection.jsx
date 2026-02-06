@@ -146,7 +146,7 @@ function AttachmentSection({ questionId, attachmentManager }) {
         {/* Stats inline a destra (solo quando ci sono allegati) */}
         {questionAttachments.length > 0 && (
           <span className="attachment-stats-inline">
-            {stats.count} file ({stats.totalSizeMB} MB) - Rimanenti:{" "}
+            {stats.count} file ({stats.totalSizeMB.toFixed(2)} MB) - Rimanenti:{" "}
             {stats.remaining}
           </span>
         )}

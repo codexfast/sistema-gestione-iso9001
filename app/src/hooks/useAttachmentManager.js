@@ -339,7 +339,7 @@ export function useAttachmentManager(audit, onUpdate) {
             return {
                 count: attachments.length,
                 totalSize,
-                totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
+                totalSizeMB: totalSize / (1024 * 1024),  // Numero (non string) per permettere .toFixed() nei componenti
                 byCategory,
                 remaining: LIMITS.maxFilesPerQuestion - attachments.length,
                 remainingSize: LIMITS.maxCumulativeSize - totalSize,
