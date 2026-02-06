@@ -44,8 +44,10 @@ app.use(compression());
 const corsOptions = {
     origin: process.env.CORS_ORIGIN.split(','),
     credentials: process.env.CORS_CREDENTIALS === 'true',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
 

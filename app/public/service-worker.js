@@ -62,8 +62,8 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    // Cache successful API responses
-                    if (response.ok) {
+                    // Cache successful API responses (solo GET/POST, no HEAD/OPTIONS)
+                    if (response.ok && (request.method === 'GET' || request.method === 'POST')) {
                         const responseClone = response.clone();
                         caches.open(API_CACHE).then((cache) => {
                             cache.put(request, responseClone);

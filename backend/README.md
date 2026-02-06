@@ -390,7 +390,7 @@ curl -k https://www.fr-busato.it:10443/health
 #### 6.2 Test Registrazione Utente
 
 ```bash
-curl -k -X POST https://www.fr-busato.it:10443/api/v1/auth/register \
+curl -k -X POST https://www.fr-busato.it:8443/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@qsstudio.it",
@@ -403,7 +403,7 @@ curl -k -X POST https://www.fr-busato.it:10443/api/v1/auth/register \
 #### 6.3 Test Login
 
 ```bash
-curl -k -X POST https://www.fr-busato.it:10443/api/v1/auth/login \
+curl -k -X POST https://www.fr-busato.it:8443/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@qsstudio.it",
@@ -551,7 +551,7 @@ sudo certbot renew --force-renewal
 
 ```bash
 # Trova processo su porta
-sudo lsof -i :10443
+sudo lsof -i :8443
 
 # Kill processo
 sudo kill -9 <PID>
@@ -564,7 +564,7 @@ sudo systemctl restart sgq-backend
 
 ## 📞 Supporto
 
-- **Documentazione API**: https://www.fr-busato.it:10443/api-docs (da implementare con Swagger)
+- **Documentazione API**: https://www.fr-busato.it:8443/api-docs (da implementare con Swagger)
 - **GitHub Issues**: [Repository Link]
 - **Email**: support@qsstudio.it
 

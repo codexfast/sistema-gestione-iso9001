@@ -28,63 +28,6 @@
       "name": "Nuovo Audit",
       "short_name": "Nuovo",
       "description": "Crea nuovo audit ISO 9001",
-      "url": "/?action=new",
-      "icons": [{ "src": "/icons/new-audit-96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Audit in Corso",
-      "short_name": "In Corso",
-      "description": "Visualizza audit in corso",
-      "url": "/?filter=in_progress",
-      "icons": [{ "src": "/icons/in-progress-96.png", "sizes": "96x96" }]
-    }
-  ],
-  "prefer_related_applications": false
-}
-      "sizes": "384x384",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512x512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-maskable-192x192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon-maskable-512x512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/desktop-checklist.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Checklist ISO 9001:2015 - Vista Desktop"
-    },
-    {
-      "src": "/screenshots/mobile-audit-list.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Lista Audit - Vista Mobile"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Nuovo Audit",
-      "short_name": "Nuovo",
-      "description": "Crea nuovo audit ISO 9001",
       "url": "/?action=new-audit",
       "icons": [
         {
@@ -106,6 +49,22 @@
           "type": "image/png"
         }
       ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-checklist.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Checklist ISO 9001:2015 - Vista Desktop"
+    },
+    {
+      "src": "/screenshots/mobile-audit-list.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Lista Audit - Vista Mobile"
     }
   ],
   "prefer_related_applications": false,

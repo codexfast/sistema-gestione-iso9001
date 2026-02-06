@@ -55,9 +55,35 @@ export class SyncService {
     }
 
     /**
+     * Valida payload audit prima di enqueue
+     * @private
+     */
+    validateAuditPayload(payload) {
+        const required = ['audit_uuid', 'audit_number', 'client_name'];
+        const missing = required.filter(field => !payload[field]);
+
+        if (missing.length > 0) {
+            throw new Error(`Validazione audit fallita. Campi obbligatori mancanti: ${missing.join(', ')}`);
+        }
+
+        return true;
+    }
+
+    /**
      * Aggiungi operazione a sync queue
      */
     async enqueue(type, payload) {
+        // Validazione payload per create_audit e update_audit
+        if (type === 'create_audit' || type === 'update_audit') {
+            try {
+                this.validateAuditPayload(payload);
+            } catch (error) {
+                console.error(`❌ [SYNC QUEUE] Validazione fallita per ${type}:`, error.message);
+                console.warn('⚠️ Audit payload:', payload);
+                throw error; // Blocca enqueue di audit malformati
+            }
+        }
+
         const db = await this.init();
 
         const queueItem = {
@@ -255,9 +281,34 @@ export class SyncService {
 
             return result;
         } catch (error) {
+            // Conflict su CREATE: audit già esiste → Rimuovi dalla queue (successo)
             if (error.response?.status === 409 && error.response?.data?.code === 'AUDIT_CONFLICT') {
-                // Conflict: Server version più recente
                 console.warn('⚠️ [SYNC] Conflict rilevato per audit:', auditData.audit_uuid || auditData.id);
+
+                // Se sync_metadata ha già l'audit_id, è un audit già sincronizzato
+                // Rimuovilo dalla queue senza errore
+                const serverData = error.response?.data?.serverData;
+                if (serverData?.audit_id) {
+                    console.log(`✅ [SYNC] Audit già sincronizzato (audit_id: ${serverData.audit_id}), rimuovo dalla queue`);
+
+                    // Aggiorna sync_metadata locale se non presente
+                    await this.updateSyncMetadataLocal(
+                        'audit',
+                        auditData.audit_uuid || auditData.id,
+                        serverData.audit_id
+                    );
+
+                    // Ritorna successo (l'audit esiste sul server, obiettivo raggiunto)
+                    return {
+                        data: {
+                            action: 'skipped_conflict',
+                            audit_id: serverData.audit_id,
+                            message: 'Audit già presente sul server'
+                        }
+                    };
+                }
+
+                // Se non abbiamo serverData, prova conflict resolution tradizionale
                 return await this.resolveConflict(auditData);
             }
             throw error;
@@ -340,6 +391,52 @@ export class SyncService {
             request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
         });
+    }
+
+    /**
+     * Pulisci sync queue da audit malformati
+     * Rimuove item che falliscono validazione
+     * @returns {Promise<number>} - Numero di item rimossi
+     */
+    async cleanMalformedAudits() {
+        console.log('🧹 [SYNC CLEANUP] Pulizia audit malformati dalla queue...');
+
+        try {
+            const db = await this.init();
+            const transaction = db.transaction([SYNC_QUEUE_STORE], 'readonly');
+            const store = transaction.objectStore(SYNC_QUEUE_STORE);
+
+            const items = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+
+            let removedCount = 0;
+
+            for (const item of items) {
+                // Verifica solo audit (create/update)
+                if (item.type === 'create_audit' || item.type === 'update_audit') {
+                    try {
+                        this.validateAuditPayload(item.payload);
+                        // Validazione OK, mantieni in queue
+                    } catch (validationError) {
+                        // Validazione FALLITA, rimuovi dalla queue
+                        console.warn(`⚠️ [SYNC CLEANUP] Rimuovo audit malformato:`, item.id, validationError.message);
+                        console.debug('Payload malformato:', item.payload);
+                        await this.removeFromQueue(item.id);
+                        removedCount++;
+                    }
+                }
+            }
+
+            console.log(`✅ [SYNC CLEANUP] Rimossi ${removedCount} audit malformati`);
+            return removedCount;
+
+        } catch (error) {
+            console.error('❌ [SYNC CLEANUP] Errore durante pulizia:', error);
+            throw error;
+        }
     }
 
     /**
