@@ -269,7 +269,20 @@ export class SyncService {
      */
     async syncUpsertAudit(auditData) {
         try {
-            const result = await apiService.upsertAudit(auditData);
+            // Mappa campi frontend→backend per multi-standard support
+            const mappedAudit = {
+                ...auditData,
+                // Mappa selectedStandards (frontend) → standard_ids (backend API)
+                standard_ids: auditData.selectedStandards || auditData.standard_ids || auditData.standardIds || 
+                    (auditData.standardId ? [auditData.standardId] : [1]) // Retrocompatibilità + default ISO 9001
+            };
+
+            // Rimuovi campi legacy per pulire payload
+            delete mappedAudit.selectedStandards;
+            delete mappedAudit.standardIds;
+            delete mappedAudit.standardId;
+
+            const result = await apiService.upsertAudit(mappedAudit);
 
             // Backend risponde con {data: {action, audit_id}}
             const responseData = result.data || result;
