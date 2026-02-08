@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/SharedComponents";
 import Dashboard from "./components/Dashboard";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
+import ConnectionStatus from "./components/ConnectionStatus";
 import { useCheckpointSaver } from "./hooks/useCheckpointSaver";
 import { checkAndMigrateStorage } from "./utils/storageVersion";
 import "./App.css";
@@ -72,6 +73,9 @@ function AppContent() {
 
   return (
     <div className="app">
+      {/* Connection Status Indicator */}
+      <ConnectionStatus />
+
       <header className="app-header">
         <div className="container header-flex">
           <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>

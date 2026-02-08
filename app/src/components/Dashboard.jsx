@@ -11,6 +11,7 @@ import StorageTestComponent from "./StorageTestComponent";
 import AuditTabsLayout from "./AuditTabsLayout";
 import AuditAccordionLayout from "./AuditAccordionLayout";
 import WorkspaceManager from "./WorkspaceManager";
+import CreateAuditPage from "../pages/CreateAuditPage";
 import { useStorage } from "../contexts/StorageContext";
 import "./Dashboard.css";
 
@@ -57,6 +58,13 @@ const Dashboard = () => {
           📱 Accordion Mobile-First
         </button>
 
+        <button
+          className={activeTab === "create-audit" ? "tab active tab-create" : "tab tab-create"}
+          onClick={() => setActiveTab("create-audit")}
+        >
+          ➕ Nuovo Audit
+        </button>
+
         {/* Tab Legacy - Solo in Development Mode */}
         {isDev && (
           <>
@@ -92,6 +100,16 @@ const Dashboard = () => {
               onUpdate={handleMetadataUpdate}
             />
           </>
+        )}
+
+        {activeTab === "create-audit" && (
+          <CreateAuditPage
+            onCancel={() => setActiveTab("accordion")}
+            onSuccess={(newAudit) => {
+              console.log('✅ Audit creato con successo:', newAudit);
+              setActiveTab("accordion");
+            }}
+          />
         )}
 
         {activeTab === "tabs" && (

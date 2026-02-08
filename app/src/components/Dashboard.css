@@ -33,6 +33,24 @@
   background-color: transparent;
 }
 
+/* Stile speciale per bottone "Nuovo Audit" */
+.tab-create {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.tab-create:hover {
+  color: #fff;
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.tab-create.active {
+  color: #28a745;
+  border-bottom-color: #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
 .dashboard-content {
   margin-top: 24px;
 }

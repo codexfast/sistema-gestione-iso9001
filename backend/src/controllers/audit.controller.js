@@ -802,6 +802,104 @@ async function upsertAudit(req, res) {
     }
 }
 
+/**
+ * GET /api/v1/audits/:id/pending-issues
+ * Recupera le pending issues (NC/OSS non risolte) dall'ultimo audit completato dello stesso cliente
+ * @route GET /api/v1/audits/:id/pending-issues
+ * @access Private (require auth)
+ */
+async function getPendingIssues(req, res) {
+    const { id: audit_id } = req.params;
+    const { organization_id } = req.user;
+
+    try {
+        logger.info(`[PENDING_ISSUES] Audit ID: ${audit_id}`);
+
+        // Step 1: Trova il client_name dell'audit corrente
+        const currentAuditResult = await query(`
+            SELECT client_name, audit_date
+            FROM audits
+            WHERE audit_id = @audit_id AND organization_id = @organization_id
+        `, { audit_id, organization_id });
+
+        if (!currentAuditResult.recordset || currentAuditResult.recordset.length === 0) {
+            logger.warn(`[PENDING_ISSUES] Audit ${audit_id} non trovato`);
+            return res.status(404).json({
+                error: 'Audit non trovato',
+                code: 'AUDIT_NOT_FOUND'
+            });
+        }
+
+        const { client_name, audit_date: current_audit_date } = currentAuditResult.recordset[0];
+        logger.info(`[PENDING_ISSUES] Cliente: ${client_name}, Data: ${current_audit_date}`);
+
+        // Step 2: Trova l'ultimo audit COMPLETATO dello stesso cliente (data precedente)
+        const lastAuditResult = await query(`
+            SELECT TOP 1 audit_id
+            FROM audits
+            WHERE organization_id = @organization_id
+            AND client_name = @client_name
+            AND audit_date < @current_audit_date
+            AND status IN ('completed', 'finalized')
+            ORDER BY audit_date DESC
+        `, { organization_id, client_name, current_audit_date });
+
+        // Se non esiste audit precedente → nessuna pending issue
+        if (!lastAuditResult.recordset || lastAuditResult.recordset.length === 0) {
+            logger.info(`[PENDING_ISSUES] Nessun audit precedente per cliente ${client_name}`);
+            return res.json({
+                pending_issues: [],
+                source_audit_id: null,
+                message: 'Nessun audit precedente trovato per questo cliente'
+            });
+        }
+
+        const source_audit_id = lastAuditResult.recordset[0].audit_id;
+        logger.info(`[PENDING_ISSUES] Ultimo audit completato: ${source_audit_id}`);
+
+        // Step 3: Trova pending issues NON RISOLTE dall'ultimo audit
+        const pendingIssuesResult = await query(`
+            SELECT 
+                pi.issue_id,
+                pi.source_audit_id,
+                pi.nc_id,
+                pi.status AS issue_status,
+                pi.follow_up_notes,
+                pi.created_at,
+                pi.updated_at,
+                nc.nc_number,
+                nc.nc_type,
+                nc.description AS nc_description,
+                nc.severity,
+                nc.category,
+                nc.requirement_reference,
+                nc.section_id
+            FROM pending_issues pi
+            INNER JOIN non_conformities nc ON pi.nc_id = nc.nc_id
+            WHERE pi.source_audit_id = @source_audit_id
+            AND pi.status IN ('open', 'in_progress')
+            ORDER BY nc.severity DESC, pi.created_at DESC
+        `, { source_audit_id });
+
+        const pendingIssues = pendingIssuesResult.recordset || [];
+        logger.info(`[PENDING_ISSUES] Trovate ${pendingIssues.length} pending issues`);
+
+        return res.json({
+            pending_issues: pendingIssues,
+            source_audit_id,
+            count: pendingIssues.length
+        });
+
+    } catch (error) {
+        logger.error('[PENDING_ISSUES] Errore:', error);
+        return res.status(500).json({
+            error: 'Errore server durante recupero pending issues',
+            code: 'SERVER_ERROR',
+            details: error.message
+        });
+    }
+}
+
 module.exports = {
     listAudits,
     getAuditById,
@@ -809,5 +907,6 @@ module.exports = {
     updateAudit,
     deleteAudit,
     getAuditStatistics,
-    upsertAudit
+    upsertAudit,
+    getPendingIssues
 };
