@@ -167,16 +167,17 @@ async function updateSyncMetadata(req, res) {
  * Helper: Crea audit da sync
  */
 async function createAuditFromSync(clientAudit, userId, organizationId) {
+    // Insert audit (senza standard_id - deprecato)
     const result = await query(`
     INSERT INTO audits (
       audit_uuid, audit_number, client_name, project_year,
       audit_date, auditor_name, audit_type, status,
-      organization_id, standard_id, created_by
+      organization_id, created_by
     )
     VALUES (
       @audit_uuid, @audit_number, @client_name, @project_year,
       @audit_date, @auditor_name, @audit_type, @status,
-      @organization_id, @standard_id, @created_by
+      @organization_id, @created_by
     );
     SELECT SCOPE_IDENTITY() AS audit_id;
   `, {
@@ -189,12 +190,28 @@ async function createAuditFromSync(clientAudit, userId, organizationId) {
         audit_type: clientAudit.auditType,
         status: clientAudit.status || 'draft',
         organization_id: organizationId,
-        standard_id: clientAudit.standardId || 1, // Default ISO 9001
         created_by: userId
     });
 
+    const auditId = result.recordset[0].audit_id;
+
+    // Insert audit_standards (multi-standard support)
+    const standardIds = clientAudit.standardIds || [clientAudit.standardId || 1]; // Retrocompatibilità
+    const primaryStandardId = standardIds[0]; // Primo standard = primario
+
+    for (let i = 0; i < standardIds.length; i++) {
+        await query(`
+            INSERT INTO audit_standards (audit_id, standard_id, is_primary)
+            VALUES (@audit_id, @standard_id, @is_primary)
+        `, {
+            audit_id: auditId,
+            standard_id: standardIds[i],
+            is_primary: i === 0 ? 1 : 0 // Solo il primo è primario
+        });
+    }
+
     return {
-        audit_id: result.recordset[0].audit_id,
+        audit_id: auditId,
         audit_uuid: clientAudit.id
     };
 }
@@ -203,6 +220,7 @@ async function createAuditFromSync(clientAudit, userId, organizationId) {
  * Helper: Aggiorna audit da sync
  */
 async function updateAuditFromSync(auditId, clientAudit) {
+    // Update audit base fields
     await query(`
     UPDATE audits
     SET
@@ -221,6 +239,25 @@ async function updateAuditFromSync(auditId, clientAudit) {
         status: clientAudit.status,
         notes: clientAudit.notes
     });
+
+    // Update audit_standards se presenti nel payload
+    if (clientAudit.standardIds && Array.isArray(clientAudit.standardIds)) {
+        // Remove existing standards
+        await query(`DELETE FROM audit_standards WHERE audit_id = @audit_id`, { audit_id: auditId });
+
+        // Insert new standards
+        const standardIds = clientAudit.standardIds;
+        for (let i = 0; i < standardIds.length; i++) {
+            await query(`
+                INSERT INTO audit_standards (audit_id, standard_id, is_primary)
+                VALUES (@audit_id, @standard_id, @is_primary)
+            `, {
+                audit_id: auditId,
+                standard_id: standardIds[i],
+                is_primary: i === 0 ? 1 : 0
+            });
+        }
+    }
 
     return { audit_id: auditId, updated: true };
 }
