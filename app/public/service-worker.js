@@ -1,7 +1,7 @@
 // Service Worker - SGQ ISO 9001 PWA
 // Strategia: Cache-First per assets, Network-First per API
 
-const CACHE_NAME = 'sgq-iso9001-v1.0.1';  // Incrementata per forced update
+const CACHE_NAME = 'sgq-iso9001-v1.0.2';  // Fix: Cache solo GET (no POST support)
 const API_CACHE = 'sgq-api-v1';
 
 // Assets da cachare per offline
@@ -62,8 +62,8 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    // Cache successful API responses (solo GET/POST, no HEAD/OPTIONS)
-                    if (response.ok && (request.method === 'GET' || request.method === 'POST')) {
+                    // Cache successful API responses (SOLO GET - Cache API non supporta POST)
+                    if (response.ok && request.method === 'GET') {
                         const responseClone = response.clone();
                         caches.open(API_CACHE).then((cache) => {
                             cache.put(request, responseClone);
