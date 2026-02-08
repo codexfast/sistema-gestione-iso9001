@@ -763,25 +763,41 @@ export function StorageProvider({ children, useMockData = true }) {
         return false;
       }
 
-      // Solo ISO 9001 supportato per ora
-      if (standard !== "ISO_9001") {
-        console.warn(`⚠️ Standard ${standard} not yet supported`);
+      // Mappa standard code → standard_id per API
+      const standardIdMap = {
+        ISO_9001: 1,
+        ISO_9001_2015: 1,
+        ISO_14001: 2,
+        ISO_14001_2015: 2,
+        ISO_45001: 3,
+        ISO_45001_2018: 3
+      };
+
+      const standardId = standardIdMap[standard];
+      if (!standardId) {
+        console.warn(`⚠️ Standard ${standard} not recognized`);
         return false;
       }
 
       // Verifica se checklist già inizializzata
       if (
-        currentAudit.checklist?.ISO_9001 &&
-        Object.keys(currentAudit.checklist.ISO_9001).length > 0
+        currentAudit.checklist?.[standard] &&
+        Object.keys(currentAudit.checklist[standard]).length > 0
       ) {
-        console.log("ℹ️ Checklist already initialized");
+        console.log(`ℹ️ Checklist ${standard} already initialized`);
         return true;
       }
 
       // Carica checklist dinamicamente da API
       try {
-        console.log("[StorageContext] Caricamento checklist da API...");
-        const questions = await fetchChecklistQuestions(1); // 1 = ISO 9001
+        console.log(`[StorageContext] Caricamento checklist ${standard} da API...`);
+        const questions = await fetchChecklistQuestions(standardId);
+        
+        if (questions.length === 0) {
+          console.warn(`⚠️ Nessuna domanda ricevuta per ${standard}`);
+          return false;
+        }
+
         const structuredChecklist = buildChecklistStructure(questions);
 
         // Converti array in oggetto per compatibilità con struttura esistente
@@ -803,7 +819,7 @@ export function StorageProvider({ children, useMockData = true }) {
             updatedAudit.checklist = {};
           }
 
-          updatedAudit.checklist.ISO_9001 = checklistObj;
+          updatedAudit.checklist[standard] = checklistObj;
           updatedAudit.metadata.lastModified = new Date().toISOString();
           updatedAudit.metrics.totalQuestions = totalQuestions;
 
@@ -811,7 +827,7 @@ export function StorageProvider({ children, useMockData = true }) {
         });
 
         console.log(
-          `✅ Initialized ISO 9001 checklist from API (${totalQuestions} questions)`,
+          `✅ Initialized ${standard} checklist from API (${totalQuestions} questions)`,
         );
         return true;
       } catch (error) {
