@@ -634,6 +634,22 @@ async function upsertAudit(req, res) {
             });
         }
 
+        // ⚠️ BLACKLIST UUID temporanea - rimuovere dopo cleanup completo cache client
+        const BLACKLISTED_UUIDS = [
+            'audit-002-acme-2025',
+            'audit-003-template-2025'
+        ];
+
+        if (BLACKLISTED_UUIDS.includes(audit_uuid)) {
+            logger.warn(`[UPSERT] UUID blacklisted rifiutato: ${audit_uuid} da organization ${organization_id}`);
+            return res.status(403).json({
+                error: 'Audit obsoleto - cancella cache browser',
+                code: 'AUDIT_DEPRECATED',
+                message: `L'audit "${client_name}" è stato rimosso. Cancella la cache del browser.`,
+                audit_uuid
+            });
+        }
+
         // Check esistenza per audit_uuid
         const existing = await query(`
       SELECT audit_id, updated_at, status
