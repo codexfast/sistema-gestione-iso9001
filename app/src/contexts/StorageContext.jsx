@@ -264,51 +264,46 @@ export function StorageProvider({ children, useMockData = true }) {
           }
         }
 
-        // CARICAMENTO: Leggi da IndexedDB (Single Source of Truth)
-        const allAudits = await fsProvider.loadAllAudits();
+        // CARICAMENTO: Leggi da IndexedDB (cache locale)
+        const localAudits = await fsProvider.loadAllAudits();
+        
+        // DOWNLOAD DAL SERVER: Sincronizzazione bidirezionale
+        let serverAudits = [];
+        if (navigator.onLine) {
+          try {
+            console.log("🌐 [DOWNLOAD] Scarico audit dal server...");
+            const apiService = (await import('../services/apiService')).default;
+            const converter = await import('../utils/auditConverter');
+            
+            const response = await apiService.getAudits();
+            const backendAudits = response.data || [];
+            
+            // CONVERTI: Backend (snake_case) → Frontend (camelCase + nested)
+            serverAudits = converter.convertAuditsFromBackend(backendAudits);
+            console.log(`✅ [DOWNLOAD] Scaricati ${serverAudits.length} audit dal server`);
+          } catch (err) {
+            console.warn("⚠️ [DOWNLOAD] Errore download server, uso cache locale:", err.message);
+          }
+        }
 
-        if (allAudits && allAudits.length > 0) {
-          setAudits(allAudits);
+        // MERGE: Server-wins (dati server sovrascrivono cache locale)
+        const mergedAudits = serverAudits.length > 0 ? serverAudits : localAudits;
+
+        if (mergedAudits && mergedAudits.length > 0) {
+          // Salva audit server in IndexedDB (aggiorna cache)
+          if (serverAudits.length > 0) {
+            console.log("💾 [MERGE] Aggiorno IndexedDB con dati server...");
+            for (const frontendAudit of serverAudits) {
+              await fsProvider.saveAudit(frontendAudit);
+            }
+            console.log(`✅ [MERGE] ${serverAudits.length} audit salvati in IndexedDB`);
+          }
+
+          setAudits(mergedAudits);
           setCurrentAuditId(null); // Mostra sempre selector all'avvio
           console.log(
-            `✅ Caricati ${allAudits.length} audit da IndexedDB - selector mode`,
+            `✅ Caricati ${mergedAudits.length} audit (${serverAudits.length} server, ${localAudits.length} cache)`,
           );
-
-          // SYNC RECOVERY: Enqueue audit esistenti se non ancora sul server
-          // Controllo sync_metadata per identificare audit mai sincronizzati
-          console.log("🔄 [SYNC RECOVERY] Verifica audit da sincronizzare...");
-          let enqueuedCount = 0;
-          for (const audit of allAudits) {
-            const auditId = audit.id || audit.metadata?.id;
-            const isSynced = await syncService.isSynced("audit", auditId);
-
-            if (!isSynced && navigator.onLine) {
-              await syncService.enqueue("create_audit", {
-                audit_uuid: auditId,
-                audit_number: audit.metadata?.auditNumber,
-                client_name: audit.metadata?.clientName,
-                project_year: audit.metadata?.projectYear,
-                audit_date: audit.metadata?.auditDate,
-                auditor_name: audit.metadata?.auditorName,
-                audit_type: audit.metadata?.auditType,
-                status: audit.metadata?.status,
-                notes: audit.metadata?.notes,
-                total_questions: audit.metadata?.totalQuestions,
-                answered_questions: audit.metadata?.answeredQuestions,
-                conformities_count: audit.metadata?.conformitiesCount,
-                non_conformities_count: audit.metadata?.nonConformitiesCount,
-                completion_percentage: audit.metadata?.completionPercentage,
-                standard_id: 1, // ISO 9001
-                updated_at: new Date().toISOString(),
-              });
-              enqueuedCount++;
-            }
-          }
-          if (enqueuedCount > 0) {
-            console.log(
-              `✅ [SYNC RECOVERY] ${enqueuedCount} audit enqueued per prima sincronizzazione`,
-            );
-          }
         } else if (useMockData) {
           // Prima inizializzazione: salva mock data in IndexedDB + ENQUEUE SYNC
           console.log(

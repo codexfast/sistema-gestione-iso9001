@@ -235,7 +235,80 @@ Join table per multi-standard audit
 
 ---
 
-### 🔄 **sync_metadata**
+### � **attachments**
+
+Evidenze (foto/audio/video/documenti) collegate ad audit o NC
+
+| Colonna         | Tipo          | Nullable | Constraint                                   |
+| --------------- | ------------- | -------- | -------------------------------------------- |
+| attachment_id   | INT IDENTITY  | NO       | PK                                           |
+| audit_id        | INT           | YES      | FK → audits (NULL se attachment legato a NC) |
+| nc_id           | INT           | YES      | FK → non_conformities                        |
+| file_name       | NVARCHAR(500) | NO       |                                              |
+| file_type       | NVARCHAR(100) | NO       | MIME type (es: 'image/jpeg')                 |
+| file_size_bytes | BIGINT        | NO       |                                              |
+| storage_path    | NVARCHAR(MAX) | NO       | Path relativo uploads/                       |
+| uploaded_by     | INT           | NO       | FK → users                                   |
+| uploaded_at     | DATETIME2     | NO       | Default GETDATE()                            |
+| created_at      | DATETIME2     | NO       |                                              |
+
+⚠️ **VINCOLO LOGICO**: audit_id OR nc_id deve essere NOT NULL (almeno una FK popolata)
+
+**Categorie file supportate:**
+
+- Photo: `.jpg`, `.jpeg`, `.png`, `.heic`
+- Audio: `.mp3`, `.m4a`, `.wav`
+- Video: `.mp4`, `.mov`
+- Document: `.pdf`, `.docx`, `.xlsx`
+
+---
+
+### 📜 **audit_history**
+
+Storico modifiche audit (ISO 9001:2015 punto 7.5.3 - Tracciabilità)
+
+| Colonna       | Tipo          | Nullable | Constraint         |
+| ------------- | ------------- | -------- | ------------------ |
+| history_id    | INT IDENTITY  | NO       | PK                 |
+| audit_id      | INT           | NO       | FK → audits        |
+| changed_by    | INT           | NO       | FK → users         |
+| change_type   | NVARCHAR(50)  | NO       | 'created', 'updated', 'status_changed', 'deleted' |
+| field_changed | NVARCHAR(100) | YES      | Nome campo modificato (es: 'status') |
+| old_value     | NVARCHAR(MAX) | YES      | Valore precedente (JSON se complesso) |
+| new_value     | NVARCHAR(MAX) | YES      | Nuovo valore |
+| changed_at    | DATETIME2     | NO       | Default GETDATE()  |
+
+**Utilizzo:**
+
+- Log automatico ad ogni UPDATE su `audits`
+- Traccia transizioni stato: draft → in_progress → completed
+- Permette audit trail per conformità ISO 9001
+
+---
+
+### 🚫 **non_conformities**
+
+Non conformità rilevate durante audit
+
+| Colonna      | Tipo          | Nullable | Constraint                                    |
+| ------------ | ------------- | -------- | --------------------------------------------- |
+| nc_id        | INT IDENTITY  | NO       | PK                                            |
+| audit_id     | INT           | NO       | FK → audits                                   |
+| standard_id  | INT           | NO       | FK → standards                                |
+| section_code | NVARCHAR(50)  | NO       | FK composite → checklist_sections             |
+| nc_number    | NVARCHAR(50)  | NO       | Progressivo (es: 'NC-001')                    |
+| nc_type      | NVARCHAR(20)  | NO       | CHECK ('major', 'minor', 'observation')       |
+| description  | NVARCHAR(MAX) | NO       |                                               |
+| severity     | INT           | NO       | 1=Low, 2=Medium, 3=High                       |
+| status       | NVARCHAR(20)  | NO       | CHECK ('open', 'in_progress', 'closed')       |
+| created_at   | DATETIME2     | NO       |                                               |
+| updated_at   | DATETIME2     | NO       |                                               |
+
+⚠️ **FK COMPOSITE**: (section_code + standard_id) → checklist_sections
+
+---
+
+### �🔄 **sync_metadata**
 
 Metadati sincronizzazione offline
 
@@ -250,8 +323,6 @@ Metadati sincronizzazione offline
 | conflict_count      | INT          | NO       | Default 0         |
 | created_at          | DATETIME2    | NO       |                   |
 
----
-
 ## 🔧 MIGRATION HISTORY
 
 | ID   | File                       | Descrizione                                    | Data       |
@@ -261,7 +332,148 @@ Metadati sincronizzazione offline
 | 007  | fix_conformity_status      | Fix constraint status                          | -          |
 | 008  | create_response_options    | Nuova versione con UI columns                  | 2026-01-11 |
 | 008b | alter_response_options     | Aggiunti campi UI (icon, color)                | -          |
+| 009  | create_audit_standards     | Multi-standard support per audit               | 2026-01-17 |
 | 010  | update_iso9001_35questions | ⏳ **DA ESEGUIRE** - Riduce da 78 a 35 domande | 2026-01-17 |
+
+---
+
+## 🗺️ ENTITY RELATIONSHIP DIAGRAM
+
+```mermaid
+erDiagram
+    organizations ||--o{ users : "ha"
+    organizations ||--o{ audits : "appartiene"
+    
+    users ||--o{ audits : "crea"
+    users ||--o{ attachments : "carica"
+    users ||--o{ audit_history : "modifica"
+    users ||--o{ sync_metadata : "esegue_sync"
+    
+    standards ||--o{ checklist_sections : "contiene"
+    standards ||--o{ checklist_questions : "definisce"
+    standards ||--o{ audit_standards : "applicato_a"
+    standards ||--o{ non_conformities : "riferimento"
+    
+    checklist_sections ||--o{ checklist_questions : "contiene"
+    checklist_sections ||--o{ non_conformities : "riferimento"
+    
+    checklist_questions ||--o{ audit_responses : "risposta"
+    
+    audits ||--o{ audit_responses : "contiene"
+    audits ||--o{ non_conformities : "rileva"
+    audits ||--o{ attachments : "evidenza"
+    audits ||--o{ audit_history : "storico"
+    audits ||--o{ audit_standards : "usa"
+    
+    non_conformities ||--o{ attachments : "evidenza_nc"
+    
+    organizations {
+        int organization_id PK
+        nvarchar organization_name UK
+        bit is_active
+    }
+    
+    users {
+        int user_id PK
+        int organization_id FK
+        nvarchar email UK
+        nvarchar full_name
+        nvarchar role
+        bit is_active
+    }
+    
+    standards {
+        int standard_id PK
+        nvarchar standard_code UK
+        nvarchar standard_name
+        nvarchar version
+        bit is_active
+    }
+    
+    checklist_sections {
+        nvarchar section_code PK
+        int standard_id FK
+        nvarchar section_title
+        int display_order
+    }
+    
+    checklist_questions {
+        int question_id PK
+        int standard_id FK
+        nvarchar section_code FK
+        nvarchar question_text
+        nvarchar question_type
+        bit is_active
+    }
+    
+    audits {
+        int audit_id PK
+        int organization_id FK
+        int created_by FK
+        nvarchar audit_number UK
+        date audit_date
+        nvarchar status
+    }
+    
+    audit_responses {
+        int response_id PK
+        int audit_id FK
+        int question_id FK
+        nvarchar conformity_status
+        nvarchar notes
+        bit is_answered
+    }
+    
+    non_conformities {
+        int nc_id PK
+        int audit_id FK
+        int standard_id FK
+        nvarchar section_code FK
+        nvarchar nc_number
+        nvarchar nc_type
+        nvarchar status
+    }
+    
+    attachments {
+        int attachment_id PK
+        int audit_id FK_nullable
+        int nc_id FK_nullable
+        int uploaded_by FK
+        nvarchar file_name
+        nvarchar file_type
+        bigint file_size_bytes
+    }
+    
+    audit_history {
+        int history_id PK
+        int audit_id FK
+        int changed_by FK
+        nvarchar change_type
+        nvarchar field_changed
+        datetime2 changed_at
+    }
+    
+    audit_standards {
+        int audit_id PK_FK
+        int standard_id PK_FK
+    }
+    
+    sync_metadata {
+        int sync_id PK
+        nvarchar entity_type
+        int entity_id
+        uniqueidentifier entity_uuid
+        int user_id FK_nullable
+        datetime2 last_sync_at
+        int sync_version
+        nvarchar sync_status
+    }
+```
+
+**NOTA IMPORTANTE - sync_metadata:**  
+La tabella `sync_metadata` **non ha FK diretta** ad `audits`, `audit_responses`, `non_conformities`.  
+Usa design generico: `entity_type` ('audit', 'response', 'nc') + `entity_id`.  
+Per eliminare sync records di un audit: `WHERE entity_type='audit' AND entity_id IN (SELECT audit_id...)`
 
 ---
 
@@ -315,5 +527,5 @@ SELECT notes FROM audit_responses;
 
 ---
 
-**Ultimo aggiornamento:** 2026-01-17  
-**Versione schema:** v1.10 (Migration 010 pending)
+**Ultimo aggiornamento:** 2026-02-08  
+**Versione schema:** v1.11 (Aggiunte audit_history + attachments complete)
