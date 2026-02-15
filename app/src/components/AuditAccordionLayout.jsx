@@ -75,14 +75,16 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
       (std) => !updatedStandards.includes(std)
     );
 
+    console.log(`[Accordion] Standard update: added=${addedStandards}, removed=${removedStandards}`);
+
     // Aggiorna metadata
     onUpdate("selectedStandards", updatedStandards);
 
-    // Inizializza checklist per standard aggiunti
+    // Inizializza checklist per standard aggiunti (immediato, no setTimeout)
     addedStandards.forEach((standard) => {
       if (standard === "ISO_9001") {
-        // Auto-inizializza checklist ISO 9001
-        setTimeout(() => initializeChecklist("ISO_9001"), 100);
+        console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
+        initializeChecklist("ISO_9001");
       }
       // TODO: Implementare ISO_14001 e ISO_45001 quando disponibili
     });
@@ -141,7 +143,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
             onClick={() => toggleSection("general-data")}
           >
             <span className="section-icon">📋</span>
-            <span className="section-title">Dati Generali</span>
+            <span className="section-title">1 – DATI GENERALI</span>
             <span className="section-arrow">
               {openSections["general-data"] ? "▼" : "▶"}
             </span>
@@ -149,7 +151,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
 
           {openSections["general-data"] && (
             <div className="accordion-content">
-              {/* Sub-Section: 1.1 Dati Generali */}
+              {/* Sub-Section: 1.1 Informazioni Audit */}
               <div className="accordion-subsection">
                 <button
                   className={`accordion-subheader ${
@@ -158,7 +160,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
                   onClick={() => toggleSubSection("general-data-form")}
                 >
                   <span className="subsection-number">1.1</span>
-                  <span className="subsection-title">Dati Generali</span>
+                  <span className="subsection-title">Informazioni di base sull'audit: oggetto, campo di applicazione, riferimenti documentali</span>
                   <span className="subsection-arrow">
                     {openSubSections["general-data-form"] ? "▼" : "▶"}
                   </span>
