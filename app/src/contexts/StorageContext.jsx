@@ -360,6 +360,40 @@ export function StorageProvider({ children, useMockData = false }) {
     loadAuditsFromIndexedDB();
   }, [fsProvider, useMockData]); // hasInitialized NON deve essere dependency (causa loop)
 
+  // === RELOAD AUDIT DOPO LOGIN ===
+  useEffect(() => {
+    const handleLoginSuccess = async () => {
+      if (!fsProvider) return;
+
+      console.log("🔄 [LOGIN] Ricarico audit dal server...");
+      
+      try {
+        const apiService = (await import('../services/apiService')).default;
+        const converter = await import('../utils/auditConverter');
+        
+        const response = await apiService.getAudits();
+        const backendAudits = response.data || [];
+        const serverAudits = converter.convertAuditsFromBackend(backendAudits);
+        
+        console.log(`✅ [LOGIN] Scaricati ${serverAudits.length} audit dal server`);
+        
+        // Salva in IndexedDB + aggiorna stato
+        if (serverAudits.length > 0) {
+          for (const audit of serverAudits) {
+            await fsProvider.saveAudit(audit);
+          }
+          setAudits(serverAudits);
+          console.log(`✅ [LOGIN] ${serverAudits.length} audit caricati in memoria`);
+        }
+      } catch (err) {
+        console.error("❌ [LOGIN] Errore download audit:", err);
+      }
+    };
+
+    window.addEventListener('auth:login', handleLoginSuccess);
+    return () => window.removeEventListener('auth:login', handleLoginSuccess);
+  }, [fsProvider]);
+
   // === SALVATAGGIO AUTOMATICO IN INDEXEDDB (depreca localStorage) ===
   useEffect(() => {
     if (audits.length === 0 || !fsProvider) return;

@@ -137,6 +137,10 @@ export function AuthProvider({ children }) {
         console.log(
           `✅ Login effettuato: ${response.user.full_name} (${response.user.role})`
         );
+        
+        // Emetti evento per triggerare download audit
+        window.dispatchEvent(new CustomEvent('auth:login', { detail: response.user }));
+        
         setIsLoading(false);
         return true;
       }
