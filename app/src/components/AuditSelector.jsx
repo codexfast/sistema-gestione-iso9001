@@ -7,7 +7,6 @@
 import React, { useState } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import { getNextAuditNumber, sortAuditsByNumber } from "../utils/auditUtils";
-import WorkspaceManager from "./WorkspaceManager";
 import "./AuditSelector.css";
 
 function AuditSelector() {
@@ -17,17 +16,10 @@ function AuditSelector() {
     currentAuditId,
     switchAudit,
     createAudit,
-    deleteAudit,
     isSaving,
-    fsProvider,
-    deviceInfo,
   } = useStorage();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [workspaceExpanded, setWorkspaceExpanded] = useState(false);
-
-  const isMobile = deviceInfo?.isMobile;
 
   // Ordina audit per numero (più recente prima) - filtro audit validi
   const validAudits = audits.filter((audit) => audit && audit.metadata);
@@ -46,18 +38,7 @@ function AuditSelector() {
     setShowCreateModal(true);
   };
 
-  const handleDeleteAudit = () => {
-    if (currentAudit) {
-      setShowDeleteConfirm(true);
-    }
-  };
 
-  const confirmDelete = () => {
-    if (currentAudit) {
-      deleteAudit(currentAuditId);
-      setShowDeleteConfirm(false);
-    }
-  };
 
   // === RENDER ===
 
@@ -116,80 +97,19 @@ function AuditSelector() {
           >
             ➕
           </button>
-
-          <button
-            onClick={handleDeleteAudit}
-            className="btn btn-icon btn-danger"
-            title="Elimina audit corrente"
-            disabled={!currentAudit}
-          >
-            🗑️
-          </button>
         </div>
 
         {isSaving && <span className="save-indicator">💾 Salvataggio...</span>}
       </div>
 
-      {/* Workspace Manager Section - Sempre visibile */}
-      <div className="workspace-section">
-        <button
-          className="workspace-toggle"
-          onClick={() => setWorkspaceExpanded(!workspaceExpanded)}
-        >
-          <span>⚙️ Impostazioni Workspace</span>
-          <span className="toggle-arrow">{workspaceExpanded ? "▼" : "▶"}</span>
-        </button>
 
-        {workspaceExpanded && (
-          <div className="workspace-content">
-            <WorkspaceManager compact={false} audit={currentAudit} />
-          </div>
-        )}
-      </div>
-
-      {/* Alert compatto se workspace non connesso - SOLO DESKTOP, meno invasivo */}
-      {!isMobile && currentAudit && !fsProvider?.ready() && (
-        <div className="alert alert-info-compact">
-          <span className="alert-icon">💾</span>
-          <span className="alert-text">
-            Salvataggio locale attivo (localStorage).
-            <button
-              className="btn-link"
-              onClick={() => setWorkspaceExpanded(true)}
-            >
-              Connetti cartella per backup su file
-            </button>
-          </span>
-        </div>
-      )}
 
       {currentAudit && (
         <div className="audit-info-bar">
-          <div className="audit-info-item">
-            <strong>Data Audit:</strong>{" "}
-            {(() => {
-              const dateStr =
-                currentAudit.metadata?.generalData?.auditDate ||
-                currentAudit.metadata?.auditDate;
-              if (!dateStr) return "Non specificata";
-              const date = new Date(dateStr);
-              return isNaN(date.getTime())
-                ? "Non valida"
-                : date.toLocaleDateString("it-IT");
-            })()}
-          </div>
-          <div className="audit-info-item">
-            <strong>Auditor:</strong>{" "}
-            {currentAudit.metadata?.generalData?.auditors?.[0] ||
-              currentAudit.metadata?.auditor ||
-              currentAudit.metadata?.auditorName ||
-              "Non specificato"}
-          </div>
           <div className="audit-info-item standards-info">
             <strong>Norme:</strong>{" "}
             <div className="standards-badges">
               {(currentAudit.metadata.selectedStandards || []).map((std) => {
-                // Determina categoria dal codice standard
                 const category = std.includes("9001")
                   ? "quality"
                   : std.includes("14001")
@@ -227,14 +147,7 @@ function AuditSelector() {
         />
       )}
 
-      {/* Modal Conferma Eliminazione */}
-      {showDeleteConfirm && (
-        <ConfirmDeleteModal
-          audit={currentAudit}
-          onConfirm={confirmDelete}
-          onCancel={() => setShowDeleteConfirm(false)}
-        />
-      )}
+
     </div>
   );
 }
@@ -417,56 +330,6 @@ function CreateAuditModal({ audits, onClose, onCreate }) {
             className="btn btn-primary"
           >
             ✓ Crea Audit
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// === MODAL CONFERMA ELIMINAZIONE ===
-
-function ConfirmDeleteModal({ audit, onConfirm, onCancel }) {
-  return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div
-        className="modal-content modal-small"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <h2>Conferma Eliminazione</h2>
-          <button className="modal-close" onClick={onCancel}>
-            ✕
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p className="warning-text">
-            ⚠️ Sei sicuro di voler eliminare questo audit?
-          </p>
-          <div className="audit-details">
-            <p>
-              <strong>Numero:</strong> {audit.metadata.auditNumber}
-            </p>
-            <p>
-              <strong>Cliente:</strong> {audit.metadata.clientName}
-            </p>
-            <p>
-              <strong>Data:</strong>{" "}
-              {new Date(audit.metadata.auditDate).toLocaleDateString("it-IT")}
-            </p>
-          </div>
-          <p className="danger-text">
-            Questa operazione non può essere annullata.
-          </p>
-        </div>
-
-        <div className="modal-footer">
-          <button onClick={onCancel} className="btn btn-secondary">
-            Annulla
-          </button>
-          <button onClick={onConfirm} className="btn btn-danger">
-            🗑️ Elimina
           </button>
         </div>
       </div>
