@@ -63,12 +63,23 @@ function AuditSelector() {
 
   if (audits.length === 0) {
     return (
-      <div className="audit-selector empty">
-        <p>Nessun audit disponibile</p>
-        <button onClick={handleCreateAudit} className="btn btn-primary">
-          ➕ Crea Primo Audit
-        </button>
-      </div>
+      <>
+        <div className="audit-selector empty">
+          <p>Nessun audit disponibile</p>
+          <button onClick={handleCreateAudit} className="btn btn-primary">
+            ➕ Crea Primo Audit
+          </button>
+        </div>
+
+        {/* Modal Creazione - NECESSARIO anche quando lista vuota */}
+        {showCreateModal && (
+          <CreateAuditModal
+            audits={audits}
+            onClose={() => setShowCreateModal(false)}
+            onCreate={createAudit}
+          />
+        )}
+      </>
     );
   }
 
