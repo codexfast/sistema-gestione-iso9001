@@ -133,7 +133,7 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <StorageProvider useMockData={true}>
+        <StorageProvider>
           <AppContent />
         </StorageProvider>
       </AuthProvider>
