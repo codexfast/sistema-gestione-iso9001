@@ -118,14 +118,6 @@ function GeneralDataSection({
 
   return (
     <div className="general-data-section">
-      <div className="section-header">
-        <h2>📋 1 – DATI GENERALI</h2>
-        <p className="section-description">
-          Informazioni di base sull'audit: oggetto, campo di applicazione,
-          riferimenti documentali
-        </p>
-      </div>
-
       <form className="general-data-form">
         {/* NUOVO: Selezione Standard */}
         <div className="form-field standards-selection">

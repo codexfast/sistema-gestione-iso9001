@@ -90,6 +90,7 @@ CREATE TABLE dbo.audit_standards (
     CONSTRAINT UQ_audit_standards_audit_standard 
         UNIQUE (audit_id, standard_id)
 );
+GO
 
 PRINT '  ✅ Tabella audit_standards creata';
 
@@ -117,6 +118,7 @@ CREATE NONCLUSTERED INDEX idx_audit_standards_primary
     WHERE is_primary = 1;
 
 PRINT '  ✅ Indice idx_audit_standards_primary creato';
+GO
 
 -- ============================================================================
 -- STEP 4: Migrazione dati esistenti

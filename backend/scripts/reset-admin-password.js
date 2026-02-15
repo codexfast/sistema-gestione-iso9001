@@ -3,33 +3,72 @@
  * Uso: node scripts/reset-admin-password.js
  */
 
+require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const sql = require('mssql');
 
-// Config database - Windows Authentication
+// Config database da .env
 const config = {
-    server: 'localhost',
-    database: 'SGQ_ISO9001',
+    server: process.env.DB_SERVER,
+    port: parseInt(process.env.DB_PORT || '1433'),
+    database: process.env.DB_DATABASE,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
     options: {
-        trustServerCertificate: true,
+        trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
         enableArithAbort: true,
-        encrypt: false,
-        trustedConnection: true  // Windows Auth
+        encrypt: process.env.DB_ENCRYPT === 'true'
     }
 };
 
 async function resetPassword() {
-    const newPassword = 'Admin2025!';
+    const newPassword = 'Admin123!';
     const email = 'admin@sgq.local';
 
     try {
         console.log('🔧 Connessione al database...');
+        console.log(`   Server: ${config.server}:${config.port}`);
+        console.log(`   Database: ${config.database}\n`);
+
         const pool = await sql.connect(config);
+        console.log('✅ Connesso al database\n');
+
+        // Verifica se admin esiste
+        console.log(`🔍 Ricerca utente: ${email}`);
+        const checkResult = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query('SELECT user_id, email, full_name, role, is_active FROM users WHERE email = @email');
+
+        if (checkResult.recordset.length === 0) {
+            console.log('❌ Admin NON trovato!\n');
+            console.log('📋 Utenti nel database:');
+            const allUsers = await pool.request().query('SELECT email, role, is_active FROM users');
+            allUsers.recordset.forEach(u => {
+                console.log(`   - ${u.email} (${u.role}) [Active: ${u.is_active}]`);
+            });
+            await pool.close();
+            process.exit(1);
+        }
+
+        const admin = checkResult.recordset[0];
+        console.log('✅ Admin trovato:');
+        console.log(`   Email: ${admin.email}`);
+        console.log(`   Ruolo: ${admin.role}`);
+        console.log(`   Attivo: ${admin.is_active}\n`);
+
+        if (!admin.is_active) {
+            console.log('⚠️  Utente DISATTIVATO - attivazione...');
+            await pool.request()
+                .input('email', sql.NVarChar, email)
+                .query('UPDATE users SET is_active = 1 WHERE email = @email');
+            console.log('✅ Utente attivato\n');
+        }
 
         console.log(`🔐 Generazione hash per password: ${newPassword}`);
         const passwordHash = await bcrypt.hash(newPassword, 10);
+        console.log('✅ Hash generato\n');
 
-        console.log(`📝 Aggiornamento password per utente: ${email}`);
+        console.log('📝 Aggiornamento password...');
         const result = await pool.request()
             .input('email', sql.NVarChar, email)
             .input('passwordHash', sql.NVarChar, passwordHash)
@@ -41,23 +80,23 @@ async function resetPassword() {
             `);
 
         if (result.rowsAffected[0] > 0) {
-            console.log('✅ Password aggiornata con successo!');
-            console.log('');
-            console.log('📋 Credenziali admin:');
-            console.log(`   Email: ${email}`);
-            console.log(`   Password: ${newPassword}`);
-            console.log('');
-            console.log('🧪 Test login PowerShell:');
-            console.log(`   $login = Invoke-RestMethod -Uri "http://localhost:10443/api/v1/auth/login" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"email":"${email}","password":"${newPassword}"}'`);
+            console.log('✅ Password aggiornata!\n');
+            console.log('================================');
+            console.log('📋 CREDENZIALI ADMIN:');
+            console.log('================================');
+            console.log(`Email:    ${email}`);
+            console.log(`Password: ${newPassword}`);
+            console.log('================================\n');
         } else {
-            console.log(`❌ Utente ${email} non trovato nel database`);
+            console.log('❌ Errore aggiornamento');
         }
 
         await pool.close();
         process.exit(0);
 
     } catch (error) {
-        console.error('❌ Errore:', error.message);
+        console.error('❌ ERRORE:', error.message);
+        console.error(error.stack);
         process.exit(1);
     }
 }

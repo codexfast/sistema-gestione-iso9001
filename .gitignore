@@ -44,3 +44,6 @@ coverage/
 # Lock files (opzionale - alcuni team li committano)
 # package-lock.json
 # yarn.lock
+
+# Local Netlify folder
+.netlify

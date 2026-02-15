@@ -273,7 +273,7 @@ export class SyncService {
             const mappedAudit = {
                 ...auditData,
                 // Mappa selectedStandards (frontend) → standard_ids (backend API)
-                standard_ids: auditData.selectedStandards || auditData.standard_ids || auditData.standardIds || 
+                standard_ids: auditData.selectedStandards || auditData.standard_ids || auditData.standardIds ||
                     (auditData.standardId ? [auditData.standardId] : [1]) // Retrocompatibilità + default ISO 9001
             };
 

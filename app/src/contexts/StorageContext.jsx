@@ -14,10 +14,7 @@ import React, {
 import { MOCK_AUDITS } from "../data/mockAudits";
 import { createNewAudit, validateAuditSchema } from "../data/auditDataModel";
 import { useAutoSaveMultiple } from "../hooks/useAutoSave";
-import {
-  fetchChecklistQuestions,
-  buildChecklistStructure,
-} from "../services/checklistService";
+import { getChecklistTemplate } from "../data/checklistTemplates";
 import {
   createStorageProvider,
   getDeviceInfo,
@@ -413,29 +410,6 @@ export function StorageProvider({ children, useMockData = false }) {
   //   }
   // }, [currentAuditId]);
 
-  // === AUTO-INIZIALIZZAZIONE CHECKLIST ===
-  // Quando un nuovo audit viene creato/selezionato, auto-inizializza checklist ISO_9001
-  useEffect(() => {
-    if (
-      currentAudit &&
-      currentAudit.metadata?.selectedStandards?.includes("ISO_9001") &&
-      (!currentAudit.checklist?.ISO_9001 ||
-        Object.keys(currentAudit.checklist.ISO_9001).length === 0)
-    ) {
-      // Ritarda per evitare race condition
-      const timer = setTimeout(() => {
-        console.log(
-          "[StorageContext] Auto-inizializzazione checklist ISO_9001...",
-        );
-        // Usa la reference alla funzione, sarà definita dopo
-        if (typeof window.__initializeChecklistRef === "function") {
-          window.__initializeChecklistRef("ISO_9001");
-        }
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [currentAudit]);
-
   // === CRUD OPERATIONS ===
 
   /**
@@ -782,17 +756,18 @@ export function StorageProvider({ children, useMockData = false }) {
   );
 
   /**
-   * Inizializza checklist per una norma specifica
+   * Inizializza checklist per una norma specifica (SYNC - template copy)
    * @param {string} standard - ISO_9001, ISO_14001, ISO_45001
+   * @returns {boolean} true se inizializzata con successo
    */
   const initializeChecklist = useCallback(
-    async (standard = "ISO_9001") => {
+    (standard = "ISO_9001") => {
       if (!currentAudit) {
         console.warn("⚠️ No current audit to initialize checklist");
         return false;
       }
 
-      // Mappa standard code → standard_id per API
+      // Mappa standard code → standard_id
       const standardIdMap = {
         ISO_9001: 1,
         ISO_9001_2015: 1,
@@ -813,71 +788,70 @@ export function StorageProvider({ children, useMockData = false }) {
         currentAudit.checklist?.[standard] &&
         Object.keys(currentAudit.checklist[standard]).length > 0
       ) {
-        console.log(`ℹ️ Checklist ${standard} already initialized`);
+        console.log(`ℹ️ Checklist ${standard} già inizializzata`);
         return true;
       }
 
-      // Carica checklist dinamicamente da API
-      try {
-        console.log(`[StorageContext] Caricamento checklist ${standard} da API...`);
-        const questions = await fetchChecklistQuestions(standardId);
-        
-        if (questions.length === 0) {
-          console.warn(`⚠️ Nessuna domanda ricevuta per ${standard}`);
-          return false;
-        }
-
-        const structuredChecklist = buildChecklistStructure(questions);
-
-        // Converti array in oggetto per compatibilità con struttura esistente
-        const checklistObj = {};
-        structuredChecklist.forEach((clause) => {
-          checklistObj[clause.clauseId] = clause;
-        });
-
-        const totalQuestions = Object.values(checklistObj).reduce(
-          (sum, clause) => sum + (clause.questions?.length || 0),
-          0,
-        );
-
-        // Aggiorna audit con checklist caricata
-        updateCurrentAudit((audit) => {
-          const updatedAudit = { ...audit };
-
-          if (!updatedAudit.checklist) {
-            updatedAudit.checklist = {};
-          }
-
-          updatedAudit.checklist[standard] = checklistObj;
-          updatedAudit.metadata.lastModified = new Date().toISOString();
-          updatedAudit.metrics.totalQuestions = totalQuestions;
-
-          return updatedAudit;
-        });
-
-        console.log(
-          `✅ Initialized ${standard} checklist from API (${totalQuestions} questions)`,
-        );
-        return true;
-      } catch (error) {
-        console.error("❌ Errore caricamento checklist da API:", error);
-
-        // Fallback: inizializza con struttura vuota
-        updateCurrentAudit((audit) => {
-          const updatedAudit = { ...audit };
-
-          if (!updatedAudit.checklist) {
-            updatedAudit.checklist = {};
-          }
-
-          updatedAudit.checklist.ISO_9001 = {};
-          updatedAudit.metrics.totalQuestions = 0;
-
-          return updatedAudit;
-        });
-
+      // STRATEGIA: Copia sincrona del template (no fetch, no race conditions)
+      const template = getChecklistTemplate(standardId);
+      
+      if (!template || !template.sections || template.sections.length === 0) {
+        console.error(`❌ Template ${standard} non disponibile`);
         return false;
       }
+
+      console.log(`[StorageContext] Copiando template ${standard} (${template.sections.reduce((sum, s) => sum + s.questions.length, 0)} domande)...`);
+
+      // Deep copy del template (importante!)
+      const templateCopy = JSON.parse(JSON.stringify(template.sections));
+
+      // Converti struttura sections[].questions[] → clauseObj{} per retrocompatibilità
+      const checklistObj = {};
+      let totalQuestions = 0;
+
+      templateCopy.forEach((section) => {
+        const clauseId = section.sectionCode; // Es: "clause4"
+        
+        checklistObj[clauseId] = {
+          id: clauseId,
+          title: section.sectionTitle,
+          questions: section.questions.map((q, idx) => ({
+            id: `q${section.sectionCode}_${idx + 1}`,
+            title: q.questionText,
+            text: q.questionText,
+            questionId: q.questionId,
+            clauseRef: section.sectionCode.replace('clause', ''),
+            // Inizializza risposta vuota
+            status: "NOT_ANSWERED",
+            score: null,
+            notes: "",
+            evidence: [],
+            evidenceUrls: []
+          }))
+        };
+        
+        totalQuestions += section.questions.length;
+      });
+
+      // Aggiorna audit con checklist copiata
+      updateCurrentAudit((audit) => {
+        const updatedAudit = { ...audit };
+
+        if (!updatedAudit.checklist) {
+          updatedAudit.checklist = {};
+        }
+
+        updatedAudit.checklist[standard] = checklistObj;
+        updatedAudit.metadata.lastModified = new Date().toISOString();
+        updatedAudit.metrics.totalQuestions = totalQuestions;
+
+        return updatedAudit;
+      });
+
+      console.log(
+        `✅ Checklist ${standard} inizializzata da template (${totalQuestions} domande)`,
+      );
+      return true;
     },
     [currentAudit, updateCurrentAudit],
   );
