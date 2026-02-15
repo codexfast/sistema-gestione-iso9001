@@ -96,7 +96,7 @@ function normalizeStatus(status) {
 /**
  * Provider per gestione stato audit
  */
-export function StorageProvider({ children, useMockData = true }) {
+export function StorageProvider({ children, useMockData = false }) {
   // Storage Provider dinamico (LocalFs o IndexedDB)
   const [fsProvider, setFsProvider] = useState(null);
   const [deviceInfo] = useState(() => getDeviceInfo());
