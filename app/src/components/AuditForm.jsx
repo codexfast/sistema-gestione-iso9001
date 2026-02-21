@@ -31,9 +31,7 @@ const AuditForm = () => {
   const loadStandards = async () => {
     setLoadingStandards(true);
     try {
-      // Per ora uso un token fittizio - in produzione verrà dal context auth
-      const token = localStorage.getItem("authToken") || "";
-      const data = await fetchStandards(token);
+      const data = await fetchStandards();
       setStandards(data);
     } catch (error) {
       console.error("Errore caricamento standard:", error);

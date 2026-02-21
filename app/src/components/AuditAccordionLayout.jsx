@@ -82,7 +82,8 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
 
     // Inizializza checklist per standard aggiunti (immediato, no setTimeout)
     addedStandards.forEach((standard) => {
-      if (standard === "ISO_9001") {
+      // Supporta sia "ISO_9001" (key interna) che "ISO_9001_2015" (code da API/fallback)
+      if (standard === "ISO_9001" || standard === "ISO_9001_2015") {
         console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
         initializeChecklist("ISO_9001");
       }

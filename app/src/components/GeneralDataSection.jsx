@@ -68,8 +68,7 @@ function GeneralDataSection({
 
   const loadStandardsFromAPI = async () => {
     try {
-      const token = localStorage.getItem("authToken") || "";
-      const data = await fetchStandards(token);
+      const data = await fetchStandards();
       if (data && data.length > 0) {
         // Aggiungi descrizione dalla categoria
         const standardsWithDesc = data.map((std) => ({

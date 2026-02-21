@@ -73,6 +73,24 @@ function ChecklistModule() {
     loadResponseOptions();
   }, []); // Esegui solo al mount
 
+  // Auto-inizializza checklist quando audit viene caricato con standard selezionati
+  // ma senza checklist già compilata (es. audit caricato da IndexedDB o server)
+  useEffect(() => {
+    if (!currentAudit) return;
+
+    const selectedStandards = currentAudit.metadata?.selectedStandards || [];
+
+    // Normalizza: "ISO_9001_2015" e "ISO_9001" entrambi producono key "ISO_9001"
+    const hasISO9001 = selectedStandards.some(
+      (s) => s === "ISO_9001" || s === "ISO_9001_2015"
+    );
+
+    if (hasISO9001 && !currentAudit.checklist?.ISO_9001) {
+      console.log("[ChecklistModule] Auto-init checklist ISO_9001 per audit caricato");
+      initializeChecklist("ISO_9001");
+    }
+  }, [currentAudit?.id]); // Esegui solo al cambio audit (non ad ogni update)
+
   // TUTTI gli hooks devono essere prima degli early returns
   const stats = useMemo(() => {
     if (!currentAudit?.checklist) return null;

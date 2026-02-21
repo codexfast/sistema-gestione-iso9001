@@ -529,7 +529,7 @@ export class SyncService {
      * Get auth token
      */
     getToken() {
-        return localStorage.getItem('authToken') || '';
+        return localStorage.getItem('sgq_auth_token') || '';
     }
 
     /**
