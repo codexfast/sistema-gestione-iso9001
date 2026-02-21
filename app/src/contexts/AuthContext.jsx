@@ -78,16 +78,18 @@ export function AuthProvider({ children }) {
         const storedUser = apiService.getStoredUser();
 
         if (isOnline) {
-          // Verifica sessione con il server
+          // Verifica sessione con il server.
+          // checkSession() ritorna null SOLO per 401 confermato.
+          // Per errori di rete/timeout lancia un'eccezione gestita dal catch esterno.
           const serverUser = await apiService.checkSession();
           if (serverUser) {
             setUser(serverUser);
             apiService.setStoredUser(serverUser);
             console.log(`✅ Sessione verificata: ${serverUser.full_name}`);
           } else {
-            // Token non valido
+            // null = token confermato invalido/scaduto (401); logout obbligatorio
             apiService.clearToken();
-            console.log("⏰ Token non valido, sessione rimossa");
+            console.log("⏰ Token non valido o scaduto, sessione rimossa");
           }
         } else if (storedUser) {
           // Offline ma abbiamo user salvato
@@ -97,11 +99,17 @@ export function AuthProvider({ children }) {
           );
         }
       } catch (err) {
-        console.error("Errore ripristino sessione:", err);
-        // In caso di errore, usa cache se disponibile
-        const storedUser = apiService.getStoredUser();
-        if (storedUser) {
-          setUser(storedUser);
+        // Errore di rete/timeout durante checkSession:
+        // NON cancellare il token – l'utente potrebbe essere offline.
+        // Usa la sessione in cache per permettere il funzionamento offline.
+        const cachedUser = apiService.getStoredUser();
+        if (cachedUser) {
+          setUser(cachedUser);
+          console.warn(
+            `⚠️ Verifica sessione fallita (${err.code || err.message}), usando cache: ${cachedUser.full_name}`
+          );
+        } else {
+          console.error("Errore ripristino sessione (nessuna cache):", err);
         }
       } finally {
         setIsLoading(false);

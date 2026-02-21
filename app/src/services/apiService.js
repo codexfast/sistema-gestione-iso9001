@@ -281,17 +281,29 @@ class ApiService {
     }
 
     /**
-     * Verifica sessione corrente
+     * Verifica sessione corrente con il server.
+     * 
+     * Semantica deliberata:
+     * - Ritorna `user` se il token è valido.
+     * - Ritorna `null` SOLO se il token è confermato non valido (401 dopo tentativo refresh).
+     * - LANCIA un errore per qualsiasi problema di rete/timeout, così il
+     *   chiamante può distinguere "token invalido" da "rete assente" e
+     *   usare la sessione in cache senza fare il logout dell'utente.
      */
     async checkSession() {
         try {
             const response = await this.get('/auth/me');
             return response.user || null;
         } catch (error) {
+            // Token confermato invalido/scaduto (dopo il tentativo di refresh)
             if (error.code === 'SESSION_EXPIRED' || error.status === 401) {
                 this.clearToken();
+                return null; // segnale esplicito: token non valido
             }
-            return null;
+            // Errore di rete, timeout, server offline → rilancia
+            // Il caller (AuthContext.initSession) userà la sessione in cache
+            // senza cancellare il token (fix auth loop su Android PWA)
+            throw error;
         }
     }
 
