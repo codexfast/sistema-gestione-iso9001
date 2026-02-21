@@ -752,10 +752,164 @@ function createClauseTable(questions, auditAttachments = []) {
 }
 
 /**
+ * Helper: crea la sezione "3 - RILIEVI PENDENTI" con tabella reale.
+ * Accetta pendingIssues sia in formato frontend (camelCase)
+ * che in formato backend/DB (snake_case) — shape-agnostic.
+ *
+ * Campi riconosciuti (con fallback):
+ *   clause / requirement_reference / section_id  → colonna "Riferimento"
+ *   description / nc_description                 → colonna "Descrizione"
+ *   originAuditNumber / nc_number                → colonna "Audit sorgente"
+ *   status / issue_status                        → colonna "Stato"
+ *   resolutionNotes / follow_up_notes            → nota a piè riga (se presente)
+ */
+function createPendingIssuesSection(pendingIssues = []) {
+    const sections = [
+        new Paragraph({
+            text: '3 - RILIEVI PENDENTI',
+            heading: HeadingLevel.HEADING_1,
+            spacing: { before: 0, after: 300 }
+        })
+    ];
+
+    // Filtra solo i rilievi non risolti (open, in_progress, persists)
+    const open = pendingIssues.filter(pi => {
+        const s = pi.status || pi.issue_status || 'open';
+        return s !== 'resolved';
+    });
+
+    if (open.length === 0) {
+        sections.push(
+            new Paragraph({
+                text: 'Nessun rilievo pendente da audit precedenti.',
+                italics: true,
+                spacing: { after: 400 }
+            })
+        );
+        return sections;
+    }
+
+    // Mappa status → etichetta + colore
+    const STATUS_LABEL = {
+        open: { label: 'Aperto', fill: COLORS.danger, text: '991B1B' },
+        in_progress: { label: 'In corso', fill: COLORS.warning, text: '92400E' },
+        persists: { label: 'Persistente', fill: COLORS.danger, text: '991B1B' },
+        resolved: { label: 'Risolto', fill: COLORS.success, text: '065F46' },
+    };
+
+    // Header tabella
+    const headerRow = new TableRow({
+        tableHeader: true,
+        children: [
+            new TableCell({
+                children: [new Paragraph({ text: 'Rif. norma', bold: true, alignment: AlignmentType.CENTER })],
+                shading: { fill: COLORS.lightGray, type: ShadingType.CLEAR },
+                verticalAlign: VerticalAlign.CENTER,
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                margins: { top: 80, bottom: 80, left: 80, right: 80 }
+            }),
+            new TableCell({
+                children: [new Paragraph({ text: 'Descrizione rilievo', bold: true, alignment: AlignmentType.CENTER })],
+                shading: { fill: COLORS.lightGray, type: ShadingType.CLEAR },
+                verticalAlign: VerticalAlign.CENTER,
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                margins: { top: 80, bottom: 80, left: 80, right: 80 }
+            }),
+            new TableCell({
+                children: [new Paragraph({ text: 'Audit sorgente', bold: true, alignment: AlignmentType.CENTER })],
+                shading: { fill: COLORS.lightGray, type: ShadingType.CLEAR },
+                verticalAlign: VerticalAlign.CENTER,
+                width: { size: 20, type: WidthType.PERCENTAGE },
+                margins: { top: 80, bottom: 80, left: 80, right: 80 }
+            }),
+            new TableCell({
+                children: [new Paragraph({ text: 'Stato', bold: true, alignment: AlignmentType.CENTER })],
+                shading: { fill: COLORS.lightGray, type: ShadingType.CLEAR },
+                verticalAlign: VerticalAlign.CENTER,
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                margins: { top: 80, bottom: 80, left: 80, right: 80 }
+            })
+        ]
+    });
+
+    // Righe dati
+    const dataRows = open.map(pi => {
+        const clauseRef = pi.clause || pi.requirement_reference || pi.section_id || '—';
+        const description = pi.description || pi.nc_description || 'N/D';
+        const sourceAudit = pi.originAuditNumber || pi.nc_number || (pi.source_audit_id ? `ID ${pi.source_audit_id}` : '—');
+        const rawStatus = pi.status || pi.issue_status || 'open';
+        const statusCfg = STATUS_LABEL[rawStatus] || STATUS_LABEL.open;
+
+        // Note di risoluzione (opzionali)
+        const notes = pi.resolutionNotes || pi.follow_up_notes || '';
+
+        // Colonna descrizione: testo + eventuali note
+        const descChildren = [new Paragraph({ text: description, spacing: { before: 0, after: 0 } })];
+        if (notes) {
+            descChildren.push(new Paragraph({
+                text: `↳ ${notes}`,
+                italics: true,
+                color: '6B7280',
+                spacing: { before: 60, after: 0 }
+            }));
+        }
+
+        return new TableRow({
+            children: [
+                new TableCell({
+                    children: [new Paragraph({ text: clauseRef, alignment: AlignmentType.CENTER })],
+                    verticalAlign: VerticalAlign.TOP,
+                    margins: { top: 80, bottom: 80, left: 80, right: 80 }
+                }),
+                new TableCell({
+                    children: descChildren,
+                    verticalAlign: VerticalAlign.TOP,
+                    margins: { top: 80, bottom: 80, left: 100, right: 100 }
+                }),
+                new TableCell({
+                    children: [new Paragraph({ text: sourceAudit, alignment: AlignmentType.CENTER })],
+                    verticalAlign: VerticalAlign.TOP,
+                    margins: { top: 80, bottom: 80, left: 80, right: 80 }
+                }),
+                new TableCell({
+                    children: [new Paragraph({
+                        text: statusCfg.label,
+                        bold: true,
+                        alignment: AlignmentType.CENTER,
+                        color: statusCfg.text
+                    })],
+                    shading: { fill: statusCfg.fill, type: ShadingType.CLEAR },
+                    verticalAlign: VerticalAlign.CENTER,
+                    margins: { top: 80, bottom: 80, left: 40, right: 40 }
+                })
+            ]
+        });
+    });
+
+    sections.push(
+        new Table({
+            rows: [headerRow, ...dataRows],
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: COLORS.black },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: COLORS.black },
+                left: { style: BorderStyle.SINGLE, size: 1, color: COLORS.black },
+                right: { style: BorderStyle.SINGLE, size: 1, color: COLORS.black },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: COLORS.black },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: COLORS.black }
+            }
+        }),
+        new Paragraph({ text: '', spacing: { after: 400 }, pageBreakBefore: true })
+    );
+
+    return sections;
+}
+
+/**
  * Crea la sezione "3 - CHECKLIST DI AUDIT" completa
  * VERSIONE SCALABILE: si adatta automaticamente a modifiche della checklist
  */
-function createChecklistSection(checklist, auditAttachments = []) {
+function createChecklistSection(checklist, auditAttachments = [], pendingIssues = []) {
     // Null guard
     if (!checklist || Object.keys(checklist).length === 0) {
         return [
@@ -770,19 +924,8 @@ function createChecklistSection(checklist, auditAttachments = []) {
 
     const sections = [];
 
-    // Sezione 3 - RILIEVI PENDENTI (placeholder)
-    sections.push(
-        new Paragraph({
-            text: '3 - RILIEVI PENDENTI',
-            heading: HeadingLevel.HEADING_1,
-            spacing: { before: 0, after: 300 }
-        }),
-        new Paragraph({
-            text: 'Nessun rilievo pendente da audit precedenti.',
-            italics: true,
-            spacing: { after: 400 }
-        })
-    );
+    // Sezione 3 - RILIEVI PENDENTI (dati reali da audit.pendingIssues)
+    sections.push(...createPendingIssuesSection(pendingIssues));
 
     // Loop dinamico su tutte le norme (SCALABILE: funziona con N norme)
     Object.entries(checklist).forEach(([normKey, normData]) => {
@@ -1337,7 +1480,7 @@ export async function exportAuditToWord(audit) {
         ...createCoverPage(audit),
         ...createGeneralDataSection(metadata.generalData, metadata),
         ...createObjectiveSection(metadata.auditObjective),
-        ...createChecklistSection(audit.checklist, audit.attachments || []), // PASS attachments
+        ...createChecklistSection(audit.checklist, audit.attachments || [], audit.pendingIssues || []),
         ...createOutcomeSection(metadata.auditOutcome, audit.checklist)
     ];
 
@@ -1459,10 +1602,10 @@ export async function exportAuditToFileSystem(audit) {
     // ANDROID/MOBILE FALLBACK: File System Access API non supportato
     if (!window.showDirectoryPicker) {
         console.warn('⚠️ [ANDROID] File System Access API non disponibile - fallback blob download');
-        
+
         // Usa exportAuditToWord() che già gestisce blob download via file-saver
         const fileName = await exportAuditToWord(audit);
-        
+
         return {
             success: true,
             path: 'Download/' + fileName, // Percorso tipico Android
@@ -1491,7 +1634,7 @@ export async function exportAuditToFileSystem(audit) {
             ...createCoverPage(audit),
             ...createGeneralDataSection(metadata.generalData, metadata),
             ...createObjectiveSection(metadata.auditObjective),
-            ...createChecklistSection(audit.checklist, audit.attachments || []), // PASS attachments
+            ...createChecklistSection(audit.checklist, audit.attachments || [], audit.pendingIssues || []),
             ...createOutcomeSection(metadata.auditOutcome, audit.checklist)
         ];
 
@@ -1538,15 +1681,15 @@ export async function exportAuditToWorkspace(audit, fsProvider) {
 
     // ANDROID/MOBILE FALLBACK: File System Access API non supportato
     if (!window.showDirectoryPicker || !fsProvider?.ready()) {
-        const reason = !window.showDirectoryPicker 
+        const reason = !window.showDirectoryPicker
             ? 'File System Access API non disponibile (mobile)'
             : 'Workspace non configurato';
-        
+
         console.warn(`⚠️ [ANDROID] ${reason} - fallback blob download`);
-        
+
         // Usa exportAuditToWord() con blob download
         const fileName = await exportAuditToWord(audit);
-        
+
         return {
             success: true,
             path: 'Download/' + fileName,
@@ -1562,7 +1705,7 @@ export async function exportAuditToWorkspace(audit, fsProvider) {
             ...createCoverPage(audit),
             ...createGeneralDataSection(metadata.generalData, metadata),
             ...createObjectiveSection(metadata.auditObjective),
-            ...createChecklistSection(audit.checklist, audit.attachments || []), // PASS attachments
+            ...createChecklistSection(audit.checklist, audit.attachments || [], audit.pendingIssues || []),
             ...createOutcomeSection(metadata.auditOutcome, audit.checklist)
         ];
 
