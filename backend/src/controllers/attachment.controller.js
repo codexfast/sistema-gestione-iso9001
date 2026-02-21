@@ -30,6 +30,7 @@ async function listAttachments(req, res) {
         const {
             audit_id,
             nc_id,
+            question_id,
             category,
             page = 1,
             limit = 50
@@ -53,6 +54,11 @@ async function listAttachments(req, res) {
         } else {
             // Lista generale per organizzazione
             whereConditions.push('a.organization_id = @organization_id');
+        }
+
+        if (question_id) {
+            whereConditions.push('att.question_id = @question_id');
+            params.question_id = parseInt(question_id);
         }
 
         if (category) {
@@ -185,7 +191,7 @@ async function getAttachmentById(req, res) {
 async function uploadAttachment(req, res) {
     try {
         const { user_id, organization_id } = req.user;
-        const { audit_id, nc_id, category = 'evidence', description } = req.body;
+        const { audit_id, nc_id, question_id, category = 'evidence', description } = req.body;
 
         // Validazione: deve avere file
         if (!req.file) {
@@ -261,6 +267,7 @@ async function uploadAttachment(req, res) {
       INSERT INTO attachments (
         audit_id,
         nc_id,
+        question_id,
         file_name,
         file_type,
         file_size,
@@ -275,6 +282,7 @@ async function uploadAttachment(req, res) {
       VALUES (
         @audit_id,
         @nc_id,
+        @question_id,
         @file_name,
         @file_type,
         @file_size,
@@ -288,6 +296,7 @@ async function uploadAttachment(req, res) {
     `, {
             audit_id: audit_id ? parseInt(audit_id) : null,
             nc_id: nc_id ? parseInt(nc_id) : null,
+            question_id: question_id ? parseInt(question_id) : null,
             file_name: req.file.originalname,
             file_type: path.extname(req.file.originalname).toLowerCase(),
             file_size: req.file.size,
@@ -468,10 +477,97 @@ async function deleteAttachment(req, res) {
     }
 }
 
+/**
+ * GET /api/v1/attachments/:id/view
+ * Visualizzazione inline nel browser (immagini + PDF)
+ * Per altri tipi forza il download (fallback identico a downloadAttachment)
+ *
+ * Differenza da /download:
+ * - immagini e PDF → Content-Disposition: inline (apre nel browser)
+ * - altri tipi     → Content-Disposition: attachment (forza download)
+ */
+async function viewAttachment(req, res) {
+    try {
+        const { id } = req.params;
+        const { organization_id } = req.user;
+
+        const result = await query(`
+      SELECT 
+        att.*,
+        a.organization_id AS audit_org_id
+      FROM attachments att
+      LEFT JOIN audits a ON att.audit_id = a.audit_id
+      LEFT JOIN non_conformities nc ON att.nc_id = nc.nc_id
+      LEFT JOIN audits a2 ON nc.audit_id = a2.audit_id
+      WHERE att.attachment_id = @id 
+        AND (
+          a.organization_id = @organization_id OR
+          a2.organization_id = @organization_id
+        )
+    `, { id: parseInt(id), organization_id });
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({
+                error: 'Allegato non trovato',
+                code: 'ATTACHMENT_NOT_FOUND'
+            });
+        }
+
+        const attachment = result.recordset[0];
+
+        if (!fsSync.existsSync(attachment.storage_path)) {
+            logger.error('View: file fisico mancante', {
+                attachment_id: id,
+                storage_path: attachment.storage_path
+            });
+            return res.status(404).json({
+                error: 'File non trovato sul server',
+                code: 'FILE_NOT_FOUND_ON_DISK'
+            });
+        }
+
+        // Tipi che il browser può mostrare inline
+        const INLINE_TYPES = new Set([
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'image/heic', 'image/heif',
+            'application/pdf'
+        ]);
+
+        const disposition = INLINE_TYPES.has(attachment.mime_type)
+            ? 'inline'
+            : 'attachment';
+
+        res.setHeader('Content-Type', attachment.mime_type);
+        res.setHeader('Content-Disposition', `${disposition}; filename="${attachment.file_name}"`);
+        res.setHeader('Content-Length', attachment.file_size);
+        // Cache 1h: file immutabili (mai sovrascritti, solo cancellati)
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+
+        const fileStream = fsSync.createReadStream(attachment.storage_path);
+        fileStream.on('error', (streamErr) => {
+            logger.error('View: stream error', { error: streamErr.message });
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Errore lettura file' });
+            }
+        });
+        fileStream.pipe(res);
+
+        logger.info('Attachment viewed', { attachment_id: id, disposition, organization_id });
+
+    } catch (error) {
+        logger.error('Error viewing attachment', { error: error.message, stack: error.stack });
+        res.status(500).json({
+            error: 'Errore durante la visualizzazione dell\'allegato',
+            code: 'ATTACHMENT_VIEW_ERROR'
+        });
+    }
+}
+
 module.exports = {
     listAttachments,
     getAttachmentById,
     uploadAttachment,
     downloadAttachment,
+    viewAttachment,
     deleteAttachment
 };

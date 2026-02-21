@@ -44,13 +44,6 @@ function AuditObjectiveSection({ auditObjective, onUpdate }) {
 
   return (
     <div className="audit-objective-section">
-      <div className="section-header">
-        <h2>🎯 2 – OBIETTIVO DELL'AUDIT</h2>
-        <p className="section-description">
-          Definisci lo scopo dell'audit, i criteri di verifica e i partecipanti
-        </p>
-      </div>
-
       <form className="audit-objective-form">
         {/* Descrizione Obiettivo */}
         <div className="form-field">

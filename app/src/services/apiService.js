@@ -328,6 +328,10 @@ class ApiService {
         return this.delete(`/audits/${id}`);
     }
 
+    async checkReaudit(clientName) {
+        return this.post('/audits/check-reaudit', { client_name: clientName });
+    }
+
     // ==========================================
     // CHECKLIST ENDPOINTS
     // ==========================================
@@ -495,11 +499,21 @@ class ApiService {
     }
 
     /**
-     * Download allegato (ritorna URL per download)
+     * URL download forzato (browser salva il file)
+     * Usa ?token= così funziona anche in <a href> senza fetch
      */
     getAttachmentDownloadUrl(attachmentId) {
         const token = this.getToken();
         return `${this.baseUrl}/attachments/${attachmentId}/download?token=${token}`;
+    }
+
+    /**
+     * URL visualizzazione inline (immagini/PDF si aprono nel browser, altri scaricati)
+     * Usa ?token= così funziona in <img src> e <iframe src> senza fetch
+     */
+    getAttachmentViewUrl(attachmentId) {
+        const token = this.getToken();
+        return `${this.baseUrl}/attachments/${attachmentId}/view?token=${token}`;
     }
 
     /**

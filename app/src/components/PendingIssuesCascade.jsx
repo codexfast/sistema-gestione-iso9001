@@ -64,12 +64,6 @@ function PendingIssuesCascade() {
   return (
     <div className="pending-cascade">
       <div className="pending-header">
-        <div>
-          <h3>⏳ Pending Issues</h3>
-          <p className="pending-description">
-            Gestione tematiche aperte con carry-over da audit precedenti
-          </p>
-        </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="btn btn-primary"

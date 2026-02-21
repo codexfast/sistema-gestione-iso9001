@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const attachmentController = require('../controllers/attachment.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, authenticateDownload } = require('../middleware/auth.middleware');
 const { upload } = require('../config/multer');
 
 // Tutti gli endpoint richiedono autenticazione
@@ -17,8 +17,13 @@ router.get('/attachments', attachmentController.listAttachments);
 // GET /api/v1/attachments/:id - Dettagli allegato
 router.get('/attachments/:id', attachmentController.getAttachmentById);
 
-// GET /api/v1/attachments/:id/download - Download file
-router.get('/attachments/:id/download', attachmentController.downloadAttachment);
+// GET /api/v1/attachments/:id/download - Download forzato (sempre attachment)
+// authenticateDownload: accetta anche ?token= (per link diretti da browser)
+router.get('/attachments/:id/download', authenticateDownload, attachmentController.downloadAttachment);
+
+// GET /api/v1/attachments/:id/view - Preview inline (immagini/PDF si aprono nel browser)
+// authenticateDownload: accetta anche ?token= (per <img src>, <a href> diretti)
+router.get('/attachments/:id/view', authenticateDownload, attachmentController.viewAttachment);
 
 // POST /api/v1/attachments/upload - Upload file
 // Nota: multer middleware 'upload.single('file')' gestisce multipart/form-data

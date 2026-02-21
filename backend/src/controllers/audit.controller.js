@@ -916,6 +916,77 @@ async function getPendingIssues(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/audits/check-reaudit
+ * Verifica se esiste un audit precedente per il cliente e quanti rilievi aperti ha
+ * Body: { client_name }
+ * Response: { has_previous_audit, pending_count, last_audit_id, last_audit_date }
+ */
+async function checkReaudit(req, res) {
+    const { organization_id } = req.user;
+    const { client_name } = req.body;
+
+    if (!client_name || !client_name.trim()) {
+        return res.status(400).json({
+            error: 'client_name obbligatorio',
+            code: 'MISSING_CLIENT_NAME'
+        });
+    }
+
+    try {
+        // 1. Trova l'ultimo audit completato del cliente
+        const lastAuditResult = await query(`
+            SELECT TOP 1
+                audit_id,
+                audit_date,
+                audit_number
+            FROM audits
+            WHERE organization_id = @organization_id
+              AND client_name = @client_name
+              AND status IN ('completed', 'finalized')
+            ORDER BY audit_date DESC
+        `, { organization_id, client_name: client_name.trim() });
+
+        if (!lastAuditResult.recordset || lastAuditResult.recordset.length === 0) {
+            return res.json({
+                has_previous_audit: false,
+                pending_count: 0,
+                last_audit_id: null,
+                last_audit_date: null
+            });
+        }
+
+        const lastAudit = lastAuditResult.recordset[0];
+
+        // 2. Conta rilievi aperti (NC, OSS, OM) dall'ultimo audit
+        const countResult = await query(`
+            SELECT COUNT(*) AS pending_count
+            FROM audit_responses
+            WHERE audit_id = @audit_id
+              AND conformity_status IN ('NC', 'OSS', 'OM')
+        `, { audit_id: lastAudit.audit_id });
+
+        const pending_count = countResult.recordset[0]?.pending_count || 0;
+
+        logger.info('[CHECK_REAUDIT]', { client_name, last_audit_id: lastAudit.audit_id, pending_count });
+
+        return res.json({
+            has_previous_audit: true,
+            pending_count,
+            last_audit_id: lastAudit.audit_id,
+            last_audit_date: lastAudit.audit_date,
+            last_audit_number: lastAudit.audit_number
+        });
+
+    } catch (error) {
+        logger.error('[CHECK_REAUDIT] Errore:', error);
+        return res.status(500).json({
+            error: 'Errore server',
+            code: 'SERVER_ERROR'
+        });
+    }
+}
+
 module.exports = {
     listAudits,
     getAuditById,
@@ -924,5 +995,6 @@ module.exports = {
     deleteAudit,
     getAuditStatistics,
     upsertAudit,
-    getPendingIssues
+    getPendingIssues,
+    checkReaudit
 };

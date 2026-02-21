@@ -7,6 +7,7 @@
 import React, { useState } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import { getNextAuditNumber, sortAuditsByNumber } from "../utils/auditUtils";
+import apiService from "../services/apiService";
 import "./AuditSelector.css";
 
 function AuditSelector() {
@@ -20,6 +21,7 @@ function AuditSelector() {
   } = useStorage();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isReauditMode, setIsReauditMode] = useState(false);
 
   // Ordina audit per numero (più recente prima) - filtro audit validi
   const validAudits = audits.filter((audit) => audit && audit.metadata);
@@ -34,7 +36,13 @@ function AuditSelector() {
     }
   };
 
-  const handleCreateAudit = () => {
+  const handleCreateNewAudit = () => {
+    setIsReauditMode(false);
+    setShowCreateModal(true);
+  };
+
+  const handleCreateReAudit = () => {
+    setIsReauditMode(true);
     setShowCreateModal(true);
   };
 
@@ -47,7 +55,7 @@ function AuditSelector() {
       <>
         <div className="audit-selector empty">
           <p>Nessun audit disponibile</p>
-          <button onClick={handleCreateAudit} className="btn btn-primary">
+          <button onClick={handleCreateNewAudit} className="btn btn-primary">
             ➕ Crea Primo Audit
           </button>
         </div>
@@ -56,6 +64,8 @@ function AuditSelector() {
         {showCreateModal && (
           <CreateAuditModal
             audits={audits}
+            currentAudit={null}
+            isReaudit={false}
             onClose={() => setShowCreateModal(false)}
             onCreate={createAudit}
           />
@@ -90,12 +100,23 @@ function AuditSelector() {
             })}
           </select>
 
+          {/* Due pulsanti distinti: Nuovo Audit vs Re-Audit */}
           <button
-            onClick={handleCreateAudit}
+            onClick={handleCreateNewAudit}
             className="btn btn-icon btn-success"
-            title="Crea nuovo audit"
+            title="Crea nuovo audit (nuova azienda)"
+            disabled={currentAudit !== null}
           >
-            ➕
+            ➕ Nuovo
+          </button>
+          
+          <button
+            onClick={handleCreateReAudit}
+            className="btn btn-icon btn-primary"
+            title="Re-audit azienda selezionata"
+            disabled={currentAudit === null}
+          >
+            🔄 Re-Audit
           </button>
         </div>
 
@@ -142,6 +163,8 @@ function AuditSelector() {
       {showCreateModal && (
         <CreateAuditModal
           audits={audits}
+          currentAudit={currentAudit}
+          isReaudit={isReauditMode}
           onClose={() => setShowCreateModal(false)}
           onCreate={createAudit}
         />
@@ -154,19 +177,54 @@ function AuditSelector() {
 
 // === MODAL CREAZIONE AUDIT ===
 
-function CreateAuditModal({ audits, onClose, onCreate }) {
+function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }) {
   const currentYear = new Date().getFullYear();
   const nextNumber = getNextAuditNumber(audits, currentYear);
 
+  // Pre-popola clientName se re-audit
+  const initialClientName = isReaudit && currentAudit 
+    ? currentAudit.metadata.clientName 
+    : "";
+
   const [formData, setFormData] = useState({
     auditNumber: nextNumber,
-    clientName: "",
+    clientName: initialClientName,
     auditDate: new Date().toISOString().split("T")[0],
     auditorName: "",
     norms: ["ISO_9001"],
   });
 
   const [errors, setErrors] = useState({});
+  const [pendingInfo, setPendingInfo] = useState(null); // { count, lastAuditId }
+
+  // Se re-audit, verifica pending issues all'apertura modal
+  React.useEffect(() => {
+    if (isReaudit && currentAudit) {
+      checkPendingIssues(currentAudit);
+    }
+  }, [isReaudit, currentAudit]);
+
+  const checkPendingIssues = async (audit) => {
+    const clientName = audit?.metadata?.clientName || audit?.client_name;
+    if (!clientName) return;
+
+    try {
+      const result = await apiService.checkReaudit(clientName);
+      if (result.has_previous_audit && result.pending_count > 0) {
+        setPendingInfo({
+          count: result.pending_count,
+          lastAuditId: result.last_audit_id,
+          lastAuditDate: result.last_audit_date
+        });
+      } else {
+        setPendingInfo(null);
+      }
+    } catch (err) {
+      // Errore non bloccante: il modal si apre comunque
+      console.warn('[Re-Audit] check-reaudit fallito:', err.message);
+      setPendingInfo(null);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -221,11 +279,18 @@ function CreateAuditModal({ audits, onClose, onCreate }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Crea Nuovo Audit</h2>
+          <h2>{isReaudit ? "🔄 Re-Audit Azienda" : "➕ Crea Nuovo Audit"}</h2>
           <button className="modal-close" onClick={onClose}>
             ✕
           </button>
         </div>
+
+        {/* Badge pending issues (solo re-audit) */}
+        {isReaudit && pendingInfo && pendingInfo.count > 0 && (
+          <div className="pending-issues-badge">
+            ⚠️ {pendingInfo.count} rilievi pendenti dall'ultimo audit
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="modal-body">
           <div className="form-group">
@@ -250,9 +315,13 @@ function CreateAuditModal({ audits, onClose, onCreate }) {
               name="clientName"
               value={formData.clientName}
               onChange={handleChange}
-              className={`form-control ${errors.clientName ? "error" : ""}`}
-              placeholder="es. Acme Industries SpA"
+              disabled={isReaudit}
+              className={`form-control ${errors.clientName ? "error" : ""} ${isReaudit ? "readonly" : ""}`}
+              placeholder={isReaudit ? "Azienda da re-auditare" : "es. Acme Industries SpA"}
             />
+            {isReaudit && (
+              <small className="form-hint">📌 Azienda selezionata (non modificabile)</small>
+            )}
             {errors.clientName && (
               <span className="error-message">{errors.clientName}</span>
             )}

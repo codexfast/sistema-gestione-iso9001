@@ -184,8 +184,76 @@ function verifyOrganization(req, res, next) {
     next();
 }
 
+/**
+ * Middleware: Autenticazione per endpoint download/view
+ *
+ * Accetta token da:
+ * 1. Header Authorization: Bearer <token>  (chiamate API standard)
+ * 2. Query param ?token=<token>            (browser apre URL direttamente: <img src>, <a href>)
+ *
+ * SOLO per endpoint read-only (download, view). Non usare su endpoint mutating.
+ */
+function authenticateDownload(req, res, next) {
+    // Prova header prima (priorità), poi query param come fallback
+    const authHeader = req.headers.authorization;
+    const queryToken = req.query.token;
+
+    if (!authHeader && !queryToken) {
+        return res.status(401).json({
+            error: 'Token di autenticazione mancante',
+            code: 'AUTH_TOKEN_MISSING'
+        });
+    }
+
+    // Estrai token da header o query
+    let token;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+    } else if (queryToken) {
+        token = queryToken;
+    } else {
+        return res.status(401).json({
+            error: 'Token non valido',
+            code: 'AUTH_TOKEN_MISSING'
+        });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        if (!decoded.user_id || !decoded.organization_id) {
+            return res.status(401).json({
+                error: 'Token non valido',
+                code: 'AUTH_TOKEN_INVALID'
+            });
+        }
+
+        req.user = {
+            user_id: decoded.user_id,
+            email: decoded.email,
+            role: decoded.role || 'auditor',
+            organization_id: decoded.organization_id
+        };
+
+        next();
+
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                error: 'Token scaduto',
+                code: 'AUTH_TOKEN_EXPIRED'
+            });
+        }
+        return res.status(401).json({
+            error: 'Token non valido',
+            code: 'AUTH_TOKEN_INVALID'
+        });
+    }
+}
+
 module.exports = {
     authenticate,
+    authenticateDownload,
     authorize,
     verifyOrganization
 };
