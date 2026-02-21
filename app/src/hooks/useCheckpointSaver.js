@@ -34,9 +34,16 @@ export function useCheckpointSaver(audit, fsProvider, options = {}) {
     const [checkpointCount, setCheckpointCount] = useState(0);
     const intervalRef = useRef(null);
 
+    // Ref per l'audit: aggiornato ad ogni render ma NON nella dependency
+    // dell'effect interval — evita il re-avvio del setInterval ad ogni modifica audit
+    const auditRef = useRef(audit);
+    useEffect(() => {
+        auditRef.current = audit;
+    }, [audit]);
+
     useEffect(() => {
         // Non avviare se disabilitato o mancano parametri
-        if (!enabled || !audit || !fsProvider) {
+        if (!enabled || !fsProvider) {
             return;
         }
 
@@ -45,12 +52,15 @@ export function useCheckpointSaver(audit, fsProvider, options = {}) {
             return;
         }
 
-        // Funzione save checkpoint
+        // Funzione save checkpoint: legge audit da ref (sempre aggiornato)
         const doSave = async () => {
+            const currentAudit = auditRef.current;
+            if (!currentAudit) return;
+
             try {
                 setIsSaving(true);
 
-                await fsProvider.saveCheckpoint(audit);
+                await fsProvider.saveCheckpoint(currentAudit);
 
                 const now = new Date();
                 setLastCheckpointTime(now);
@@ -85,7 +95,10 @@ export function useCheckpointSaver(audit, fsProvider, options = {}) {
                 intervalRef.current = null;
             }
         };
-    }, [audit, fsProvider, enabled, intervalMs, onSave, onError]);
+    // audit rimosso dalle deps: il ref garantisce sempre l'ultimo valore senza
+    // riavviare l'intervallo ad ogni modifica dell'audit (causa re-render loop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fsProvider, enabled, intervalMs]);
 
     return {
         lastCheckpointTime,

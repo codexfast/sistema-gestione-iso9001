@@ -75,6 +75,7 @@ function ChecklistModule() {
 
   // Auto-inizializza checklist quando audit viene caricato con standard selezionati
   // ma senza checklist già compilata (es. audit caricato da IndexedDB o server)
+  // NOTA: {} è truthy in JS, quindi serve il check su Object.keys().length
   useEffect(() => {
     if (!currentAudit) return;
 
@@ -85,7 +86,11 @@ function ChecklistModule() {
       (s) => s === "ISO_9001" || s === "ISO_9001_2015"
     );
 
-    if (hasISO9001 && !currentAudit.checklist?.ISO_9001) {
+    // Considera vuota: mancante, null, oppure oggetto {} senza clausole
+    const isoChecklist = currentAudit.checklist?.ISO_9001;
+    const isChecklistEmpty = !isoChecklist || Object.keys(isoChecklist).length === 0;
+
+    if (hasISO9001 && isChecklistEmpty) {
       console.log("[ChecklistModule] Auto-init checklist ISO_9001 per audit caricato");
       initializeChecklist("ISO_9001");
     }
