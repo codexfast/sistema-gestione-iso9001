@@ -21,30 +21,33 @@ export default function WorkspaceManager({ audit, compact = false }) {
   const isMobile = storage.deviceInfo?.isMobile;
   const storageType = storage.deviceInfo?.recommendedStorage;
 
-  // Aggiorna stato quando storage cambia
+  // Aggiorna stato quando fsProvider cambia (stabile dopo init, non su ogni re-render context)
   useEffect(() => {
     const info = storage.fsProvider?.ready();
     setStorageInfo(info);
 
-    // Se IndexedDB, carica statistiche
+    // Se IndexedDB, carica statistiche una volta al mount
     if (storageType === "indexeddb" && storage.fsProvider?.getStorageStats) {
       storage.fsProvider.getStorageStats().then(setStorageStats);
     }
-  }, [storage, storageType]);
+  }, [storage.fsProvider, storageType]);
 
-  // Polling per aggiornare stato (caso permessi scaduti o IndexedDB stats)
+  // Polling per aggiornare stato (solo LocalFS: verifica permessi scaduti)
+  // IndexedDB non ha permessi da verificare → intervallo lungo (30s)
   useEffect(() => {
+    const pollInterval = storageType === "indexeddb" ? 30000 : 2000;
     const interval = setInterval(() => {
       const info = storage.fsProvider?.ready();
       setStorageInfo(info);
 
+      // Statistiche IndexedDB: aggiorna ogni 30s (non ogni 2s)
       if (storageType === "indexeddb" && storage.fsProvider?.getStorageStats) {
         storage.fsProvider.getStorageStats().then(setStorageStats);
       }
-    }, 2000); // Controlla ogni 2 secondi
+    }, pollInterval);
 
     return () => clearInterval(interval);
-  }, [storage, storageType]);
+  }, [storage.fsProvider, storageType]);
 
   const updateStorageInfo = () => {
     const info = storage.fsProvider?.ready();
