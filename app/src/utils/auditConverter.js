@@ -31,6 +31,13 @@ export function backendToFrontend(backendAudit) {
             conformitiesCount: backendAudit.conformities_count || 0,
             nonConformitiesCount: backendAudit.non_conformities_count || 0,
             completionPercentage: backendAudit.completion_percentage || 0,
+            // selectedStandards: derivato da standard_id (1=ISO_9001_2015, 2=ISO_14001, 3=ISO_45001)
+            selectedStandards: (() => {
+                const id = backendAudit.standard_id;
+                if (id === 2) return ['ISO_14001'];
+                if (id === 3) return ['ISO_45001'];
+                return ['ISO_9001_2015']; // default: ISO 9001
+            })(),
             createdAt: backendAudit.created_at,
             updatedAt: backendAudit.updated_at,
         },
@@ -38,6 +45,9 @@ export function backendToFrontend(backendAudit) {
             ISO_9001: {} // Vuoto, verrà popolato al primo accesso
         },
         nonConformities: [],
+        pendingIssues: [],       // Richiesto da schema validation (auditDataModel.js:446)
+        reportChapters: [],      // Richiesto da schema validation (auditDataModel.js:447)
+        exports: [],             // Richiesto da schema validation (auditDataModel.js:448)
         evidences: {
             documents: [],
             photos: [],
