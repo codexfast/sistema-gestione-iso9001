@@ -4,7 +4,7 @@
  * Sistema Gestione ISO 9001 - QS Studio
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
 import AttachmentSection from "./AttachmentSection";
@@ -46,6 +46,7 @@ function ChecklistModule() {
     auditSaveStatus,
     isSaving,
     initializeChecklist,
+    fetchAndApplyServerResponses,
   } = useStorage();
 
   const [expandedClauses, setExpandedClauses] = useState(new Set([])); // Tutti chiusi
@@ -113,6 +114,26 @@ function ChecklistModule() {
       initializeChecklist("ISO_9001");
     }
   }, [currentAudit?.id]); // Esegui solo al cambio audit (non ad ogni update)
+
+  // Idrata checklist con risposte salvate sul server.
+  // Si attiva DOPO initializeChecklist (quando le clausole sono presenti)
+  // e solo una volta per audit (tramite ref).
+  const hydratedAuditRef = useRef(null);
+
+  const isoChecklistReady = !!(
+    currentAudit?.checklist?.ISO_9001 &&
+    Object.keys(currentAudit.checklist.ISO_9001).length > 0
+  );
+
+  useEffect(() => {
+    if (!isoChecklistReady) return;
+    const auditNumericId = currentAudit?.metadata?.auditId;
+    if (!auditNumericId) return;
+    const auditKey = currentAudit?.metadata?.id || currentAudit?.id;
+    if (hydratedAuditRef.current === auditKey) return; // già fatto per questo audit
+    hydratedAuditRef.current = auditKey;
+    fetchAndApplyServerResponses(auditNumericId);
+  }, [currentAudit?.id, isoChecklistReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // TUTTI gli hooks devono essere prima degli early returns
   const stats = useMemo(() => {

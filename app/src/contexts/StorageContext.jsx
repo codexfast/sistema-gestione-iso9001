@@ -20,6 +20,7 @@ import {
   getDeviceInfo,
 } from "../services/storageAdapter";
 import { syncService } from "../services/syncService";
+import apiService from "../services/apiService";
 
 // Crea Context
 const StorageContext = createContext(null);
@@ -860,6 +861,70 @@ export function StorageProvider({ children, useMockData = false }) {
     [currentAudit, updateCurrentAudit],
   );
 
+  /**
+   * Carica le risposte salvate sul server e le applica alla checklist corrente.
+   * Chiamata da ChecklistModule dopo initializeChecklist.
+   * @param {number} numericAuditId - audit_id INTEGER dal server (metadata.auditId)
+   */
+  const fetchAndApplyServerResponses = useCallback(
+    async (numericAuditId) => {
+      if (!numericAuditId) return;
+      if (!navigator.onLine) {
+        console.log("📴 [HYDRATE] Offline — risposte non scaricate dal server");
+        return;
+      }
+      try {
+        console.log(`🔄 [HYDRATE] Carico risposte server per audit ${numericAuditId}...`);
+        const result = await apiService.getAuditResponses(numericAuditId);
+        const rows = result?.data;
+        if (!rows || rows.length === 0) {
+          console.log(`ℹ️ [HYDRATE] Nessuna risposta trovata per audit ${numericAuditId}`);
+          return;
+        }
+
+        // Map question_id → {status, notes}
+        const responseMap = {};
+        rows.forEach((r) => {
+          if (r.question_id) {
+            responseMap[r.question_id] = {
+              status: r.conformity_status || "NOT_ANSWERED",
+              notes: r.notes || "",
+            };
+          }
+        });
+
+        console.log(`✅ [HYDRATE] Applico ${Object.keys(responseMap).length} risposte alla checklist`);
+
+        updateCurrentAudit((audit) => {
+          const updatedAudit = JSON.parse(JSON.stringify(audit));
+          const checklist = updatedAudit.checklist;
+          if (!checklist) return audit;
+
+          let applied = 0;
+          Object.values(checklist).forEach((normData) => {
+            if (!normData || typeof normData !== "object") return;
+            Object.values(normData).forEach((clauseData) => {
+              if (!clauseData.questions) return;
+              clauseData.questions = clauseData.questions.map((q) => {
+                if (q.questionId && responseMap[q.questionId]) {
+                  applied++;
+                  return { ...q, ...responseMap[q.questionId] };
+                }
+                return q;
+              });
+            });
+          });
+
+          console.log(`✅ [HYDRATE] Applicate ${applied}/${rows.length} risposte`);
+          return updatedAudit;
+        });
+      } catch (err) {
+        console.warn("⚠️ [HYDRATE] Errore caricamento risposte server:", err.message);
+      }
+    },
+    [updateCurrentAudit],
+  );
+
   // Registra reference globale per useEffect
   useEffect(() => {
     window.__initializeChecklistRef = initializeChecklist;
@@ -1017,6 +1082,7 @@ export function StorageProvider({ children, useMockData = false }) {
     duplicateAudit,
     deleteAudit,
     initializeChecklist,
+    fetchAndApplyServerResponses,
     importBackup,
 
     // File System
