@@ -798,6 +798,15 @@ async function upsertAudit(req, res) {
 
             const newAudit = result.recordset[0];
 
+            // Inserisce in audit_standards (junction table) - fix sync offline
+            const stdId = standard_id || 1;
+            try {
+              await query(
+                'IF NOT EXISTS (SELECT 1 FROM audit_standards WHERE audit_id=@audit_id AND standard_id=@standard_id) INSERT INTO audit_standards (audit_id, standard_id) VALUES (@audit_id, @standard_id)',
+                { audit_id: newAudit.audit_id, standard_id: stdId }
+              );
+            } catch(e) { logger.warn('[UPSERT] audit_standards insert failed:', e.message); }
+
             logger.info(`[UPSERT] Audit creato: ${newAudit.audit_id} (${newAudit.audit_uuid})`);
 
             return res.status(201).json({
@@ -987,6 +996,81 @@ async function checkReaudit(req, res) {
     }
 }
 
+
+/**
+ * Salva in bulk le risposte checklist (UPSERT)
+ * POST /api/v1/audits/:id/responses/bulk
+ * Body: { responses: [{question_id, conformity_status, notes, evidence}] }
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+async function bulkSaveResponses(req, res) {
+    const { id: auditUuid } = req.params;
+    const { responses } = req.body;
+    const organizationId = req.user?.organization_id;
+
+    if (!responses || !Array.isArray(responses) || responses.length === 0) {
+        return res.status(400).json({ error: 'Nessuna risposta fornita', code: 'NO_RESPONSES' });
+    }
+
+    try {
+        // Recupera audit_id interno dalla UUID
+        const auditResult = await query(
+            'SELECT audit_id FROM audits WHERE audit_uuid = @audit_uuid AND organization_id = @org_id',
+            { audit_uuid: auditUuid, org_id: organizationId }
+        );
+        if (!auditResult.recordset?.length) {
+            return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
+        }
+        const auditId = auditResult.recordset[0].audit_id;
+
+        let saved = 0;
+        const errors = [];
+
+        for (const resp of responses) {
+            const { question_id, conformity_status, notes } = resp;
+
+            if (!question_id) {
+                errors.push({ question_id: null, error: 'question_id mancante' });
+                continue;
+            }
+
+            try {
+                await query(
+                    `MERGE audit_responses AS target
+                     USING (SELECT @audit_id AS audit_id, @question_id AS question_id) AS source
+                     ON target.audit_id = source.audit_id AND target.question_id = source.question_id
+                     WHEN MATCHED THEN
+                         UPDATE SET conformity_status = @conformity_status,
+                                    notes = @notes,
+                                    is_answered = 1,
+                                    updated_at = GETDATE()
+                     WHEN NOT MATCHED THEN
+                         INSERT (response_uuid, audit_id, question_id, conformity_status, notes, is_answered, created_at, updated_at)
+                         VALUES (NEWID(), @audit_id, @question_id, @conformity_status, @notes, 1, GETDATE(), GETDATE());`,
+                    {
+                        audit_id: auditId,
+                        question_id: Number(question_id),
+                        conformity_status: conformity_status || null,
+                        notes: notes || null
+                    }
+                );
+                saved++;
+            } catch (e) {
+                logger.warn('[BULK_RESPONSES] Errore riga:', { question_id, error: e.message });
+                errors.push({ question_id, error: e.message });
+            }
+        }
+
+        logger.info(`[BULK_RESPONSES] audit_uuid=${auditUuid} saved=${saved} errors=${errors.length}`);
+        return res.json({ saved, errors, total: responses.length });
+
+    } catch (error) {
+        logger.error('[BULK_RESPONSES] Errore generale:', error);
+        return res.status(500).json({ error: 'Errore server', code: 'SERVER_ERROR' });
+    }
+}
+
 module.exports = {
     listAudits,
     getAuditById,
@@ -996,5 +1080,6 @@ module.exports = {
     getAuditStatistics,
     upsertAudit,
     getPendingIssues,
-    checkReaudit
+    checkReaudit,
+    bulkSaveResponses
 };

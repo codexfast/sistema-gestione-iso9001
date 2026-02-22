@@ -39,4 +39,8 @@ router.put('/audits/:id', auditController.updateAudit);
 // DELETE /api/v1/audits/:id - Elimina audit (soft delete)
 router.delete('/audits/:id', auditController.deleteAudit);
 
+
+// POST /api/v1/audits/:id/responses/bulk - Salva risposte checklist in bulk (UPSERT)
+router.post('/audits/:id/responses/bulk', auditController.bulkSaveResponses);
+
 module.exports = router;
