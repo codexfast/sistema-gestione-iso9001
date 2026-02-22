@@ -14,6 +14,20 @@ import { validateQuestion } from "../utils/checklistValidation";
 import apiService from "../services/apiService";
 import "./ChecklistModule.css";
 
+/**
+ * Normalizza il codice norma per l'accesso alla checklist:
+ * "ISO_9001_2015" → "ISO_9001", "ISO_14001_2015" → "ISO_14001", ecc.
+ * Il dato viene salvato sempre con la chiave breve (es. "ISO_9001").
+ */
+function normalizeChecklistKey(normCode) {
+  const mapping = {
+    ISO_9001_2015:  "ISO_9001",
+    ISO_14001_2015: "ISO_14001",
+    ISO_45001_2018: "ISO_45001",
+  };
+  return mapping[normCode] || normCode;
+}
+
 // Nuovi status ISO 9001:2015 (sovrascrivono il legacy format)
 const STATUS = {
   C: "C", // Conforme
@@ -99,11 +113,11 @@ function ChecklistModule() {
   // TUTTI gli hooks devono essere prima degli early returns
   const stats = useMemo(() => {
     if (!currentAudit?.checklist) return null;
-    return calculateNormCompletion(currentAudit.checklist, selectedNorm);
+    return calculateNormCompletion(currentAudit.checklist, normalizeChecklistKey(selectedNorm));
   }, [currentAudit, selectedNorm]);
 
   const filteredClauses = useMemo(() => {
-    const checklist = currentAudit?.checklist?.[selectedNorm];
+    const checklist = currentAudit?.checklist?.[normalizeChecklistKey(selectedNorm)];
     if (!checklist || !searchTerm.trim()) {
       return checklist;
     }
@@ -145,12 +159,18 @@ function ChecklistModule() {
     "ISO_9001",
   ];
 
-  // Auto-select prima norma disponibile se quella selezionata non esiste
-  if (!availableNorms.includes(selectedNorm) && availableNorms.length > 0) {
+  // Chiave normalizzata per accesso ai dati (ISO_9001_2015 → ISO_9001, ecc.)
+  const checklistKey = normalizeChecklistKey(selectedNorm);
+
+  // Auto-select prima norma disponibile se quella selezionata (normalizzata) non ha dati
+  if (
+    !availableNorms.some((n) => normalizeChecklistKey(n) === checklistKey) &&
+    availableNorms.length > 0
+  ) {
     setSelectedNorm(availableNorms[0]);
   }
 
-  const checklist = currentAudit.checklist?.[selectedNorm];
+  const checklist = currentAudit.checklist?.[checklistKey];
 
   // Verifica se checklist è vuota (non inizializzata)
   const isChecklistEmpty = !checklist || Object.keys(checklist).length === 0;
@@ -163,15 +183,15 @@ function ChecklistModule() {
           <h3>Checklist Non Inizializzata</h3>
           <p>
             Questo audit non ha ancora una checklist compilabile per la norma{" "}
-            <strong>{selectedNorm.replace("ISO_", "ISO ")}</strong>.
+            <strong>{checklistKey.replace("ISO_", "ISO ")}</strong>.
           </p>
           <p className="hint">
             Clicca il pulsante qui sotto per inizializzare la struttura con le
-            26 domande previste dalla norma ISO 9001:2015 (clausole 4-10).
+            domande previste dalla norma ISO 9001:2015 (clausole 4-10).
           </p>
           <button
             className="btn btn-primary btn-large"
-            onClick={() => initializeChecklist(selectedNorm)}
+            onClick={() => initializeChecklist(checklistKey)}
           >
             ✨ Inizializza Checklist ISO 9001
           </button>
@@ -195,7 +215,7 @@ function ChecklistModule() {
   };
 
   const expandAll = () => {
-    setExpandedClauses(new Set(Object.keys(checklist.clauses)));
+    setExpandedClauses(new Set(Object.keys(checklist)));
   };
 
   const collapseAll = () => {
@@ -206,11 +226,11 @@ function ChecklistModule() {
     updateCurrentAudit((audit) => {
       const updatedAudit = { ...audit };
 
-      // Accesso corretto alla struttura: checklist[norm][clauseId]
-      const clause = updatedAudit.checklist[selectedNorm][clauseId];
+      // Accesso corretto alla struttura: checklist[checklistKey][clauseId]
+      const clause = updatedAudit.checklist[checklistKey][clauseId];
 
       if (!clause || !clause.questions) {
-        console.error(`Clausola ${clauseId} non trovata in ${selectedNorm}`);
+        console.error(`Clausola ${clauseId} non trovata in ${checklistKey}`);
         return audit; // Ritorna audit non modificato
       }
 
@@ -273,7 +293,7 @@ function ChecklistModule() {
         // Ricalcola metriche
         const newCompletion = calculateNormCompletion(
           updatedAudit.checklist,
-          selectedNorm
+          checklistKey
         );
 
         // Aggiorna metriche globali (somma tutte le norme)
@@ -283,7 +303,7 @@ function ChecklistModule() {
         currentAudit.metadata.selectedStandards.forEach((norm) => {
           const normStats = calculateNormCompletion(
             updatedAudit.checklist,
-            norm
+            normalizeChecklistKey(norm)  // normalizza es. ISO_9001_2015 → ISO_9001
           );
           totalAnswered += normStats.answered;
           totalQuestions += normStats.total;
