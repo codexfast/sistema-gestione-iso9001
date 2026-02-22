@@ -1,0 +1,285 @@
+/**
+ * AttachmentPreview.css
+ * Preview inline allegati server nella checklist audit
+ */
+
+/* === Sezione preview === */
+.attachment-preview-section {
+  margin-top: 10px;
+  border-top: 1px dashed var(--border-light, #e0e0e0);
+  padding-top: 10px;
+}
+
+.preview-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* === Loading === */
+.attachment-preview-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #888);
+}
+
+.preview-loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-light, #ddd);
+  border-top-color: var(--primary, #1976d2);
+  border-radius: 50%;
+  animation: preview-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes preview-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Grid preview === */
+.preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* === Item generico === */
+.preview-item {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* === Preview immagine === */
+.preview-image-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border-light, #ddd);
+  background: var(--surface, #f5f5f5);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.preview-image-wrapper:hover {
+  border-color: var(--primary, #1976d2);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-image-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+
+.preview-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.preview-image-wrapper:hover .preview-image-overlay {
+  opacity: 1;
+}
+
+/* === Link file (PDF / altri) === */
+.preview-file-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light, #ddd);
+  background: var(--surface, #fafafa);
+  text-decoration: none;
+  color: var(--text-primary, #333);
+  font-size: 0.78rem;
+  max-width: 180px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.preview-file-link:hover {
+  border-color: var(--primary, #1976d2);
+  background: #e8f0fe;
+  color: var(--primary, #1976d2);
+}
+
+.preview-file-link.pdf {
+  border-color: #f44336;
+}
+
+.preview-file-link.pdf:hover {
+  background: #fdecea;
+  color: #c62828;
+  border-color: #c62828;
+}
+
+.preview-file-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.preview-file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* === Bottone elimina (top-right su ogni item) === */
+.preview-delete-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: #f44336;
+  color: white;
+  font-size: 0.6rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+  padding: 0;
+}
+
+.preview-item:hover .preview-delete-btn {
+  opacity: 1;
+}
+
+.preview-delete-btn:hover {
+  background: #c62828;
+}
+
+/* === Lightbox === */
+.preview-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  animation: lightbox-fade 0.2s ease;
+}
+
+@keyframes lightbox-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: min(90vw, 1000px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  color: #333;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: background 0.15s;
+}
+
+.lightbox-close:hover {
+  background: #f44336;
+  color: white;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: calc(90vh - 80px);
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+.lightbox-caption {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
+  text-align: center;
+  max-width: 600px;
+  word-break: break-word;
+}
+
+.lightbox-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lightbox-download {
+  padding: 6px 16px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  text-decoration: none;
+  font-size: 0.82rem;
+  transition: background 0.15s;
+}
+
+.lightbox-download:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* === Responsive mobile === */
+@media (max-width: 480px) {
+  .preview-image-wrapper {
+    width: 64px;
+    height: 64px;
+  }
+
+  .preview-file-link {
+    max-width: 150px;
+  }
+}

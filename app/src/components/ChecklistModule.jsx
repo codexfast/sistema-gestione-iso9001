@@ -8,6 +8,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
 import AttachmentSection from "./AttachmentSection";
+import AttachmentPreview from "./AttachmentPreview";
 import { CHECKLIST_STATUS } from "../data/auditDataModel";
 import { calculateNormCompletion } from "../utils/auditUtils";
 import { validateQuestion } from "../utils/checklistValidation";
@@ -55,6 +56,9 @@ function ChecklistModule() {
 
   // Hook gestione allegati
   const attachments = useAttachmentManager(currentAudit, updateCurrentAudit);
+
+  // UUID audit per il fetch degli allegati server
+  const auditId = currentAudit?.metadata?.id || currentAudit?.id || null;
 
   // Carica opzioni di risposta dal backend (Step 1.6)
   useEffect(() => {
@@ -398,6 +402,7 @@ function ChecklistModule() {
               onToggle={() => toggleClause(clauseId)}
               onQuestionUpdate={handleQuestionUpdate}
               attachmentManager={attachments}
+              auditId={auditId}
             />
           ))
         )}
@@ -415,6 +420,7 @@ function ClauseAccordion({
   onToggle,
   onQuestionUpdate,
   attachmentManager,
+  auditId,
 }) {
   // Calcola statistiche clausola
   const clauseStats = useMemo(() => {
@@ -457,6 +463,7 @@ function ClauseAccordion({
               question={question}
               onUpdate={onQuestionUpdate}
               attachmentManager={attachmentManager}
+              auditId={auditId}
             />
           ))}
         </div>
@@ -467,7 +474,7 @@ function ClauseAccordion({
 
 // === QUESTION CARD COMPONENT ===
 
-function QuestionCard({ clauseId, question, onUpdate, attachmentManager }) {
+function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId }) {
   const handleStatusChange = (status) => {
     onUpdate(clauseId, question.id, "status", status);
   };
@@ -542,13 +549,19 @@ function QuestionCard({ clauseId, question, onUpdate, attachmentManager }) {
           />
         </div>
 
-        {/* Evidenza = Allegati (no label wrapper, stats inline) */}
+        {/* Evidenza = Allegati locali (upload) */}
         {attachmentManager && (
           <AttachmentSection
             questionId={question.id}
             attachmentManager={attachmentManager}
           />
         )}
+
+        {/* Allegati già sul server (preview inline immagini/PDF) */}
+        <AttachmentPreview
+          auditId={auditId}
+          questionId={question.id}
+        />
       </div>
     </div>
   );
