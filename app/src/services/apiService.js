@@ -344,6 +344,22 @@ class ApiService {
         return this.post('/audits/check-reaudit', { client_name: clientName });
     }
 
+    /**
+     * Rilievi pendenti (NC/OSS/OM) di un audit già esistente
+     * :auditId = audit_id INTEGER (dal campo last_audit_id di checkReaudit)
+     */
+    async getNcResponses(auditId) {
+        return this.get(`/audits/${auditId}/nc-responses`);
+    }
+
+    /**
+     * Pending issues associati a un audit corrente
+     * :auditId = audit_id INTEGER
+     */
+    async getPendingIssues(auditId) {
+        return this.get(`/audits/${auditId}/pending-issues`);
+    }
+
     // ==========================================
     // CHECKLIST ENDPOINTS
     // ==========================================

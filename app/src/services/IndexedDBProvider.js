@@ -305,7 +305,7 @@ export class IndexedDBProvider {
 
 // === SINGLETON per sync queue ===
 const SYNC_DB_NAME = 'SGQ_ISO9001_DB';
-const SYNC_DB_VERSION = 2;  // Incrementata per aggiungere sync_metadata store
+const SYNC_DB_VERSION = 3;  // Incrementata per aggiungere attachments_offline store
 
 let syncDbInstance = null;
 
@@ -349,6 +349,12 @@ export async function getDatabase() {
                 metaStore.createIndex('by_entity', ['entityType', 'localId'], { unique: true });
                 metaStore.createIndex('serverId', 'serverId', { unique: false });
                 console.log('📋 Sync metadata store creato');
+            }
+
+            // Store per blob allegati offline (ArrayBuffer + metadata)
+            if (!db.objectStoreNames.contains('attachments_offline')) {
+                db.createObjectStore('attachments_offline', { keyPath: 'blobKey' });
+                console.log('📦 Attachments offline blob store creato');
             }
         };
     });

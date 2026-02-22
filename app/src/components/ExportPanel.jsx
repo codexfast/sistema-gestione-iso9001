@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useStorage } from "../contexts/StorageContext";
+import apiService from "../services/apiService";
 import {
   downloadAuditJSON,
   downloadAllAuditsJSON,
@@ -55,7 +56,23 @@ const ExportPanel = () => {
 
     try {
       setIsExporting(true);
-      const fileName = await exportAuditToWord(currentAudit);
+
+      // Fetcha rilievi pendenti reali dal server (best-effort, non bloccante)
+      const auditForExport = { ...currentAudit };
+      const auditId = currentAudit.metadata?.id || currentAudit.id;
+
+      try {
+        const pendingResult = await apiService.getPendingIssues(auditId);
+        if (pendingResult?.pending_issues?.length > 0) {
+          auditForExport.pendingIssues = pendingResult.pending_issues;
+          console.log(`📋 [EXPORT] ${pendingResult.pending_issues.length} rilievi pendenti da DB`);
+        }
+      } catch (err) {
+        // Non bloccante: usa dati locali se API non risponde
+        console.warn('[EXPORT] pending issues da DB non disp., uso locali:', err.message);
+      }
+
+      const fileName = await exportAuditToWord(auditForExport);
       showMessage(`✅ Report Word generato: ${fileName}`, "success");
     } catch (error) {
       console.error("Errore export Word:", error);

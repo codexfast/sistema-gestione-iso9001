@@ -14,6 +14,7 @@ import apiService from './apiService';
 const SYNC_QUEUE_STORE = 'syncQueue';
 const STORE_SYNC_METADATA = 'sync_metadata';  // Store per tracking sync status
 const SYNC_STATUS_KEY = 'lastSyncStatus';
+const ATTACHMENTS_BLOB_STORE = 'attachments_offline'; // Store blob per upload offline
 
 /**
  * Struttura SyncQueueItem
@@ -382,12 +383,94 @@ export class SyncService {
 
     /**
      * Sync: Upload attachment
+     * Supporta sia payload.file (diretto) che payload.blobKey (da IDB)
      */
     async syncUploadAttachment(payload) {
-        return await apiService.uploadAttachment(payload.file, {
+        let file = payload.file;
+
+        // Se abbiamo un blobKey, recupera il blob da IDB
+        if (!file && payload.blobKey) {
+            const blobData = await this.getFileBlob(payload.blobKey);
+            if (!blobData) {
+                throw new Error(`Blob non trovato in IDB per key: ${payload.blobKey}`);
+            }
+            file = new Blob([blobData.arrayBuffer], { type: blobData.mimeType });
+            // Aggiungi nome al blob (richiesto da uploadAttachment)
+            file = new File([file], blobData.fileName || 'upload', { type: blobData.mimeType });
+        }
+
+        const result = await apiService.uploadAttachment(file, {
             auditId: payload.auditId,
+            questionId: payload.questionId,
             category: payload.category,
             description: payload.description
+        });
+
+        // Pulizia blob da IDB dopo upload riuscito
+        if (payload.blobKey) {
+            await this.deleteBlobFromStore(payload.blobKey);
+            console.log(`🗑️ [OFFLINE BLOB] Blob rimosso da IDB dopo sync: ${payload.blobKey}`);
+        }
+
+        return result;
+    }
+
+    /**
+     * Salva blob file in IDB per upload offline
+     * @param {string} blobKey - Chiave univoca (es. `att_<timestamp>_<filename>`)
+     * @param {ArrayBuffer} arrayBuffer - Contenuto file
+     * @param {Object} metadata - { mimeType, fileName }
+     */
+    async storeFileBlob(blobKey, arrayBuffer, metadata = {}) {
+        const db = await this.init();
+        const transaction = db.transaction([ATTACHMENTS_BLOB_STORE], 'readwrite');
+        const store = transaction.objectStore(ATTACHMENTS_BLOB_STORE);
+
+        await new Promise((resolve, reject) => {
+            const request = store.put({
+                blobKey,
+                arrayBuffer,
+                mimeType: metadata.mimeType || 'application/octet-stream',
+                fileName: metadata.fileName || blobKey,
+                savedAt: Date.now()
+            });
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+
+        console.log(`📦 [OFFLINE BLOB] File salvato in IDB: ${blobKey}`);
+    }
+
+    /**
+     * Recupera blob da IDB
+     * @param {string} blobKey
+     * @returns {Promise<{arrayBuffer, mimeType, fileName}|null>}
+     */
+    async getFileBlob(blobKey) {
+        const db = await this.init();
+        const transaction = db.transaction([ATTACHMENTS_BLOB_STORE], 'readonly');
+        const store = transaction.objectStore(ATTACHMENTS_BLOB_STORE);
+
+        return new Promise((resolve, reject) => {
+            const request = store.get(blobKey);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * Elimina blob da IDB
+     * @param {string} blobKey
+     */
+    async deleteBlobFromStore(blobKey) {
+        const db = await this.init();
+        const transaction = db.transaction([ATTACHMENTS_BLOB_STORE], 'readwrite');
+        const store = transaction.objectStore(ATTACHMENTS_BLOB_STORE);
+
+        await new Promise((resolve, reject) => {
+            const request = store.delete(blobKey);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
         });
     }
 

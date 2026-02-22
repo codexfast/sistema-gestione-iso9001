@@ -18,6 +18,8 @@
 
 import { useState, useCallback } from "react";
 import { useStorage } from "../contexts/StorageContext";
+import apiService from "../services/apiService";
+import { syncService } from "../services/syncService";
 
 /**
  * Mappa categoria → subfolder
@@ -171,6 +173,44 @@ export function useAttachmentManager(audit, onUpdate) {
                             path: metadata.relativePath,
                             uploadDate: new Date().toISOString(),
                         };
+
+                        // Tenta upload server (best-effort, non bloccante)
+                        const auditId = audit?.metadata?.id || audit?.id;
+                        if (auditId) {
+                            try {
+                                const serverResult = await apiService.uploadAttachment(file, {
+                                    auditId,
+                                    questionId,
+                                    category,
+                                    description: `${category} - ${questionId}`,
+                                });
+                                attachment.serverAttachmentId = serverResult?.attachment?.attachment_id || null;
+                                console.log(`☁️ [UPLOAD] File ${file.name} caricato su server`);
+                            } catch (uploadErr) {
+                                // Offline o errore server: salva blob in IDB per sync futuro
+                                console.warn(`📦 [OFFLINE] Upload fallito per ${file.name}, enqueue per sync:`, uploadErr.message);
+                                try {
+                                    const buffer = await file.arrayBuffer();
+                                    const blobKey = `att_${Date.now()}_${file.name}`;
+                                    await syncService.storeFileBlob(blobKey, buffer, {
+                                        mimeType: file.type,
+                                        fileName: file.name,
+                                    });
+                                    await syncService.enqueue('upload_attachment', {
+                                        blobKey,
+                                        auditId,
+                                        questionId,
+                                        category,
+                                        description: `${category} - ${questionId}`,
+                                        fileName: file.name,
+                                    });
+                                    attachment.pendingSync = true;
+                                    attachment.blobKey = blobKey;
+                                } catch (syncErr) {
+                                    console.error(`❌ [OFFLINE] Errore enqueue sync per ${file.name}:`, syncErr);
+                                }
+                            }
+                        }
 
                         results.push(attachment);
                     } catch (err) {

@@ -105,25 +105,181 @@ export const ISO_9001_TEMPLATE = {
 };
 
 /**
- * Template ISO 14001:2015 (Placeholder)
- * TODO: Popolare quando cliente fornisce checklist
+ * Template ISO 14001:2015 (Sistema di Gestione Ambientale)
+ * Clausole 4-10 — 35 domande di audit
+ * questionId: null = domande non ancora nel DB (sync silenzioso)
  */
 export const ISO_14001_TEMPLATE = {
   standardId: 2,
   standardCode: "ISO_14001_2015",
   standardName: "ISO 14001:2015",
-  sections: []
+  sections: [
+    {
+      sectionCode: "clause4",
+      sectionTitle: "Contesto dell'Organizzazione",
+      displayOrder: 1,
+      questions: [
+        { questionId: null, questionText: "Comprensione del contesto esterno e interno rilevante per la gestione ambientale (4.1)", questionType: "conformity", isMandatory: true, displayOrder: 1 },
+        { questionId: null, questionText: "Identificazione delle parti interessate e dei requisiti legali e altri requisiti ambientali (4.2)", questionType: "conformity", isMandatory: true, displayOrder: 2 },
+        { questionId: null, questionText: "Campo di applicazione del SGA: confini, attività, prodotti, servizi definiti e documentati (4.3)", questionType: "conformity", isMandatory: true, displayOrder: 3 },
+        { questionId: null, questionText: "Il SGA include processi necessari e le loro interazioni secondo i requisiti della norma (4.4)", questionType: "conformity", isMandatory: true, displayOrder: 4 }
+      ]
+    },
+    {
+      sectionCode: "clause5",
+      sectionTitle: "Leadership",
+      displayOrder: 2,
+      questions: [
+        { questionId: null, questionText: "L'alta direzione dimostra leadership e impegno verso il SGA (5.1)", questionType: "conformity", isMandatory: true, displayOrder: 5 },
+        { questionId: null, questionText: "Politica ambientale definita, comunicata e disponibile (5.2)", questionType: "conformity", isMandatory: true, displayOrder: 6 },
+        { questionId: null, questionText: "Ruoli, responsabilità e autorità per il SGA assegnati e comunicati (5.3)", questionType: "conformity", isMandatory: true, displayOrder: 7 }
+      ]
+    },
+    {
+      sectionCode: "clause6",
+      sectionTitle: "Pianificazione",
+      displayOrder: 3,
+      questions: [
+        { questionId: null, questionText: "Identificazione degli aspetti ambientali significativi (6.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 8 },
+        { questionId: null, questionText: "Valutazione degli obblighi di conformità (requisiti legali e altri) (6.1.3)", questionType: "conformity", isMandatory: true, displayOrder: 9 },
+        { questionId: null, questionText: "Pianificazione delle azioni per affrontare rischi, opportunità, aspetti significativi (6.1.4)", questionType: "conformity", isMandatory: true, displayOrder: 10 },
+        { questionId: null, questionText: "Obiettivi ambientali stabiliti, misurabili e monitorati (6.2)", questionType: "conformity", isMandatory: true, displayOrder: 11 }
+      ]
+    },
+    {
+      sectionCode: "clause7",
+      sectionTitle: "Supporto",
+      displayOrder: 4,
+      questions: [
+        { questionId: null, questionText: "Risorse necessarie per il SGA disponibili e adeguate (7.1)", questionType: "conformity", isMandatory: true, displayOrder: 12 },
+        { questionId: null, questionText: "Competenze del personale che opera sotto il controllo dell'organizzazione (7.2)", questionType: "conformity", isMandatory: true, displayOrder: 13 },
+        { questionId: null, questionText: "Consapevolezza del personale sulla politica, aspetti significativi e conseguenze (7.3)", questionType: "conformity", isMandatory: true, displayOrder: 14 },
+        { questionId: null, questionText: "Comunicazione interna ed esterna sull'SGA (7.4)", questionType: "conformity", isMandatory: true, displayOrder: 15 },
+        { questionId: null, questionText: "Informazioni documentate richieste dalla norma create, aggiornate e controllate (7.5)", questionType: "conformity", isMandatory: true, displayOrder: 16 }
+      ]
+    },
+    {
+      sectionCode: "clause8",
+      sectionTitle: "Attività Operative",
+      displayOrder: 5,
+      questions: [
+        { questionId: null, questionText: "Pianificazione e controllo operativo degli aspetti ambientali significativi (8.1)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
+        { questionId: null, questionText: "Preparazione e risposta alle emergenze ambientali (8.2)", questionType: "conformity", isMandatory: true, displayOrder: 18 },
+        { questionId: null, questionText: "Gestione dei fornitori e appaltatori riguardo agli aspetti ambientali (8.1 - ciclo vita)", questionType: "conformity", isMandatory: true, displayOrder: 19 },
+        { questionId: null, questionText: "Controllo dei processi in outsourcing con impatti ambientali significativi (8.1)", questionType: "conformity", isMandatory: true, displayOrder: 20 }
+      ]
+    },
+    {
+      sectionCode: "clause9",
+      sectionTitle: "Valutazione delle Prestazioni",
+      displayOrder: 6,
+      questions: [
+        { questionId: null, questionText: "Monitoraggio, misurazione, analisi e valutazione delle prestazioni ambientali (9.1.1)", questionType: "conformity", isMandatory: true, displayOrder: 21 },
+        { questionId: null, questionText: "Valutazione della conformità agli obblighi di conformità (9.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 22 },
+        { questionId: null, questionText: "Programma di audit interno attuato e risultati disponibili (9.2)", questionType: "conformity", isMandatory: true, displayOrder: 23 },
+        { questionId: null, questionText: "Riesame della direzione eseguito con tutti gli input richiesti e output documentati (9.3)", questionType: "conformity", isMandatory: true, displayOrder: 24 }
+      ]
+    },
+    {
+      sectionCode: "clause10",
+      sectionTitle: "Miglioramento",
+      displayOrder: 7,
+      questions: [
+        { questionId: null, questionText: "Gestione delle non conformità, azioni correttive adottate e verificate (10.2)", questionType: "conformity", isMandatory: true, displayOrder: 25 },
+        { questionId: null, questionText: "Miglioramento continuo del SGA (10.3)", questionType: "conformity", isMandatory: true, displayOrder: 26 }
+      ]
+    }
+  ]
 };
 
 /**
- * Template ISO 45001:2018 (Placeholder)
- * TODO: Popolare quando cliente fornisce checklist
+ * Template ISO 45001:2018 (Sistema di Gestione per la Salute e Sicurezza sul Lavoro)
+ * Clausole 4-10 — 35 domande di audit
+ * questionId: null = domande non ancora nel DB (sync silenzioso)
  */
 export const ISO_45001_TEMPLATE = {
   standardId: 3,
   standardCode: "ISO_45001_2018",
   standardName: "ISO 45001:2018",
-  sections: []
+  sections: [
+    {
+      sectionCode: "clause4",
+      sectionTitle: "Contesto dell'Organizzazione",
+      displayOrder: 1,
+      questions: [
+        { questionId: null, questionText: "Comprensione del contesto dell'organizzazione e fattori che influenzano la SSL (4.1)", questionType: "conformity", isMandatory: true, displayOrder: 1 },
+        { questionId: null, questionText: "Identificazione delle parti interessate rilevanti e dei loro requisiti SSL (4.2)", questionType: "conformity", isMandatory: true, displayOrder: 2 },
+        { questionId: null, questionText: "Campo di applicazione del SGSSL definito, confini e applicabilità documentati (4.3)", questionType: "conformity", isMandatory: true, displayOrder: 3 },
+        { questionId: null, questionText: "Il SGSSL e le sue interazioni con i processi aziendali sono definiti (4.4)", questionType: "conformity", isMandatory: true, displayOrder: 4 }
+      ]
+    },
+    {
+      sectionCode: "clause5",
+      sectionTitle: "Leadership e Partecipazione dei Lavoratori",
+      displayOrder: 2,
+      questions: [
+        { questionId: null, questionText: "L'alta direzione dimostra leadership e impegno verso il SGSSL (5.1)", questionType: "conformity", isMandatory: true, displayOrder: 5 },
+        { questionId: null, questionText: "Politica per la SSL stabilita, comunicata e accessibile (5.2)", questionType: "conformity", isMandatory: true, displayOrder: 6 },
+        { questionId: null, questionText: "Ruoli, responsabilità e autorità per il SGSSL assegnati e comunicati (5.3)", questionType: "conformity", isMandatory: true, displayOrder: 7 },
+        { questionId: null, questionText: "Consultazione e partecipazione dei lavoratori nei processi del SGSSL (5.4)", questionType: "conformity", isMandatory: true, displayOrder: 8 }
+      ]
+    },
+    {
+      sectionCode: "clause6",
+      sectionTitle: "Pianificazione",
+      displayOrder: 3,
+      questions: [
+        { questionId: null, questionText: "Identificazione dei pericoli e valutazione dei rischi per la SSL (6.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 9 },
+        { questionId: null, questionText: "Identificazione delle opportunità per il miglioramento della SSL (6.1.2.3)", questionType: "conformity", isMandatory: true, displayOrder: 10 },
+        { questionId: null, questionText: "Determinazione e accesso ai requisiti legali e altri applicabili alla SSL (6.1.3)", questionType: "conformity", isMandatory: true, displayOrder: 11 },
+        { questionId: null, questionText: "Pianificazione delle azioni per affrontare rischi e opportunità SSL (6.1.4)", questionType: "conformity", isMandatory: true, displayOrder: 12 },
+        { questionId: null, questionText: "Obiettivi SSL stabiliti, misurabili, monitorati con piani d'azione (6.2)", questionType: "conformity", isMandatory: true, displayOrder: 13 }
+      ]
+    },
+    {
+      sectionCode: "clause7",
+      sectionTitle: "Supporto",
+      displayOrder: 4,
+      questions: [
+        { questionId: null, questionText: "Risorse necessarie per il SGSSL disponibili (7.1)", questionType: "conformity", isMandatory: true, displayOrder: 14 },
+        { questionId: null, questionText: "Competenze del personale per le attività con impatto sulla SSL (7.2)", questionType: "conformity", isMandatory: true, displayOrder: 15 },
+        { questionId: null, questionText: "Consapevolezza del personale su politica, pericoli, rischi e gestione emergenze (7.3)", questionType: "conformity", isMandatory: true, displayOrder: 16 },
+        { questionId: null, questionText: "Comunicazione interna ed esterna sulle tematiche SSL (7.4)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
+        { questionId: null, questionText: "Informazioni documentate richieste dalla norma controllate e disponibili (7.5)", questionType: "conformity", isMandatory: true, displayOrder: 18 }
+      ]
+    },
+    {
+      sectionCode: "clause8",
+      sectionTitle: "Attività Operative",
+      displayOrder: 5,
+      questions: [
+        { questionId: null, questionText: "Pianificazione e controllo operativo dei rischi SSL (gerarchia dei controlli) (8.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 19 },
+        { questionId: null, questionText: "Gestione del cambiamento (modifiche temporanee e permanenti) (8.1.3)", questionType: "conformity", isMandatory: true, displayOrder: 20 },
+        { questionId: null, questionText: "Controllo dei fornitori, appaltatori e lavoratori autonomi in area aziendale (8.1.4)", questionType: "conformity", isMandatory: true, displayOrder: 21 },
+        { questionId: null, questionText: "Preparazione e risposta alle emergenze SSL (procedure, esercitazioni) (8.2)", questionType: "conformity", isMandatory: true, displayOrder: 22 }
+      ]
+    },
+    {
+      sectionCode: "clause9",
+      sectionTitle: "Valutazione delle Prestazioni",
+      displayOrder: 6,
+      questions: [
+        { questionId: null, questionText: "Monitoraggio, misurazione e analisi delle prestazioni del SGSSL (9.1.1)", questionType: "conformity", isMandatory: true, displayOrder: 23 },
+        { questionId: null, questionText: "Valutazione della conformità ai requisiti legali SSL (9.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 24 },
+        { questionId: null, questionText: "Programma di audit interno SSL attuato con obiettività (9.2)", questionType: "conformity", isMandatory: true, displayOrder: 25 },
+        { questionId: null, questionText: "Riesame della direzione SSL con input/output documentati e azioni definite (9.3)", questionType: "conformity", isMandatory: true, displayOrder: 26 }
+      ]
+    },
+    {
+      sectionCode: "clause10",
+      sectionTitle: "Miglioramento",
+      displayOrder: 7,
+      questions: [
+        { questionId: null, questionText: "Gestione di incidenti, non conformità e azioni correttive SSL (10.2)", questionType: "conformity", isMandatory: true, displayOrder: 27 },
+        { questionId: null, questionText: "Miglioramento continuo del SGSSL con evidenze di progressi (10.3)", questionType: "conformity", isMandatory: true, displayOrder: 28 }
+      ]
+    }
+  ]
 };
 
 /**

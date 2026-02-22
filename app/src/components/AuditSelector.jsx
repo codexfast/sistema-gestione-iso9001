@@ -211,10 +211,20 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     try {
       const result = await apiService.checkReaudit(clientName);
       if (result.has_previous_audit && result.pending_count > 0) {
+        // Carica il dettaglio NC/OSS/OM dall'ultimo audit
+        let issues = [];
+        try {
+          const ncResult = await apiService.getNcResponses(result.last_audit_id);
+          issues = ncResult.responses || [];
+        } catch (err) {
+          console.warn('[Re-Audit] getNcResponses fallito (non bloccante):', err.message);
+        }
+
         setPendingInfo({
           count: result.pending_count,
           lastAuditId: result.last_audit_id,
-          lastAuditDate: result.last_audit_date
+          lastAuditDate: result.last_audit_date,
+          issues
         });
       } else {
         setPendingInfo(null);
@@ -285,10 +295,40 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
           </button>
         </div>
 
-        {/* Badge pending issues (solo re-audit) */}
+        {/* Sezione rilievi pendenti (solo re-audit) */}
         {isReaudit && pendingInfo && pendingInfo.count > 0 && (
-          <div className="pending-issues-badge">
-            ⚠️ {pendingInfo.count} rilievi pendenti dall'ultimo audit
+          <div className="pending-issues-section">
+            <div className="pending-issues-header">
+              <span className="pending-issues-icon">⚠️</span>
+              <strong>
+                {pendingInfo.count} rilievi pendenti dall'ultimo audit
+              </strong>
+              {pendingInfo.lastAuditDate && (
+                <span className="pending-issues-date">
+                  ({new Date(pendingInfo.lastAuditDate).toLocaleDateString('it-IT')})
+                </span>
+              )}
+            </div>
+
+            {pendingInfo.issues && pendingInfo.issues.length > 0 ? (
+              <ul className="pending-issues-list">
+                {pendingInfo.issues.map((issue) => (
+                  <li key={issue.response_id} className={`pending-issue-item status-${issue.conformity_status?.toLowerCase()}`}>
+                    <span className={`pending-issue-badge badge-${issue.conformity_status?.toLowerCase()}`}>
+                      {issue.conformity_status}
+                    </span>
+                    <span className="pending-issue-ref">
+                      {issue.clause_number || issue.requirement_reference || `Q${issue.question_id}`}
+                    </span>
+                    <span className="pending-issue-text">
+                      {issue.question_text || issue.notes || '—'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="pending-issues-loading">⏳ Caricamento dettagli...</p>
+            )}
           </div>
         )}
 

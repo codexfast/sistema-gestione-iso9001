@@ -842,9 +842,9 @@ async function getPendingIssues(req, res) {
 
         // Step 1: Trova il client_name dell'audit corrente
         const currentAuditResult = await query(`
-            SELECT client_name, audit_date
+            SELECT audit_id, client_name, audit_date
             FROM audits
-            WHERE audit_id = @audit_id AND organization_id = @organization_id
+            WHERE (audit_id = TRY_CAST(@audit_id AS INT) OR audit_uuid = @audit_id) AND organization_id = @organization_id
         `, { audit_id, organization_id });
 
         if (!currentAuditResult.recordset || currentAuditResult.recordset.length === 0) {
@@ -1071,6 +1071,49 @@ async function bulkSaveResponses(req, res) {
     }
 }
 
+
+/**
+ * GET /api/v1/audits/:id/nc-responses
+ * Restituisce le risposte NC/OSS/OM di un audit specifico (per pre-visualizzazione rilievi nel re-audit modal)
+ * :id = audit_id INTEGER
+ */
+async function getNcResponses(req, res) {
+    const { id: audit_id } = req.params;
+    const { organization_id } = req.user;
+
+    try {
+        const result = await query(
+            `SELECT
+                ar.response_id,
+                ar.question_id,
+                ar.conformity_status,
+                ar.notes,
+                ar.updated_at,
+                cq.question_text,
+                cq.clause_number,
+                cq.requirement_reference
+             FROM audit_responses ar
+             LEFT JOIN checklist_questions cq ON ar.question_id = cq.question_id
+             JOIN audits a ON ar.audit_id = a.audit_id
+             WHERE (ar.audit_id = TRY_CAST(@audit_id AS INT) OR a.audit_uuid = @audit_id)
+               AND a.organization_id = @organization_id
+               AND ar.conformity_status IN ('NC', 'OSS', 'OM')
+             ORDER BY ar.conformity_status, cq.clause_number`,
+            { audit_id: String(audit_id), organization_id }
+        );
+
+        return res.json({
+            responses: result.recordset || [],
+            audit_id: Number(audit_id),
+            total: result.recordset?.length || 0
+        });
+
+    } catch (error) {
+        logger.error('[NC_RESPONSES] Errore:', error);
+        return res.status(500).json({ error: 'Errore server', code: 'SERVER_ERROR' });
+    }
+}
+
 module.exports = {
     listAudits,
     getAuditById,
@@ -1081,5 +1124,6 @@ module.exports = {
     upsertAudit,
     getPendingIssues,
     checkReaudit,
-    bulkSaveResponses
+    bulkSaveResponses,
+    getNcResponses
 };
