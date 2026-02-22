@@ -435,7 +435,10 @@ export function StorageProvider({ children, useMockData = false }) {
           // Includi solo domande con risposta (status diverso da NOT_ANSWERED)
           if (question.status && question.status !== "NOT_ANSWERED") {
             responses.push({
-              clause_ref: question.clauseRef || question.id, // es: '4.1', '5.2.1'
+              // question_id (intero) prioritario → lookup diretto sul server
+              // clause_ref come fallback per lookup via section_code
+              question_id: question.questionId || null,
+              clause_ref: question.clauseRef || question.id,
               conformity_status: question.status, // 'C', 'NC', 'OSS', 'OM', 'NA'
               notes: question.notes || null,
               evidence: question.evidenceRef || null,
@@ -820,7 +823,8 @@ export function StorageProvider({ children, useMockData = false }) {
             title: q.questionText,
             text: q.questionText,
             questionId: q.questionId,
-            clauseRef: section.sectionCode.replace('clause', ''),
+            // clauseRef puntato: es. "4.1", "4.2", "5.1", "7.3", ecc.
+            clauseRef: `${section.sectionCode.replace('clause', '')}.${idx + 1}`,
             // Inizializza risposta vuota
             status: "NOT_ANSWERED",
             score: null,
