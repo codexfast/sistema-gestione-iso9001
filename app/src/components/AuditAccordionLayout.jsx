@@ -16,7 +16,7 @@ import AuditOutcomeSection from "./AuditOutcomeSection";
 import ExportPanel from "./ExportPanel";
 
 function AuditAccordionLayout({ currentAudit, onUpdate }) {
-  const { initializeChecklist } = useStorage();
+  const { initializeChecklist, fetchAndApplyServerResponses } = useStorage();
 
   // Stato per gestire quali sezioni sono aperte
   const [openSections, setOpenSections] = useState({
@@ -78,6 +78,11 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
         currentAudit.id
       );
       initializeChecklist("ISO_9001");
+      // Idrata subito con risposte reali dal server (audit esistente)
+      const numericId = currentAudit.metadata?.auditId;
+      if (numericId) {
+        fetchAndApplyServerResponses(numericId);
+      }
     }
   }, [currentAudit?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
