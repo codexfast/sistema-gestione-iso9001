@@ -95,9 +95,9 @@ export function useCheckpointSaver(audit, fsProvider, options = {}) {
                 intervalRef.current = null;
             }
         };
-    // audit rimosso dalle deps: il ref garantisce sempre l'ultimo valore senza
-    // riavviare l'intervallo ad ogni modifica dell'audit (causa re-render loop)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // audit rimosso dalle deps: il ref garantisce sempre l'ultimo valore senza
+        // riavviare l'intervallo ad ogni modifica dell'audit (causa re-render loop)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fsProvider, enabled, intervalMs]);
 
     return {
