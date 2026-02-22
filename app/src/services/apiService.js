@@ -496,12 +496,13 @@ class ApiService {
      * Upload allegato (usa FormData, non JSON)
      */
     async uploadAttachment(file, options = {}) {
-        const { auditId, ncId, category = 'evidence', description } = options;
+        const { auditId, ncId, questionId, category = 'evidence', description } = options;
 
         const formData = new FormData();
         formData.append('file', file);
         if (auditId) formData.append('audit_id', auditId);
         if (ncId) formData.append('nc_id', ncId);
+        if (questionId) formData.append('question_id', questionId);
         formData.append('category', category);
         if (description) formData.append('description', description);
 

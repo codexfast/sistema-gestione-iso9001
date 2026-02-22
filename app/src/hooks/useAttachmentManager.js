@@ -175,7 +175,8 @@ export function useAttachmentManager(audit, onUpdate) {
                         };
 
                         // Tenta upload server (best-effort, non bloccante)
-                        const auditId = audit?.metadata?.id || audit?.id;
+                        // Usa auditId numerico (metadata.auditId) per compatibilità backend
+                        const auditId = audit?.metadata?.auditId || audit?.metadata?.id || audit?.id;
                         if (auditId) {
                             try {
                                 const serverResult = await apiService.uploadAttachment(file, {

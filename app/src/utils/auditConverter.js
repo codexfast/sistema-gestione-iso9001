@@ -48,6 +48,7 @@ export function backendToFrontend(backendAudit) {
         pendingIssues: [],       // Richiesto da schema validation (auditDataModel.js:446)
         reportChapters: [],      // Richiesto da schema validation (auditDataModel.js:447)
         exports: [],             // Richiesto da schema validation (auditDataModel.js:448)
+        attachments: [],         // Lista allegati locali (preservata dal merge se presente)
         evidences: {
             documents: [],
             photos: [],

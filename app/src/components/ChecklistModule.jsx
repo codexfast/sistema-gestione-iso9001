@@ -57,8 +57,9 @@ function ChecklistModule() {
   // Hook gestione allegati
   const attachments = useAttachmentManager(currentAudit, updateCurrentAudit);
 
-  // UUID audit per il fetch degli allegati server
-  const auditId = currentAudit?.metadata?.id || currentAudit?.id || null;
+  // ID audit: numerico (INT) per AttachmentPreview/server, UUID per upload
+  const auditId = currentAudit?.metadata?.auditId || null;   // INT per GET /attachments
+  const auditUuid = currentAudit?.metadata?.id || currentAudit?.id || null; // UUID per upload
 
   // Carica opzioni di risposta dal backend (Step 1.6)
   useEffect(() => {
@@ -550,17 +551,19 @@ function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId
         </div>
 
         {/* Evidenza = Allegati locali (upload) */}
+        {/* questionId: numeric INT (question.questionId) se disponibile, fallback stringa locale */}
         {attachmentManager && (
           <AttachmentSection
-            questionId={question.id}
+            questionId={question.questionId || question.id}
             attachmentManager={attachmentManager}
           />
         )}
 
         {/* Allegati già sul server (preview inline immagini/PDF) */}
+        {/* Richiede questionId numerico INT — non renderizza se null (ISO 14001/45001) */}
         <AttachmentPreview
           auditId={auditId}
-          questionId={question.id}
+          questionId={question.questionId || null}
         />
       </div>
     </div>

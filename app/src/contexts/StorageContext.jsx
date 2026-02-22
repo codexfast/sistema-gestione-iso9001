@@ -284,8 +284,18 @@ export function StorageProvider({ children, useMockData = false }) {
           }
         }
 
-        // MERGE: Server-wins (dati server sovrascrivono cache locale)
-        const mergedAudits = serverAudits.length > 0 ? serverAudits : localAudits;
+        // MERGE: Server-wins per metadata/checklist, preserva attachments locali non ancora sul server
+        const mergedAudits = serverAudits.length > 0
+          ? serverAudits.map(serverAudit => {
+              const sid = serverAudit.metadata?.id || serverAudit.id;
+              const localAudit = localAudits.find(la => (la.metadata?.id || la.id) === sid);
+              // Preserver local attachments[] se il dato server non li include
+              if (localAudit?.attachments?.length > 0) {
+                return { ...serverAudit, attachments: localAudit.attachments };
+              }
+              return serverAudit;
+            })
+          : localAudits;
 
         if (mergedAudits && mergedAudits.length > 0) {
           // Salva audit server in IndexedDB (aggiorna cache)

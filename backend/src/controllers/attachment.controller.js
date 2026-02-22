@@ -44,9 +44,17 @@ async function listAttachments(req, res) {
 
         // Filtra per organization_id via audit o NC
         if (audit_id) {
-            whereConditions.push('att.audit_id = @audit_id');
+            // Supporta sia audit_id INT che audit_uuid (UUID)
+            const numericAuditId = parseInt(audit_id);
+            if (!isNaN(numericAuditId)) {
+                whereConditions.push('att.audit_id = @audit_id');
+                params.audit_id = numericAuditId;
+            } else {
+                // UUID: join su audits per risolvere a audit_id INT
+                whereConditions.push('a.audit_uuid = @audit_uuid');
+                params.audit_uuid = audit_id;
+            }
             whereConditions.push('a.organization_id = @organization_id');
-            params.audit_id = parseInt(audit_id);
         } else if (nc_id) {
             whereConditions.push('att.nc_id = @nc_id');
             whereConditions.push('a.organization_id = @organization_id');
@@ -227,20 +235,34 @@ async function uploadAttachment(req, res) {
 
         // Verifica ownership audit o NC
         if (audit_id) {
-            const auditCheck = await query(`
+            // Supporta sia audit_id INT che audit_uuid (UUID)
+            const numericAuditId = parseInt(audit_id);
+            let resolvedAuditId;
+
+            if (!isNaN(numericAuditId)) {
+                const auditCheck = await query(`
         SELECT audit_id FROM audits
         WHERE audit_id = @audit_id AND organization_id = @organization_id AND is_deleted = 0
-      `, { audit_id: parseInt(audit_id), organization_id });
-
-            if (auditCheck.recordset.length === 0) {
-                // Cleanup file uploaded
-                await fs.unlink(req.file.path).catch(() => { });
-
-                return res.status(404).json({
-                    error: 'Audit non trovato',
-                    code: 'AUDIT_NOT_FOUND'
-                });
+      `, { audit_id: numericAuditId, organization_id });
+                if (auditCheck.recordset.length === 0) {
+                    await fs.unlink(req.file.path).catch(() => { });
+                    return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
+                }
+                resolvedAuditId = numericAuditId;
+            } else {
+                // UUID: risolvi a numeric audit_id
+                const auditCheck = await query(`
+        SELECT audit_id FROM audits
+        WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0
+      `, { audit_uuid: audit_id, organization_id });
+                if (auditCheck.recordset.length === 0) {
+                    await fs.unlink(req.file.path).catch(() => { });
+                    return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
+                }
+                resolvedAuditId = auditCheck.recordset[0].audit_id;
             }
+            // Sostituisci audit_id con il valore numerico risolto (usato nell'INSERT)
+            req.body.audit_id = resolvedAuditId;
         }
 
         if (nc_id) {
@@ -294,7 +316,7 @@ async function uploadAttachment(req, res) {
         GETDATE()
       )
     `, {
-            audit_id: audit_id ? parseInt(audit_id) : null,
+            audit_id: req.body.audit_id ? parseInt(req.body.audit_id) : null,
             nc_id: nc_id ? parseInt(nc_id) : null,
             question_id: question_id ? parseInt(question_id) : null,
             file_name: req.file.originalname,
