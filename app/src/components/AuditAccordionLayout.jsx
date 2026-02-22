@@ -3,7 +3,7 @@
  * Struttura ad albero verticale conforme al template Word
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import "./AuditAccordionLayout.css";
 
@@ -61,6 +61,25 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
   const handleAuditOutcomeUpdate = (updatedData) => {
     onUpdate("auditOutcome", updatedData);
   };
+
+  // Auto-inizializza checklist al caricamento dell'audit (anche senza aprire il sotto-accordeon)
+  useEffect(() => {
+    if (!currentAudit) return;
+    const standards = currentAudit.metadata?.selectedStandards || [];
+    const hasISO9001 = standards.some(
+      (s) => s === "ISO_9001" || s === "ISO_9001_2015"
+    );
+    const isoChecklist = currentAudit.checklist?.ISO_9001;
+    const isChecklistEmpty =
+      !isoChecklist || Object.keys(isoChecklist).length === 0;
+    if (hasISO9001 && isChecklistEmpty) {
+      console.log(
+        "[AuditAccordionLayout] Auto-init checklist ISO_9001 per audit:",
+        currentAudit.id
+      );
+      initializeChecklist("ISO_9001");
+    }
+  }, [currentAudit?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStandardsUpdate = (updatedStandards) => {
     const previousStandards = currentAudit.metadata.selectedStandards || [];
@@ -246,8 +265,10 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
 
           {openSections["checklist"] && (
             <div className="accordion-content">
-              {/* ISO 9001 - Solo se selezionato */}
-              {selectedStandards.includes("ISO_9001") && (
+              {/* ISO 9001 - Solo se selezionato (accetta sia "ISO_9001" che "ISO_9001_2015") */}
+              {selectedStandards.some(
+                (s) => s === "ISO_9001" || s === "ISO_9001_2015"
+              ) && (
                 <div className="accordion-subsection standard-section">
                   <button
                     className={`accordion-subheader standard-header ${
