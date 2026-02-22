@@ -22,10 +22,10 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Contesto dell'Organizzazione",
       displayOrder: 1,
       questions: [
-        { questionId: 1, questionText: "Comprendere l'Organizzazione e il suo contesto", questionType: "conformity", isMandatory: true, displayOrder: 1 },
-        { questionId: 2, questionText: "Esigenze e aspettative delle parti interessate", questionType: "conformity", isMandatory: true, displayOrder: 2 },
-        { questionId: 3, questionText: "Campo di applicazione", questionType: "conformity", isMandatory: true, displayOrder: 3 },
-        { questionId: 4, questionText: "Informazioni necessarie per supportare l'attuazione dei processi", questionType: "conformity", isMandatory: true, displayOrder: 4 }
+        { questionId: 87, questionText: "Comprendere l'Organizzazione e il suo contesto", questionType: "conformity", isMandatory: true, displayOrder: 1 },
+        { questionId: 88, questionText: "Esigenze e aspettative delle parti interessate", questionType: "conformity", isMandatory: true, displayOrder: 2 },
+        { questionId: 89, questionText: "Campo di applicazione", questionType: "conformity", isMandatory: true, displayOrder: 3 },
+        { questionId: 90, questionText: "Informazioni necessarie per supportare l'attuazione dei processi", questionType: "conformity", isMandatory: true, displayOrder: 4 }
       ]
     },
     {
@@ -33,10 +33,10 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Leadership",
       displayOrder: 2,
       questions: [
-        { questionId: 5, questionText: "Leadership E Impegno", questionType: "conformity", isMandatory: true, displayOrder: 5 },
-        { questionId: 6, questionText: "Politica per la Qualità", questionType: "conformity", isMandatory: true, displayOrder: 6 },
-        { questionId: 7, questionText: "Comunicazione della Politica per la Qualità", questionType: "conformity", isMandatory: true, displayOrder: 7 },
-        { questionId: 8, questionText: "Ruoli organizzativi, responsabilità e autorità", questionType: "conformity", isMandatory: true, displayOrder: 8 }
+        { questionId: 91, questionText: "Leadership E Impegno", questionType: "conformity", isMandatory: true, displayOrder: 5 },
+        { questionId: 92, questionText: "Politica per la Qualità", questionType: "conformity", isMandatory: true, displayOrder: 6 },
+        { questionId: 93, questionText: "Comunicazione della Politica per la Qualità", questionType: "conformity", isMandatory: true, displayOrder: 7 },
+        { questionId: 94, questionText: "Ruoli organizzativi, responsabilità e autorità", questionType: "conformity", isMandatory: true, displayOrder: 8 }
       ]
     },
     {
@@ -44,8 +44,8 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Pianificazione",
       displayOrder: 3,
       questions: [
-        { questionId: 9, questionText: "Azioni per affrontare rischi e opportunita", questionType: "conformity", isMandatory: true, displayOrder: 9 },
-        { questionId: 10, questionText: "Obiettivi per la Qualità", questionType: "conformity", isMandatory: true, displayOrder: 10 }
+        { questionId: 95, questionText: "Azioni per affrontare rischi e opportunita", questionType: "conformity", isMandatory: true, displayOrder: 9 },
+        { questionId: 96, questionText: "Obiettivi per la Qualità", questionType: "conformity", isMandatory: true, displayOrder: 10 }
       ]
     },
     {
@@ -53,15 +53,15 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Supporto",
       displayOrder: 4,
       questions: [
-        { questionId: 11, questionText: "Persone", questionType: "conformity", isMandatory: true, displayOrder: 11 },
-        { questionId: 12, questionText: "Infrastruttura", questionType: "conformity", isMandatory: true, displayOrder: 12 },
-        { questionId: 13, questionText: "Ambiente", questionType: "conformity", isMandatory: true, displayOrder: 13 },
-        { questionId: 14, questionText: "Idoneità allo scopo delle risorse per il monitoraggio e la misurazione", questionType: "conformity", isMandatory: true, displayOrder: 14 },
-        { questionId: 15, questionText: "Riferibilità metrologica per la taratura/verifica delle apparecchiature di misura", questionType: "conformity", isMandatory: true, displayOrder: 15 },
-        { questionId: 16, questionText: "Evidenza delle competenze del personale", questionType: "conformity", isMandatory: true, displayOrder: 16 },
-        { questionId: 17, questionText: "Consapevolezza", questionType: "conformity", isMandatory: true, displayOrder: 17 },
-        { questionId: 18, questionText: "Comunicazione", questionType: "conformity", isMandatory: true, displayOrder: 18 },
-        { questionId: 19, questionText: "Informazioni Documentate", questionType: "conformity", isMandatory: true, displayOrder: 19 }
+        { questionId: 97, questionText: "Persone", questionType: "conformity", isMandatory: true, displayOrder: 11 },
+        { questionId: 98, questionText: "Infrastruttura", questionType: "conformity", isMandatory: true, displayOrder: 12 },
+        { questionId: 99, questionText: "Ambiente", questionType: "conformity", isMandatory: true, displayOrder: 13 },
+        { questionId: 100, questionText: "Idoneità allo scopo delle risorse per il monitoraggio e la misurazione", questionType: "conformity", isMandatory: true, displayOrder: 14 },
+        { questionId: 101, questionText: "Riferibilità metrologica per la taratura/verifica delle apparecchiature di misura", questionType: "conformity", isMandatory: true, displayOrder: 15 },
+        { questionId: 102, questionText: "Evidenza delle competenze del personale", questionType: "conformity", isMandatory: true, displayOrder: 16 },
+        { questionId: 103, questionText: "Consapevolezza", questionType: "conformity", isMandatory: true, displayOrder: 17 },
+        { questionId: 104, questionText: "Comunicazione", questionType: "conformity", isMandatory: true, displayOrder: 18 },
+        { questionId: 105, questionText: "Informazioni Documentate", questionType: "conformity", isMandatory: true, displayOrder: 19 }
       ]
     },
     {
@@ -69,16 +69,16 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Attività Operative",
       displayOrder: 5,
       questions: [
-        { questionId: 20, questionText: "Requisiti per prodotti e servizi", questionType: "conformity", isMandatory: true, displayOrder: 20 },
-        { questionId: 21, questionText: "Riesame dei requisiti", questionType: "conformity", isMandatory: true, displayOrder: 21 },
-        { questionId: 22, questionText: "Progettazione", questionType: "conformity", isMandatory: true, displayOrder: 22 },
-        { questionId: 23, questionText: "Valutazione, selezione, monitoraggio delle prestazioni e rivalutazione dei fornitori esterni", questionType: "conformity", isMandatory: true, displayOrder: 23 },
-        { questionId: 24, questionText: "Rintracciabilità degli output", questionType: "conformity", isMandatory: true, displayOrder: 24 },
-        { questionId: 25, questionText: "Proprietà del cliente/fornitore", questionType: "conformity", isMandatory: true, displayOrder: 25 },
-        { questionId: 26, questionText: "Post vendita", questionType: "conformity", isMandatory: true, displayOrder: 26 },
-        { questionId: 27, questionText: "Controllo delle modifiche", questionType: "conformity", isMandatory: true, displayOrder: 27 },
-        { questionId: 28, questionText: "Rilascio dei prodotti/servizi", questionType: "conformity", isMandatory: true, displayOrder: 28 },
-        { questionId: 29, questionText: "Descrizione delle Non Conformità, Azioni adottate, concessioni ottenute", questionType: "conformity", isMandatory: true, displayOrder: 29 }
+        { questionId: 106, questionText: "Requisiti per prodotti e servizi", questionType: "conformity", isMandatory: true, displayOrder: 20 },
+        { questionId: 107, questionText: "Riesame dei requisiti", questionType: "conformity", isMandatory: true, displayOrder: 21 },
+        { questionId: 108, questionText: "Progettazione", questionType: "conformity", isMandatory: true, displayOrder: 22 },
+        { questionId: 109, questionText: "Valutazione, selezione, monitoraggio delle prestazioni e rivalutazione dei fornitori esterni", questionType: "conformity", isMandatory: true, displayOrder: 23 },
+        { questionId: 110, questionText: "Rintracciabilità degli output", questionType: "conformity", isMandatory: true, displayOrder: 24 },
+        { questionId: 111, questionText: "Proprietà del cliente/fornitore", questionType: "conformity", isMandatory: true, displayOrder: 25 },
+        { questionId: 112, questionText: "Post vendita", questionType: "conformity", isMandatory: true, displayOrder: 26 },
+        { questionId: 113, questionText: "Controllo delle modifiche", questionType: "conformity", isMandatory: true, displayOrder: 27 },
+        { questionId: 114, questionText: "Rilascio dei prodotti/servizi", questionType: "conformity", isMandatory: true, displayOrder: 28 },
+        { questionId: 115, questionText: "Descrizione delle Non Conformità, Azioni adottate, concessioni ottenute", questionType: "conformity", isMandatory: true, displayOrder: 29 }
       ]
     },
     {
@@ -86,10 +86,10 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Valutazione delle Prestazioni",
       displayOrder: 6,
       questions: [
-        { questionId: 30, questionText: "Valutazione delle prestazioni del SGQ (KPI)", questionType: "conformity", isMandatory: true, displayOrder: 30 },
-        { questionId: 31, questionText: "Customer Satisfaction", questionType: "conformity", isMandatory: true, displayOrder: 31 },
-        { questionId: 32, questionText: "Attuazione del programma di audit e risultati di audit", questionType: "conformity", isMandatory: true, displayOrder: 32 },
-        { questionId: 33, questionText: "Risultati dei Riesami di Direzione", questionType: "conformity", isMandatory: true, displayOrder: 33 }
+        { questionId: 116, questionText: "Valutazione delle prestazioni del SGQ (KPI)", questionType: "conformity", isMandatory: true, displayOrder: 30 },
+        { questionId: 117, questionText: "Customer Satisfaction", questionType: "conformity", isMandatory: true, displayOrder: 31 },
+        { questionId: 118, questionText: "Attuazione del programma di audit e risultati di audit", questionType: "conformity", isMandatory: true, displayOrder: 32 },
+        { questionId: 119, questionText: "Risultati dei Riesami di Direzione", questionType: "conformity", isMandatory: true, displayOrder: 33 }
       ]
     },
     {
@@ -97,8 +97,8 @@ export const ISO_9001_TEMPLATE = {
       sectionTitle: "Miglioramento",
       displayOrder: 7,
       questions: [
-        { questionId: 34, questionText: "Non conformità e Azioni Correttive", questionType: "conformity", isMandatory: true, displayOrder: 34 },
-        { questionId: 35, questionText: "Miglioramento continuo", questionType: "conformity", isMandatory: true, displayOrder: 35 }
+        { questionId: 120, questionText: "Non conformità e Azioni Correttive", questionType: "conformity", isMandatory: true, displayOrder: 34 },
+        { questionId: 121, questionText: "Miglioramento continuo", questionType: "conformity", isMandatory: true, displayOrder: 35 }
       ]
     }
   ]
