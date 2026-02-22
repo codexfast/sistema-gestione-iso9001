@@ -31,7 +31,8 @@ export const CHECKLIST_STATUS = {
     NON_COMPLIANT: 'NC',               // Non Conforme (Non Soddisfatto) ✗
     NOT_APPLICABLE: 'NA',              // Non Applicabile -
     IMPROVEMENT_OPP: 'OM',             // Opportunità di Miglioramento
-    NOT_VERIFIED: 'NV'                 // Non Verificato
+    NOT_VERIFIED: 'NV',                // Non Verificato
+    NOT_ANSWERED: 'NOT_ANSWERED'       // Non risposto (default inizializzazione)
 };
 
 /**
