@@ -106,6 +106,9 @@
             .then((reg) => {
               console.log("✅ Service Worker registered:", reg.scope);
 
+              // Controlla aggiornamenti ogni 60 secondi (utile per sessioni lunghe)
+              setInterval(() => reg.update(), 60000);
+
               // Check for updates
               reg.addEventListener("updatefound", () => {
                 const newWorker = reg.installing;
@@ -115,13 +118,40 @@
                     newWorker.state === "installed" &&
                     navigator.serviceWorker.controller
                   ) {
-                    console.log("⚠️ New version available - refresh to update");
-                    // Opzionale: mostra toast per reload
+                    console.log("⬆️ Nuovo aggiornamento pronto, reload in corso...");
                   }
                 });
               });
             })
             .catch((err) => console.error("❌ SW registration failed:", err));
+
+          // Auto-reload quando il nuovo SW prende controllo
+          // (skipWaiting + clients.claim nel SW triggera questo evento)
+          let reloading = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (reloading) return;
+            reloading = true;
+
+            // Mostra overlay prima del reload
+            const overlay = document.createElement("div");
+            overlay.id = "sw-update-overlay";
+            overlay.style.cssText = [
+              "position:fixed","top:0","left:0","width:100%","height:100%",
+              "background:rgba(30,64,175,0.92)","color:#fff",
+              "display:flex","flex-direction:column",
+              "align-items:center","justify-content:center",
+              "z-index:99999","font-family:sans-serif",
+              "gap:16px"
+            ].join(";");
+            overlay.innerHTML = [
+              "<div style='font-size:2rem'>⬆️</div>",
+              "<div style='font-size:1.2rem;font-weight:600'>Aggiornamento disponibile</div>",
+              "<div style='font-size:0.95rem;opacity:0.85'>Ricarico l'app con la nuova versione...</div>"
+            ].join("");
+            document.body.appendChild(overlay);
+
+            setTimeout(() => window.location.reload(), 1500);
+          });
         });
       }
     </script>
