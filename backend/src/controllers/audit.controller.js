@@ -680,8 +680,8 @@ async function upsertAudit(req, res) {
                 });
             }
 
-            // UPDATE
-            await query(`
+            // UPDATE con OUTPUT per ottenere il timestamp server effettivo
+            const updateResult = await query(`
         UPDATE audits
         SET 
           audit_number = @audit_number,
@@ -699,6 +699,7 @@ async function upsertAudit(req, res) {
           completion_percentage = @completion_percentage,
           standard_id = @standard_id,
           updated_at = GETDATE()
+        OUTPUT INSERTED.updated_at
         WHERE audit_id = @audit_id AND organization_id = @organization_id
       `, {
                 audit_id,
@@ -721,10 +722,14 @@ async function upsertAudit(req, res) {
 
             logger.info(`[UPSERT] Audit aggiornato: ${audit_id} (${audit_uuid})`);
 
+            // Ritorna updated_at server → il client lo memorizza per evitare conflict ciclici
+            const serverUpdatedAt = updateResult.recordset?.[0]?.updated_at || new Date().toISOString();
+
             return res.json({
                 audit_id,
                 audit_uuid,
                 action: 'updated',
+                updated_at: serverUpdatedAt,
                 message: 'Audit aggiornato con successo'
             });
 
@@ -753,7 +758,7 @@ async function upsertAudit(req, res) {
           updated_at,
           is_deleted
         )
-        OUTPUT INSERTED.audit_id, INSERTED.audit_uuid
+        OUTPUT INSERTED.audit_id, INSERTED.audit_uuid, INSERTED.updated_at
         VALUES (
           @audit_uuid,
           @audit_number,
@@ -813,6 +818,7 @@ async function upsertAudit(req, res) {
                 audit_id: newAudit.audit_id,
                 audit_uuid: newAudit.audit_uuid,
                 action: 'created',
+                updated_at: newAudit.updated_at,
                 message: 'Audit creato con successo'
             });
         }

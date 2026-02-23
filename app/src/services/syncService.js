@@ -285,44 +285,51 @@ export class SyncService {
 
             const result = await apiService.upsertAudit(mappedAudit);
 
-            // Backend risponde con {data: {action, audit_id}}
+            // Backend risponde con {audit_id, audit_uuid, action, updated_at}
             const responseData = result.data || result;
+            const auditUuid = auditData.audit_uuid || auditData.id;
 
             // Aggiorna sync_metadata
             if (responseData.action === 'created') {
-                await this.updateSyncMetadataLocal('audit', auditData.audit_uuid || auditData.id, responseData.audit_id);
+                await this.updateSyncMetadataLocal('audit', auditUuid, responseData.audit_id);
+            }
+
+            // Memorizza server updated_at → i sync futuri useranno questo valore
+            // evitando conflict ciclici (server_ts > client_ts)
+            if (responseData.updated_at) {
+                localStorage.setItem(`sgq_srv_ts_${auditUuid}`, responseData.updated_at);
             }
 
             return result;
         } catch (error) {
-            // Conflict su CREATE: audit già esiste → Rimuovi dalla queue (successo)
-            if (error.response?.status === 409 && error.response?.data?.code === 'AUDIT_CONFLICT') {
-                console.warn('⚠️ [SYNC] Conflict rilevato per audit:', auditData.audit_uuid || auditData.id);
+            // Conflict: server ha versione più recente (409)
+            // FIX: usa error.status/code (fetch-based ApiError), NON error.response (Axios-style)
+            if (error.status === 409 && error.code === 'AUDIT_CONFLICT') {
+                const auditUuid = auditData.audit_uuid || auditData.id;
+                console.warn('⚠️ [SYNC] Conflict server-wins per audit:', auditUuid);
 
-                // Se sync_metadata ha già l'audit_id, è un audit già sincronizzato
-                // Rimuovilo dalla queue senza errore
-                const serverData = error.response?.data?.serverData;
+                const serverData = error.data?.serverData; // error.data preserva il body completo del 409
                 if (serverData?.audit_id) {
-                    console.log(`✅ [SYNC] Audit già sincronizzato (audit_id: ${serverData.audit_id}), rimuovo dalla queue`);
+                    // Aggiorna sync_metadata locale
+                    await this.updateSyncMetadataLocal('audit', auditUuid, serverData.audit_id);
 
-                    // Aggiorna sync_metadata locale se non presente
-                    await this.updateSyncMetadataLocal(
-                        'audit',
-                        auditData.audit_uuid || auditData.id,
-                        serverData.audit_id
-                    );
+                    // Memorizza server updated_at → evita conflict ciclici nei sync futuri
+                    if (serverData.updated_at) {
+                        localStorage.setItem(`sgq_srv_ts_${auditUuid}`, serverData.updated_at);
+                        console.log(`📌 [SYNC] Server updated_at memorizzato per ${auditUuid}: ${serverData.updated_at}`);
+                    }
 
-                    // Ritorna successo (l'audit esiste sul server, obiettivo raggiunto)
+                    // Server-wins: rimuovi dalla queue senza errore
                     return {
                         data: {
-                            action: 'skipped_conflict',
+                            action: 'server_wins',
                             audit_id: serverData.audit_id,
-                            message: 'Audit già presente sul server'
+                            message: 'Server più recente, versione server mantenuta'
                         }
                     };
                 }
 
-                // Se non abbiamo serverData, prova conflict resolution tradizionale
+                // serverData mancante: usa resolveConflict tradizionale
                 return await this.resolveConflict(auditData);
             }
             throw error;

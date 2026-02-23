@@ -145,7 +145,8 @@ class ApiService {
                 throw new ApiError(
                     errorData.error || `HTTP ${response.status}`,
                     response.status,
-                    errorData.code || 'API_ERROR'
+                    errorData.code || 'API_ERROR',
+                    errorData // ← preserva serverData, conflict info, ecc.
                 );
             }
 
@@ -574,11 +575,12 @@ class ApiService {
  * Classe errore API personalizzata
  */
 class ApiError extends Error {
-    constructor(message, status, code) {
+    constructor(message, status, code, data = null) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
         this.code = code;
+        this.data = data; // Preserva il body completo della risposta (es. serverData da 409)
     }
 }
 

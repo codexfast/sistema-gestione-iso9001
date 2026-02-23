@@ -532,9 +532,20 @@ export function StorageProvider({ children, useMockData = false }) {
 
             // Enqueue sync audit metadata se online
             if (navigator.onLine) {
+              // Usa updated_at >= server_ts per evitare conflict ciclici:
+              // se il server ha già una versione più recente (memorizzata in localStorage
+              // da syncService dopo ogni sync riuscito/server-wins), il timestamp inviato
+              // deve essere >= quella dello server altrimenti torna sempre 409.
+              const auditUuid = updated.id || updated.metadata?.id;
+              const storedServerTs = localStorage.getItem(`sgq_srv_ts_${auditUuid}`);
+              const serverTsMs = storedServerTs ? new Date(storedServerTs).getTime() : 0;
+              const clientTsMs = Date.now();
+              // +1ms garantisce client > server → nessun conflict
+              const syncUpdatedAt = new Date(Math.max(clientTsMs, serverTsMs + 1)).toISOString();
+
               syncService
                 .enqueue("update_audit", {
-                  audit_uuid: updated.id || updated.metadata?.id, // Backend richiede audit_uuid
+                  audit_uuid: auditUuid, // Backend richiede audit_uuid
                   audit_number: updated.metadata?.auditNumber,
                   client_name: updated.metadata?.clientName,
                   project_year: updated.metadata?.projectYear,
@@ -545,7 +556,7 @@ export function StorageProvider({ children, useMockData = false }) {
                   notes: updated.metadata?.notes,
                   ...calculatedMetrics, // Metriche calcolate da checklist
                   standard_id: 1, // ISO 9001
-                  updated_at: new Date().toISOString(),
+                  updated_at: syncUpdatedAt,
                 })
                 .catch((err) => {
                   console.error("❌ [SYNC] Errore enqueue update:", err);
