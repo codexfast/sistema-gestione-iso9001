@@ -177,15 +177,27 @@ export function useAttachmentManager(audit, onUpdate) {
                         // Tenta upload server (best-effort, non bloccante)
                         // Usa auditId numerico (metadata.auditId) per compatibilità backend
                         const auditId = audit?.metadata?.auditId || audit?.metadata?.id || audit?.id;
+
+                        // Mapping categorie IT→EN per compatibilità backend
+                        const CATEGORY_MAP = {
+                            foto: 'photo',
+                            documenti: 'document',
+                            verbali: 'document',
+                            evidence: 'evidence',
+                            audio: 'audio',
+                            video: 'video',
+                        };
+                        const serverCategory = CATEGORY_MAP[category] || 'evidence';
+
                         if (auditId) {
                             try {
                                 const serverResult = await apiService.uploadAttachment(file, {
                                     auditId,
                                     questionId,
-                                    category,
+                                    category: serverCategory,
                                     description: `${category} - ${questionId}`,
                                 });
-                                attachment.serverAttachmentId = serverResult?.attachment?.attachment_id || null;
+                                attachment.serverAttachmentId = serverResult?.data?.attachment_id || null;
                                 console.log(`☁️ [UPLOAD] File ${file.name} caricato su server`);
                             } catch (uploadErr) {
                                 // Offline o errore server: salva blob in IDB per sync futuro
@@ -201,7 +213,7 @@ export function useAttachmentManager(audit, onUpdate) {
                                         blobKey,
                                         auditId,
                                         questionId,
-                                        category,
+                                        category: serverCategory,
                                         description: `${category} - ${questionId}`,
                                         fileName: file.name,
                                     });
