@@ -203,6 +203,7 @@ async function uploadAttachment(req, res) {
 
         // Validazione: deve avere file
         if (!req.file) {
+            logger.warn('Upload: nessun file ricevuto', { user_id, organization_id, body: req.body });
             return res.status(400).json({
                 error: 'Nessun file caricato',
                 code: 'VALIDATION_ERROR'
@@ -213,7 +214,7 @@ async function uploadAttachment(req, res) {
         if ((!audit_id && !nc_id) || (audit_id && nc_id)) {
             // Cleanup file uploaded
             await fs.unlink(req.file.path).catch(() => { });
-
+            logger.warn('Upload: audit_id/nc_id mancante o duplicato', { audit_id, nc_id, user_id, organization_id });
             return res.status(400).json({
                 error: 'Specificare audit_id O nc_id (non entrambi)',
                 code: 'VALIDATION_ERROR'
@@ -225,7 +226,7 @@ async function uploadAttachment(req, res) {
         if (!validCategories.includes(category)) {
             // Cleanup file uploaded
             await fs.unlink(req.file.path).catch(() => { });
-
+            logger.warn('Upload: categoria non valida', { category, validCategories, user_id, organization_id });
             return res.status(400).json({
                 error: 'Categoria non valida',
                 code: 'VALIDATION_ERROR',
@@ -246,6 +247,7 @@ async function uploadAttachment(req, res) {
       `, { audit_id: numericAuditId, organization_id });
                 if (auditCheck.recordset.length === 0) {
                     await fs.unlink(req.file.path).catch(() => { });
+                    logger.warn('Upload: audit non trovato (INT)', { audit_id: numericAuditId, organization_id });
                     return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
                 }
                 resolvedAuditId = numericAuditId;
@@ -257,6 +259,7 @@ async function uploadAttachment(req, res) {
       `, { audit_uuid: audit_id, organization_id });
                 if (auditCheck.recordset.length === 0) {
                     await fs.unlink(req.file.path).catch(() => { });
+                    logger.warn('Upload: audit non trovato (UUID)', { audit_uuid: audit_id, organization_id });
                     return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
                 }
                 resolvedAuditId = auditCheck.recordset[0].audit_id;
