@@ -680,8 +680,10 @@ async function upsertAudit(req, res) {
                 });
             }
 
-            // UPDATE con OUTPUT per ottenere il timestamp server effettivo
+            // UPDATE — SQL Server non supporta OUTPUT diretto su tabelle con trigger;
+            // usiamo una table variable come destinazione intermedia dell'OUTPUT clause
             const updateResult = await query(`
+        DECLARE @out TABLE (updated_at DATETIME2);
         UPDATE audits
         SET 
           audit_number = @audit_number,
@@ -699,8 +701,9 @@ async function upsertAudit(req, res) {
           completion_percentage = @completion_percentage,
           standard_id = @standard_id,
           updated_at = GETDATE()
-        OUTPUT INSERTED.updated_at
-        WHERE audit_id = @audit_id AND organization_id = @organization_id
+        OUTPUT INSERTED.updated_at INTO @out
+        WHERE audit_id = @audit_id AND organization_id = @organization_id;
+        SELECT updated_at FROM @out;
       `, {
                 audit_id,
                 audit_number,
@@ -735,7 +738,9 @@ async function upsertAudit(req, res) {
 
         } else {
             // ========== INSERT NUOVO ==========
+            // Usiamo table variable per OUTPUT (compatibilità trigger SQL Server)
             const result = await query(`
+        DECLARE @out TABLE (audit_id INT, audit_uuid UNIQUEIDENTIFIER, updated_at DATETIME2);
         INSERT INTO audits (
           audit_uuid,
           audit_number,
@@ -758,7 +763,7 @@ async function upsertAudit(req, res) {
           updated_at,
           is_deleted
         )
-        OUTPUT INSERTED.audit_id, INSERTED.audit_uuid, INSERTED.updated_at
+        OUTPUT INSERTED.audit_id, INSERTED.audit_uuid, INSERTED.updated_at INTO @out
         VALUES (
           @audit_uuid,
           @audit_number,
@@ -780,7 +785,8 @@ async function upsertAudit(req, res) {
           GETDATE(),
           GETDATE(),
           0
-        )
+        );
+        SELECT audit_id, audit_uuid, updated_at FROM @out;
       `, {
                 audit_uuid,
                 audit_number,
@@ -806,11 +812,11 @@ async function upsertAudit(req, res) {
             // Inserisce in audit_standards (junction table) - fix sync offline
             const stdId = standard_id || 1;
             try {
-              await query(
-                'IF NOT EXISTS (SELECT 1 FROM audit_standards WHERE audit_id=@audit_id AND standard_id=@standard_id) INSERT INTO audit_standards (audit_id, standard_id) VALUES (@audit_id, @standard_id)',
-                { audit_id: newAudit.audit_id, standard_id: stdId }
-              );
-            } catch(e) { logger.warn('[UPSERT] audit_standards insert failed:', e.message); }
+                await query(
+                    'IF NOT EXISTS (SELECT 1 FROM audit_standards WHERE audit_id=@audit_id AND standard_id=@standard_id) INSERT INTO audit_standards (audit_id, standard_id) VALUES (@audit_id, @standard_id)',
+                    { audit_id: newAudit.audit_id, standard_id: stdId }
+                );
+            } catch (e) { logger.warn('[UPSERT] audit_standards insert failed:', e.message); }
 
             logger.info(`[UPSERT] Audit creato: ${newAudit.audit_id} (${newAudit.audit_uuid})`);
 
