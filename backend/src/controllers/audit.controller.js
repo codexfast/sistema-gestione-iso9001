@@ -955,17 +955,24 @@ async function checkReaudit(req, res) {
     }
 
     try {
-        // 1. Trova l'ultimo audit completato del cliente
+        // 1. Trova il più recente audit dello stesso cliente che abbia almeno 1 NC/OSS/OM
+        //    (non necessariamente l'ultimo in assoluto: un re-audit vuoto non deve
+        //     nascondere le NC dell'audit ancora più precedente)
         const lastAuditResult = await query(`
             SELECT TOP 1
-                audit_id,
-                audit_date,
-                audit_number
-            FROM audits
-            WHERE organization_id = @organization_id
-              AND client_name = @client_name
-              AND (@exclude_uuid IS NULL OR audit_uuid <> TRY_CAST(@exclude_uuid AS UNIQUEIDENTIFIER))
-            ORDER BY audit_date DESC, audit_id DESC
+                a.audit_id,
+                a.audit_date,
+                a.audit_number,
+                COUNT(ar.response_id) AS pending_count
+            FROM audits a
+            JOIN audit_responses ar
+              ON ar.audit_id = a.audit_id
+             AND ar.conformity_status IN ('NC', 'OSS', 'OM')
+            WHERE a.organization_id = @organization_id
+              AND a.client_name = @client_name
+              AND (@exclude_uuid IS NULL OR a.audit_uuid <> TRY_CAST(@exclude_uuid AS UNIQUEIDENTIFIER))
+            GROUP BY a.audit_id, a.audit_date, a.audit_number
+            ORDER BY a.audit_date DESC, a.audit_id DESC
         `, { organization_id, client_name: client_name.trim(), exclude_uuid: current_audit_uuid || null });
 
         if (!lastAuditResult.recordset || lastAuditResult.recordset.length === 0) {
@@ -978,16 +985,7 @@ async function checkReaudit(req, res) {
         }
 
         const lastAudit = lastAuditResult.recordset[0];
-
-        // 2. Conta rilievi aperti (NC, OSS, OM) dall'ultimo audit
-        const countResult = await query(`
-            SELECT COUNT(*) AS pending_count
-            FROM audit_responses
-            WHERE audit_id = @audit_id
-              AND conformity_status IN ('NC', 'OSS', 'OM')
-        `, { audit_id: lastAudit.audit_id });
-
-        const pending_count = countResult.recordset[0]?.pending_count || 0;
+        const pending_count = lastAudit.pending_count || 0;
 
         logger.info('[CHECK_REAUDIT]', { client_name, last_audit_id: lastAudit.audit_id, pending_count });
 
