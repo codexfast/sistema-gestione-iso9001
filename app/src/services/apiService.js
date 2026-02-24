@@ -341,8 +341,8 @@ class ApiService {
         return this.delete(`/audits/${id}`);
     }
 
-    async checkReaudit(clientName) {
-        return this.post('/audits/check-reaudit', { client_name: clientName });
+    async checkReaudit(clientName, currentAuditUuid = null) {
+        return this.post('/audits/check-reaudit', { client_name: clientName, current_audit_uuid: currentAuditUuid });
     }
 
     /**

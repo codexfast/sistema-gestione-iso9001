@@ -206,10 +206,11 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
 
   const checkPendingIssues = async (audit) => {
     const clientName = audit?.metadata?.clientName || audit?.client_name;
+    const currentUuid = audit?.metadata?.id || null;
     if (!clientName) return;
 
     try {
-      const result = await apiService.checkReaudit(clientName);
+      const result = await apiService.checkReaudit(clientName, currentUuid);
       if (result.has_previous_audit && result.pending_count > 0) {
         // Carica il dettaglio NC/OSS/OM dall'ultimo audit
         let issues = [];

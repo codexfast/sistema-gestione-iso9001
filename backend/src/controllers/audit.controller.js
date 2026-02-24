@@ -945,7 +945,7 @@ async function getPendingIssues(req, res) {
  */
 async function checkReaudit(req, res) {
     const { organization_id } = req.user;
-    const { client_name } = req.body;
+    const { client_name, current_audit_uuid } = req.body;
 
     if (!client_name || !client_name.trim()) {
         return res.status(400).json({
@@ -964,9 +964,9 @@ async function checkReaudit(req, res) {
             FROM audits
             WHERE organization_id = @organization_id
               AND client_name = @client_name
-              AND status IN ('completed', 'finalized')
-            ORDER BY audit_date DESC
-        `, { organization_id, client_name: client_name.trim() });
+              AND (@exclude_uuid IS NULL OR audit_uuid <> TRY_CAST(@exclude_uuid AS UNIQUEIDENTIFIER))
+            ORDER BY audit_date DESC, audit_id DESC
+        `, { organization_id, client_name: client_name.trim(), exclude_uuid: current_audit_uuid || null });
 
         if (!lastAuditResult.recordset || lastAuditResult.recordset.length === 0) {
             return res.json({
