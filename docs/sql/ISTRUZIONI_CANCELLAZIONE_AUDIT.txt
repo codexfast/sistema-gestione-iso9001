@@ -1,0 +1,114 @@
+================================================================================
+  PROCEDURA CANCELLAZIONE AUDIT - Sistema Gestione ISO 9001
+  File script: docs/sql/delete_audit_cascade.sql
+================================================================================
+
+ATTENZIONE: operazione IRREVERSIBILE. Eseguire backup prima se necessario.
+
+--------------------------------------------------------------------------------
+FASE 1 — TROVARE L'AUDIT_ID
+--------------------------------------------------------------------------------
+
+1. Aprire SSMS e connettersi a:
+   Server:   www.fr-busato.it,11043
+   Database: SGQ_ISO9001
+
+2. Aprire il file: docs/sql/delete_audit_cascade.sql
+
+3. Eseguire SOLO la SEZIONE 1 (la prima SELECT in alto):
+
+   SELECT audit_id, audit_uuid, audit_number, client_name, status, audit_date
+   FROM audits ORDER BY audit_id DESC;
+
+4. Individuare nella griglia l'audit da cancellare e annotare il suo AUDIT_ID
+   (es. 4912 per "2026-04 - Audit Test 2026-03 Post-Fix")
+
+
+--------------------------------------------------------------------------------
+FASE 2 — ANTEPRIMA (obbligatoria prima di procedere)
+--------------------------------------------------------------------------------
+
+5. Nella riga in cima allo script sostituire il valore 0 con l'AUDIT_ID trovato:
+
+   DECLARE @AUDIT_ID INT = 4912;   -- <-- inserire qui
+
+6. Eseguire SOLO la SEZIONE 2 (le due SELECT di anteprima).
+   Verificare nella griglia quante righe verranno eliminate per ogni tabella.
+   Verificare anche i path dei file allegati da rimuovere (seconda SELECT).
+
+
+--------------------------------------------------------------------------------
+FASE 3 — CANCELLAZIONE DAL DATABASE
+--------------------------------------------------------------------------------
+
+7. Nella SEZIONE 3 dello script, DECOMMENTARE il blocco
+   (selezionare tutto il testo tra /* e */ e premere CTRL+K, CTRL+U in SSMS)
+
+8. Assicurarsi che @AUDIT_ID sia ancora impostato correttamente.
+
+9. Eseguire la SEZIONE 3.
+   Lo script usa BEGIN TRANSACTION / ROLLBACK: in caso di errore si annulla
+   automaticamente senza modificare niente.
+
+10. Verificare nel pannello Messaggi di SSMS che compaia la riga:
+    === CANCELLAZIONE COMPLETATA: 2026-04 - ... ===
+
+
+--------------------------------------------------------------------------------
+FASE 4 — RIMOZIONE FILE FISICI ALLEGATI (se presenti)
+--------------------------------------------------------------------------------
+
+11. Se in FASE 2 la SELECT sugli allegati ha restituito righe, i file fisici
+    sono ancora sul server. Rimuoverli via SSH:
+
+    Aprire un terminale PowerShell e digitare:
+
+    ssh spascarella@www.fr-busato.it -p 1122
+    password: Sistemi@2026
+
+12. Per ogni storage_path elencato in FASE 2, eseguire:
+
+    rm /var/www/sgq-backend/<storage_path>
+
+    Esempio:
+    rm /var/www/sgq-backend/uploads/2026/02/nome_file.jpg
+
+    Oppure, per vedere tutti i file nella cartella upload:
+    ls /var/www/sgq-backend/uploads/2026/02/
+
+
+--------------------------------------------------------------------------------
+FASE 5 — PULIZIA CACHE FRONTEND (opzionale)
+--------------------------------------------------------------------------------
+
+13. Se l'audit cancellato era ancora visibile nella PWA sul browser,
+    aprire la console sviluppatore (F12) → Application → Storage → Clear site data.
+    Oppure fare logout e login.
+
+
+--------------------------------------------------------------------------------
+VERIFICA FINALE
+--------------------------------------------------------------------------------
+
+14. Eseguire di nuovo la SELECT della FASE 1 e verificare che l'audit
+    non compaia più nella lista.
+
+
+================================================================================
+  NOTE TECNICHE
+================================================================================
+
+Ordine di cancellazione (rispetta tutte le foreign key del DB):
+  1. pending_issues  (dove l'audit è TARGET del re-audit)
+  2. pending_issues  (dove l'audit è SOURCE = audit precedente referenziato)
+  3. audit_responses (risposte checklist)
+  4. attachments     (metadati allegati nel DB)
+  5. non_conformities
+  6. audit_standards
+  7. audit_history
+  8. audits          (record principale — cancellato per ultimo)
+
+I file fisici in /var/www/sgq-backend/uploads/ NON vengono rimossi dallo script
+SQL: vanno eliminati manualmente come da FASE 4.
+
+================================================================================
