@@ -224,6 +224,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
           count: result.pending_count,
           lastAuditId: result.last_audit_id,
           lastAuditDate: result.last_audit_date,
+          lastAuditNumber: result.last_audit_number,
           issues
         });
       } else {
@@ -281,7 +282,23 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
       return;
     }
 
-    onCreate(formData);
+    // Re-audit: propaga rilievi pendenti dell'audit precedente nel nuovo audit
+    const submitData = { ...formData };
+    if (isReaudit && pendingInfo?.issues?.length > 0) {
+      submitData.pendingIssues = pendingInfo.issues.map((issue) => ({
+        id: `issue_${issue.response_id}`,
+        description: issue.question_text || issue.requirement_reference || `Domanda ${issue.question_id}`,
+        notes: issue.notes || '',
+        fromAuditNumber: pendingInfo.lastAuditNumber || `#${pendingInfo.lastAuditId}`,
+        originalStatus: issue.conformity_status,
+        clauseNumber: issue.clause_number || issue.requirement_reference || '',
+        sourceResponseId: issue.response_id,
+        resolved: false,
+        createdDate: new Date().toISOString(),
+      }));
+    }
+
+    onCreate(submitData);
     onClose();
   };
 

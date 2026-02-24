@@ -289,7 +289,7 @@ export function createNewAudit(metadata) {
         checklist: {},
         nonConformities: [],
         evidences: {},
-        pendingIssues: [],
+        pendingIssues: metadata.pendingIssues || [],
         reportChapters: [],
         metrics: {
             completionPercentage: 0,

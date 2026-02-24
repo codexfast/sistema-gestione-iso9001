@@ -96,7 +96,7 @@ function PendingIssuesCascade() {
           {issues.map((issue) => (
             <div
               key={issue.id}
-              className={`issue-card ${issue.resolved ? "resolved" : ""}`}
+              className={`issue-card ${issue.resolved ? "resolved" : ""} ${issue.originalStatus ? `status-${issue.originalStatus.toLowerCase()}` : ""}`}
             >
               <div className="issue-header">
                 <input
@@ -106,7 +106,17 @@ function PendingIssuesCascade() {
                   className="issue-checkbox"
                 />
                 <div className="issue-title-section">
-                  <h4 className="issue-title">{issue.description}</h4>
+                  <div className="issue-title-row">
+                    {issue.originalStatus && (
+                      <span className={`issue-status-badge badge-${issue.originalStatus.toLowerCase()}`}>
+                        {issue.originalStatus}
+                      </span>
+                    )}
+                    {issue.clauseNumber && (
+                      <span className="issue-clause">{issue.clauseNumber}</span>
+                    )}
+                    <h4 className="issue-title">{issue.description}</h4>
+                  </div>
                   {issue.fromAuditNumber && (
                     <span className="issue-source">
                       Da audit {issue.fromAuditNumber}
