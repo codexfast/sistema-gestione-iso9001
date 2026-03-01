@@ -9,13 +9,14 @@ const { authenticate, authenticateDownload } = require('../middleware/auth.middl
 const { upload } = require('../config/multer');
 
 // Tutti gli endpoint richiedono autenticazione
-router.use(authenticate);
+// NOTA: /view e /download usano authenticateDownload (accetta anche ?token= per link diretti)
+// Gli altri endpoint usano authenticate (solo Authorization: Bearer)
 
 // GET /api/v1/attachments - Lista allegati con filtri
-router.get('/attachments', attachmentController.listAttachments);
+router.get('/attachments', authenticate, attachmentController.listAttachments);
 
 // GET /api/v1/attachments/:id - Dettagli allegato
-router.get('/attachments/:id', attachmentController.getAttachmentById);
+router.get('/attachments/:id', authenticate, attachmentController.getAttachmentById);
 
 // GET /api/v1/attachments/:id/download - Download forzato (sempre attachment)
 // authenticateDownload: accetta anche ?token= (per link diretti da browser)
@@ -27,12 +28,12 @@ router.get('/attachments/:id/view', authenticateDownload, attachmentController.v
 
 // POST /api/v1/attachments/upload - Upload file
 // Nota: multer middleware 'upload.single('file')' gestisce multipart/form-data
-router.post('/attachments/upload', upload.single('file'), attachmentController.uploadAttachment);
+router.post('/attachments/upload', authenticate, upload.single('file'), attachmentController.uploadAttachment);
 
 // DELETE /api/v1/attachments/:id - Elimina allegato
-router.delete('/attachments/:id', attachmentController.deleteAttachment);
+router.delete('/attachments/:id', authenticate, attachmentController.deleteAttachment);
 
 // PUT /api/v1/attachments/:id/replace - Sostituisce file allegato (desktop)
-router.put('/attachments/:id/replace', upload.single('file'), attachmentController.replaceAttachment);
+router.put('/attachments/:id/replace', authenticate, upload.single('file'), attachmentController.replaceAttachment);
 
 module.exports = router;
