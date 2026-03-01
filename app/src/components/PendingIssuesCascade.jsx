@@ -1,12 +1,50 @@
 /**
  * Pending Issues Cascade Component
- * Gestione pending issues con carry-over da audit precedenti
+ * Gestione pending issues con carry-over da audit precedenti.
+ * Mostra lo stato attuale di ogni rilievo nel re-audit corrente
+ * confrontandolo con lo status originale rilevato nell'audit precedente.
+ *
  * Sistema Gestione ISO 9001 - QS Studio
  */
 
 import React, { useState } from "react";
 import { useStorage } from "../contexts/StorageContext";
 import "./PendingIssuesCascade.css";
+
+/**
+ * Configurazione badge per ogni conformity_status
+ */
+const STATUS_CONFIG = {
+  C:   { label: "Conforme",               icon: "✅", cssKey: "c",       note: "Risolto"            },
+  NC:  { label: "Non Conforme",           icon: "🔴", cssKey: "nc",      note: "Persistente"        },
+  OSS: { label: "Osservazione",           icon: "🟡", cssKey: "oss",     note: "Da monitorare"      },
+  OM:  { label: "Opp. Miglioramento",     icon: "🔵", cssKey: "om",      note: "Da monitorare"      },
+  NV:  { label: "Non Valutato",           icon: "⌛", cssKey: "nv",      note: "Non ancora valutato"},
+  NA:  { label: "Non Applicabile",        icon: "➖", cssKey: "na",      note: "Non applicabile"    },
+};
+
+/**
+ * Cerca la risposta corrente per un dato question_id nella checklist dell'audit.
+ * La checklist ha struttura: audit.checklist[standard][section].items[i].questionId
+ * @param {Object} checklist - audit.checklist
+ * @param {number|string} questionId - ID DB della domanda
+ * @returns {string|null} conformity_status corrente oppure null se non ancora risposto
+ */
+function getCurrentStatusForQuestion(checklist, questionId) {
+  if (!checklist || !questionId) return null;
+  const qid = Number(questionId);
+  for (const standard of Object.values(checklist)) {
+    for (const section of Object.values(standard)) {
+      const items = section.items || section.questions || [];
+      for (const item of items) {
+        if (Number(item.questionId) === qid) {
+          return item.status || null;
+        }
+      }
+    }
+  }
+  return null;
+}
 
 function PendingIssuesCascade() {
   const { currentAudit, audits, updateCurrentAudit } = useStorage();
@@ -15,13 +53,20 @@ function PendingIssuesCascade() {
   if (!currentAudit) {
     return (
       <div className="pending-cascade empty">
-        <p>Seleziona un audit per gestire pending issues</p>
+        <p>Seleziona un audit per gestire i rilievi pendenti</p>
       </div>
     );
   }
 
   const issues = currentAudit.pendingIssues || [];
+  const checklist = currentAudit.checklist || {};
+
+  // Calcola statistiche considerando anche lo stato attuale nella checklist
   const resolvedCount = issues.filter((i) => i.resolved).length;
+  const autoResolvedCount = issues.filter(
+    (i) => !i.resolved && getCurrentStatusForQuestion(checklist, i.questionId) === "C"
+  ).length;
+  const openCount = issues.length - resolvedCount;
 
   const handleToggleResolved = (issueId) => {
     updateCurrentAudit((audit) => ({
@@ -41,10 +86,9 @@ function PendingIssuesCascade() {
         createdDate: new Date().toISOString(),
         resolved: false,
       };
-
       return {
         ...audit,
-        pendingIssues: [...audit.pendingIssues, newIssue],
+        pendingIssues: [...(audit.pendingIssues || []), newIssue],
         metadata: { ...audit.metadata, lastModified: new Date().toISOString() },
       };
     });
@@ -52,7 +96,7 @@ function PendingIssuesCascade() {
   };
 
   const handleDeleteIssue = (issueId) => {
-    if (window.confirm("Eliminare questo pending issue?")) {
+    if (window.confirm("Eliminare questo rilievo pendente?")) {
       updateCurrentAudit((audit) => ({
         ...audit,
         pendingIssues: audit.pendingIssues.filter((i) => i.id !== issueId),
@@ -64,11 +108,14 @@ function PendingIssuesCascade() {
   return (
     <div className="pending-cascade">
       <div className="pending-header">
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn btn-primary"
-        >
-          ➕ Aggiungi Issue
+        <div>
+          <h3>🔁 Rilievi Pendenti</h3>
+          <p className="pending-description">
+            Carry-over da audit precedenti — stato attuale verificato nella checklist corrente
+          </p>
+        </div>
+        <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
+          ➕ Aggiungi Rilievo
         </button>
       </div>
 
@@ -77,66 +124,113 @@ function PendingIssuesCascade() {
           <span className="stat-value">{issues.length}</span>
           <span className="stat-label">Totali</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-value">{issues.length - resolvedCount}</span>
+        <div className="stat-card stat-open">
+          <span className="stat-value">{openCount}</span>
           <span className="stat-label">Aperti</span>
         </div>
-        <div className="stat-card">
+        <div className="stat-card stat-resolved">
           <span className="stat-value">{resolvedCount}</span>
-          <span className="stat-label">Risolti</span>
+          <span className="stat-label">Chiusi</span>
         </div>
+        {autoResolvedCount > 0 && (
+          <div className="stat-card stat-auto-resolved">
+            <span className="stat-value">{autoResolvedCount}</span>
+            <span className="stat-label">Conformi ✅</span>
+          </div>
+        )}
       </div>
 
       {issues.length === 0 ? (
         <div className="pending-empty">
-          <p>Nessun pending issue registrato</p>
+          <p>✅ Nessun rilievo pendente registrato</p>
         </div>
       ) : (
         <div className="issues-list">
-          {issues.map((issue) => (
-            <div
-              key={issue.id}
-              className={`issue-card ${issue.resolved ? "resolved" : ""} ${issue.originalStatus ? `status-${issue.originalStatus.toLowerCase()}` : ""}`}
-            >
-              <div className="issue-header">
-                <input
-                  type="checkbox"
-                  checked={issue.resolved}
-                  onChange={() => handleToggleResolved(issue.id)}
-                  className="issue-checkbox"
-                />
-                <div className="issue-title-section">
-                  <div className="issue-title-row">
-                    {issue.originalStatus && (
-                      <span className={`issue-status-badge badge-${issue.originalStatus.toLowerCase()}`}>
-                        {issue.originalStatus}
+          {issues.map((issue) => {
+            const currentStatus = getCurrentStatusForQuestion(checklist, issue.questionId);
+            const origCfg = STATUS_CONFIG[issue.originalStatus] || null;
+            const currCfg = currentStatus ? STATUS_CONFIG[currentStatus] : null;
+            const isAutoResolved = currentStatus === "C";
+            const isWorse =
+              (issue.originalStatus === "OSS" || issue.originalStatus === "OM" || issue.originalStatus === "NV") &&
+              currentStatus === "NC";
+
+            return (
+              <div
+                key={issue.id}
+                className={[
+                  "issue-card",
+                  issue.resolved ? "resolved" : "",
+                  isAutoResolved && !issue.resolved ? "auto-resolved" : "",
+                  isWorse ? "worsened" : "",
+                  origCfg ? `status-${origCfg.cssKey}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <div className="issue-header">
+                  <input
+                    type="checkbox"
+                    checked={issue.resolved}
+                    onChange={() => handleToggleResolved(issue.id)}
+                    className="issue-checkbox"
+                    title="Segna come chiuso/aperto (richiede conferma auditor)"
+                  />
+                  <div className="issue-title-section">
+                    <div className="issue-title-row">
+                      {origCfg && (
+                        <span className={`issue-status-badge badge-${origCfg.cssKey}`}>
+                          {issue.originalStatus}
+                        </span>
+                      )}
+                      {issue.clauseNumber && (
+                        <span className="issue-clause">{issue.clauseNumber}</span>
+                      )}
+                      <h4 className="issue-title">{issue.description}</h4>
+                    </div>
+                    {issue.fromAuditNumber && (
+                      <span className="issue-source">
+                        Da audit {issue.fromAuditNumber}
                       </span>
                     )}
-                    {issue.clauseNumber && (
-                      <span className="issue-clause">{issue.clauseNumber}</span>
-                    )}
-                    <h4 className="issue-title">{issue.description}</h4>
                   </div>
-                  {issue.fromAuditNumber && (
-                    <span className="issue-source">
-                      Da audit {issue.fromAuditNumber}
+                  <button
+                    onClick={() => handleDeleteIssue(issue.id)}
+                    className="issue-delete"
+                    title="Elimina rilievo"
+                  >
+                    🗑️
+                  </button>
+                </div>
+
+                {issue.notes && (
+                  <div className="issue-notes">
+                    <strong>Note originali:</strong> {issue.notes}
+                  </div>
+                )}
+
+                {/* Stato attuale nella checklist del re-audit */}
+                <div className="issue-current-status">
+                  <span className="current-status-label">Stato attuale:</span>
+                  {currentStatus ? (
+                    <span className={`current-status-badge current-${currCfg?.cssKey || "pending"}`}>
+                      {currCfg?.icon} {currentStatus}
+                      {" — "}
+                      {isWorse ? (
+                        <strong>⚠️ Peggiorato</strong>
+                      ) : (
+                        <span>{currCfg?.note}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="current-status-badge current-pending">
+                      ⏳ Non ancora valutato in questo audit
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDeleteIssue(issue.id)}
-                  className="issue-delete"
-                >
-                  🗑️
-                </button>
               </div>
-              {issue.notes && (
-                <div className="issue-notes">
-                  <strong>Note:</strong> {issue.notes}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

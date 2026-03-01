@@ -294,6 +294,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
         originalStatus: issue.conformity_status,
         clauseNumber: issue.clause_number || issue.requirement_reference || '',
         sourceResponseId: issue.response_id,
+        questionId: issue.question_id || null,
         resolved: false,
         createdDate: new Date().toISOString(),
       }));
