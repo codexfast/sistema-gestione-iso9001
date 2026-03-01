@@ -31,7 +31,6 @@ import {
     ExternalHyperlink
 } from 'docx';
 import { saveAs } from 'file-saver';
-import apiService from '../services/apiService';
 
 /**
  * Colori aziendali e palette template
@@ -626,7 +625,7 @@ function createQuestionRow(question, auditAttachments = []) {
  * Una sola riga che occupa tutte e 3 le colonne (columnSpan 3),
  * con i nomi dei file come link cliccabili verso il server.
  */
-function createAttachmentRows(attachments) {
+function createAttachmentRows(attachments, getViewUrl = null) {
     if (!attachments || attachments.length === 0) {
         return [];
     }
@@ -645,9 +644,9 @@ function createAttachmentRows(attachments) {
             children.push(new TextRun({ text: '   |   ', color: '9CA3AF' }));
         }
 
-        // Link cliccabile se abbiamo un ID server valido
-        if (attId) {
-            const url = apiService.getAttachmentViewUrl(attId);
+        // Link cliccabile se abbiamo getViewUrl e un ID valido
+        const url = (getViewUrl && attId) ? getViewUrl(attId) : null;
+        if (url) {
             children.push(
                 new ExternalHyperlink({
                     link: url,
@@ -662,7 +661,7 @@ function createAttachmentRows(attachments) {
                 })
             );
         } else {
-            // Nessun ID server: solo testo
+            // Nessun URL disponibile: solo testo
             children.push(new TextRun({ text: fileName, color: '374151' }));
         }
     });
@@ -730,7 +729,7 @@ function createTableHeaderRow() {
  * Helper: crea tabella completa per una clausola
  * SCALABILE: gestisce automaticamente qualsiasi numero di domande
  */
-function createClauseTable(questions, auditAttachments = []) {
+function createClauseTable(questions, auditAttachments = [], getViewUrl = null) {
     if (!questions || questions.length === 0) {
         return new Table({
             rows: [
@@ -771,7 +770,7 @@ function createClauseTable(questions, auditAttachments = []) {
         const questionAttachments = qServerId != null
             ? auditAttachments.filter(att => Number(att.questionId) === Number(qServerId))
             : [];
-        const attachmentRows = createAttachmentRows(questionAttachments);
+        const attachmentRows = createAttachmentRows(questionAttachments, getViewUrl);
         allRows.push(...attachmentRows);
     }); return new Table({
         rows: [
@@ -948,7 +947,7 @@ function createPendingIssuesSection(pendingIssues = []) {
  * Crea la sezione "3 - CHECKLIST DI AUDIT" completa
  * VERSIONE SCALABILE: si adatta automaticamente a modifiche della checklist
  */
-function createChecklistSection(checklist, auditAttachments = [], pendingIssues = []) {
+function createChecklistSection(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null) {
     // Null guard
     if (!checklist || Object.keys(checklist).length === 0) {
         return [
@@ -1003,7 +1002,7 @@ function createChecklistSection(checklist, auditAttachments = [], pendingIssues 
             // Tabella unica per la clausola con TUTTE le domande
             // Ogni riga avrà "4.1 - Testo domanda" nella prima colonna
             sections.push(
-                createClauseTable(clause.questions || [], auditAttachments), // PASS attachments
+                createClauseTable(clause.questions || [], auditAttachments, getViewUrl),
                 new Paragraph({
                     text: '',
                     spacing: { after: 300 }
@@ -1530,7 +1529,7 @@ function createFooter() {
 /**
  * Funzione principale: genera il documento Word professionale completo
  */
-export async function exportAuditToWord(audit) {
+export async function exportAuditToWord(audit, getViewUrl = null) {
     if (!audit || !audit.metadata) {
         throw new Error('Audit non valido: metadata mancante');
     }
@@ -1542,7 +1541,7 @@ export async function exportAuditToWord(audit) {
         ...createCoverPage(audit),
         ...createGeneralDataSection(metadata.generalData, metadata),
         ...createObjectiveSection(metadata.auditObjective),
-        ...createChecklistSection(audit.checklist, audit.attachments || [], audit.pendingIssues || []),
+        ...createChecklistSection(audit.checklist, audit.attachments || [], audit.pendingIssues || [], getViewUrl),
         ...createOutcomeSection(metadata.auditOutcome, audit.checklist)
     ];
 

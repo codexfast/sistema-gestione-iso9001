@@ -102,7 +102,13 @@ const ExportPanel = () => {
         console.warn('[EXPORT] allegati server non disp., uso locali:', err.message);
       }
 
-      const fileName = await exportAuditToWord(auditForExport);
+      // Costruisce getViewUrl con token esplicito (encodeURIComponent per sicurezza)
+      const rawToken = apiService.getToken();
+      const getViewUrl = rawToken
+        ? (id) => `${apiService.baseUrl}/attachments/${id}/view?token=${encodeURIComponent(rawToken)}`
+        : null;
+
+      const fileName = await exportAuditToWord(auditForExport, getViewUrl);
       showMessage(`✅ Report Word generato: ${fileName}`, "success");
     } catch (error) {
       console.error("Errore export Word:", error);
