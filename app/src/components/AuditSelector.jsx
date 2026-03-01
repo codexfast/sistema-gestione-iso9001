@@ -286,7 +286,9 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     // Re-audit: propaga rilievi pendenti dell'audit precedente nel nuovo audit
     const submitData = { ...formData };
     if (isReaudit && pendingInfo?.issues?.length > 0) {
-      submitData.pendingIssues = pendingInfo.issues.map((issue) => ({
+      submitData.pendingIssues = pendingInfo.issues
+        .filter((issue) => issue.conformity_status !== 'OM')
+        .map((issue) => ({
         id: `issue_${issue.response_id}`,
         description: issue.question_text || issue.requirement_reference || `Domanda ${issue.question_id}`,
         notes: issue.notes || '',

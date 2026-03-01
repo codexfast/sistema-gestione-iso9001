@@ -967,7 +967,7 @@ async function checkReaudit(req, res) {
             FROM audits a
             JOIN audit_responses ar
               ON ar.audit_id = a.audit_id
-             AND ar.conformity_status IN ('NC', 'OSS', 'OM', 'NV')
+             AND ar.conformity_status IN ('NC', 'OSS', 'NV')
             WHERE a.organization_id = @organization_id
               AND a.client_name = @client_name
               AND (@exclude_uuid IS NULL OR a.audit_uuid <> TRY_CAST(@exclude_uuid AS UNIQUEIDENTIFIER))
@@ -1107,7 +1107,7 @@ async function getNcResponses(req, res) {
              JOIN audits a ON ar.audit_id = a.audit_id
              WHERE (ar.audit_id = TRY_CAST(@audit_id AS INT) OR a.audit_uuid = @audit_id)
                AND a.organization_id = @organization_id
-               AND ar.conformity_status IN ('NC', 'OSS', 'OM', 'NV')
+               AND ar.conformity_status IN ('NC', 'OSS', 'NV')
              ORDER BY ar.conformity_status, cq.clause_number`,
             { audit_id: String(audit_id), organization_id }
         );

@@ -206,69 +206,17 @@
 }
 
 /* ============================================
- * Stat cards colorate
+ * Stat cards colorate per tipo rilievo
  * ============================================ */
-.stat-card.stat-open     .stat-value { color: #e65100; }
-.stat-card.stat-resolved .stat-value { color: #27ae60; }
-.stat-card.stat-auto-resolved { border-color: #27ae60; }
-.stat-card.stat-auto-resolved .stat-value { color: #27ae60; }
-.stat-card.stat-auto-resolved .stat-label { color: #27ae60; }
+.stat-card.stat-nc  { border-color: #c62828; }
+.stat-card.stat-nc  .stat-value { color: #c62828; }
+.stat-card.stat-nc  .stat-label { color: #c62828; }
 
-/* ============================================
- * Issue card — stati speciali
- * ============================================ */
+.stat-card.stat-oss { border-color: #e65100; }
+.stat-card.stat-oss .stat-value { color: #e65100; }
+.stat-card.stat-oss .stat-label { color: #e65100; }
 
-/* Auto-resolved: la stessa domanda è ora C nella checklist corrente */
-.issue-card.auto-resolved {
-  border-color: #27ae60;
-  border-left-color: #27ae60;
-  background: #f1faf4;
-}
-
-/* Peggiorato: era OSS/OM/NV, ora è NC */
-.issue-card.worsened {
-  border-color: #c62828;
-  border-left-color: #c62828;
-  background: #fff5f5;
-}
-
-/* ============================================
- * Sezione "Stato attuale nel re-audit"
- * ============================================ */
-.issue-current-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 10px 14px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 3px solid #bbb;
-  font-size: 0.88em;
-}
-
-.current-status-label {
-  color: #7f8c8d;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.current-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.85em;
-  font-weight: 600;
-}
-
-/* Badge per stato corrente */
-.current-status-badge.current-c       { background: #e8f5e9; color: #2e7d32; }
-.current-status-badge.current-nc      { background: #ffebee; color: #c62828; }
-.current-status-badge.current-oss     { background: #fff3e0; color: #e65100; }
-.current-status-badge.current-om      { background: #e3f2fd; color: #1565c0; }
-.current-status-badge.current-nv      { background: #f3e5f5; color: #6a1b9a; }
-.current-status-badge.current-na      { background: #eceff1; color: #546e7a; }
-.current-status-badge.current-pending { background: #fafafa; color: #9e9e9e; border: 1px dashed #bbb; }
+.stat-card.stat-nv  { border-color: #6a1b9a; }
+.stat-card.stat-nv  .stat-value { color: #6a1b9a; }
+.stat-card.stat-nv  .stat-label { color: #6a1b9a; }
 
