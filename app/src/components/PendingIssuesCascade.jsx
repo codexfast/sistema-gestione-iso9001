@@ -64,8 +64,9 @@ function PendingIssuesCascade() {
           setSourceAuditNumber(reauditInfo.last_audit_number || `#${reauditInfo.last_audit_id}`);
         }
       } catch (err) {
+        console.error('[PendingIssues] Errore:', err?.status, err?.message, err);
         if (!cancelled) {
-          setError("Impossibile caricare i rilievi pendenti");
+          setError(`Impossibile caricare i rilievi pendenti (${err?.status || 'NET'}: ${err?.message || err})`);
           setIssues([]);
         }
       } finally {
