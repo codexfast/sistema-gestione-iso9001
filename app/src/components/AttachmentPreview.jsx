@@ -26,6 +26,8 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lightbox, setLightbox] = useState(null); // attachment_id aperto a schermo intero
+  const [replacing, setReplacing] = useState(null); // attachment_id in sostituzione
+  const [replacedAt, setReplacedAt] = useState({}); // { [id]: timestamp } per cache-bust immagini
 
   const fetchAttachments = useCallback(async () => {
     if (!auditId || !questionId) return;
@@ -62,6 +64,40 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
     }
   };
 
+  /**
+   * Sostituisce un allegato con un nuovo file (desktop-only via CSS).
+   * Apre file picker, carica il nuovo file sul server, aggiorna la lista.
+   */
+  const handleReplace = useCallback((att) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    // Suggerisci stesso tipo del file originale
+    input.accept = att.mime_type?.startsWith('image/') ? 'image/*' : '*/*';
+    input.style.display = 'none';
+
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      document.body.removeChild(input);
+      if (!file) return;
+
+      setReplacing(att.attachment_id);
+      setLightbox(null); // chiudi lightbox se aperto
+      try {
+        await apiService.replaceAttachment(att.attachment_id, file);
+        setReplacedAt(prev => ({ ...prev, [att.attachment_id]: Date.now() }));
+        await fetchAttachments(); // ri-fetch lista aggiornata
+      } catch (err) {
+        alert(`❌ Errore sostituzione: ${err.message}`);
+      } finally {
+        setReplacing(null);
+      }
+    };
+
+    input.oncancel = () => { document.body.removeChild(input); };
+    document.body.appendChild(input);
+    input.click();
+  }, [fetchAttachments]);
+
   // Niente da mostrare: loading silenzioso, nessun errore critico
   if (!auditId || !questionId) return null;
   if (loading && attachments.length === 0) {
@@ -93,7 +129,7 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
                 title={att.file_name}
               >
                 <img
-                  src={apiService.getAttachmentViewUrl(att.attachment_id)}
+                  src={`${apiService.getAttachmentViewUrl(att.attachment_id)}${replacedAt[att.attachment_id] ? '&v=' + replacedAt[att.attachment_id] : ''}`}
                   alt={att.file_name}
                   loading="lazy"
                   className="preview-image"
@@ -132,6 +168,15 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
               </a>
             )}
 
+            <button
+              type="button"
+              className="preview-replace-btn"
+              onClick={() => handleReplace(att)}
+              disabled={replacing === att.attachment_id}
+              title="Sostituisci file"
+            >
+              {replacing === att.attachment_id ? '⏳' : '✏️'}
+            </button>
             <button
               type="button"
               className="preview-delete-btn"
@@ -175,6 +220,14 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
               >
                 ⬇ Scarica
               </a>
+              <button
+                type="button"
+                className="lightbox-replace-btn"
+                onClick={() => handleReplace(lightbox)}
+                disabled={replacing === lightbox.attachment_id}
+              >
+                {replacing === lightbox.attachment_id ? '⏳ Sostituzione...' : '✏️ Sostituisci'}
+              </button>
             </div>
           </div>
         </div>

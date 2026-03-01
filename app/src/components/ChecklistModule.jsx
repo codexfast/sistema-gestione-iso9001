@@ -477,6 +477,9 @@ function ClauseAccordion({
 // === QUESTION CARD COMPONENT ===
 
 function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId }) {
+  // Incrementato dopo ogni upload per forzare re-fetch in AttachmentPreview
+  const [attachmentRefreshKey, setAttachmentRefreshKey] = useState(0);
+
   const handleStatusChange = (status) => {
     onUpdate(clauseId, question.id, "status", status);
   };
@@ -564,6 +567,7 @@ function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId
           <AttachmentSection
             questionId={question.questionId || question.id}
             attachmentManager={attachmentManager}
+            onUploadSuccess={() => setAttachmentRefreshKey(k => k + 1)}
           />
         )}
 
@@ -572,6 +576,7 @@ function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId
         <AttachmentPreview
           auditId={auditId}
           questionId={question.questionId || null}
+          refreshKey={attachmentRefreshKey}
         />
       </div>
     </div>

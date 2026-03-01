@@ -32,4 +32,7 @@ router.post('/attachments/upload', upload.single('file'), attachmentController.u
 // DELETE /api/v1/attachments/:id - Elimina allegato
 router.delete('/attachments/:id', attachmentController.deleteAttachment);
 
+// PUT /api/v1/attachments/:id/replace - Sostituisce file allegato (desktop)
+router.put('/attachments/:id/replace', upload.single('file'), attachmentController.replaceAttachment);
+
 module.exports = router;

@@ -548,6 +548,33 @@ class ApiService {
     }
 
     /**
+     * Sostituisce un allegato esistente con un nuovo file (desktop-only).
+     * Elimina il file vecchio dal server e salva il nuovo.
+     */
+    async replaceAttachment(attachmentId, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const token = this.getToken();
+        const response = await fetch(`${this.baseUrl}/attachments/${attachmentId}/replace`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                errorData.error || 'Sostituzione fallita',
+                response.status,
+                errorData.code || 'REPLACE_ERROR'
+            );
+        }
+
+        return response.json();
+    }
+
+    /**
      * Elimina allegato
      */
     async deleteAttachment(attachmentId) {

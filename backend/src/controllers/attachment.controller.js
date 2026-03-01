@@ -588,11 +588,91 @@ async function viewAttachment(req, res) {
     }
 }
 
+/**
+ * PUT /api/v1/attachments/:id/replace
+ * Sostituisce il file fisico di un allegato esistente.
+ * Usato per modifiche da browser desktop (Word/Excel/immagini).
+ * Elimina il vecchio file dal disco, aggiorna i metadati in DB.
+ */
+async function replaceAttachment(req, res) {
+    const { id: attachment_id } = req.params;
+    const { organization_id } = req.user;
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'Nessun file caricato', code: 'VALIDATION_ERROR' });
+    }
+
+    try {
+        // 1. Verifica ownership: allegato appartiene a un audit di questa org
+        const existing = await query(`
+            SELECT att.attachment_id, att.storage_path, att.file_name
+            FROM attachments att
+            LEFT JOIN audits a ON att.audit_id = a.audit_id
+            WHERE att.attachment_id = @attachment_id
+              AND a.organization_id = @organization_id
+        `, { attachment_id: parseInt(attachment_id), organization_id });
+
+        if (!existing.recordset?.length) {
+            await fs.unlink(req.file.path).catch(() => { });
+            return res.status(404).json({ error: 'Allegato non trovato', code: 'NOT_FOUND' });
+        }
+
+        const old = existing.recordset[0];
+
+        // 2. Elimina vecchio file dal disco (soft failure: non blocca se già rimosso)
+        await fs.unlink(old.storage_path).catch(err =>
+            logger.warn('[REPLACE] Impossibile eliminare vecchio file:', { path: old.storage_path, error: err.message })
+        );
+
+        // 3. Aggiorna DB con nuovi metadati file
+        await query(`
+            UPDATE attachments
+            SET file_name     = @file_name,
+                file_type     = @file_type,
+                file_size     = @file_size,
+                mime_type     = @mime_type,
+                storage_path  = @storage_path
+            WHERE attachment_id = @attachment_id
+        `, {
+            attachment_id: parseInt(attachment_id),
+            file_name: req.file.originalname,
+            file_type: path.extname(req.file.originalname).toLowerCase(),
+            file_size: req.file.size,
+            mime_type: req.file.mimetype,
+            storage_path: req.file.path,
+        });
+
+        logger.info('[REPLACE] Allegato sostituito', {
+            attachment_id,
+            old_file: old.file_name,
+            new_file: req.file.originalname,
+            organization_id
+        });
+
+        return res.json({
+            success: true,
+            data: {
+                attachment_id: parseInt(attachment_id),
+                file_name: req.file.originalname,
+                file_size: req.file.size,
+                mime_type: req.file.mimetype,
+            }
+        });
+
+    } catch (error) {
+        // Cleanup file appena caricato in caso di errore DB
+        await fs.unlink(req.file.path).catch(() => { });
+        logger.error('[REPLACE] Errore:', error);
+        return res.status(500).json({ error: 'Errore server', code: 'SERVER_ERROR' });
+    }
+}
+
 module.exports = {
     listAttachments,
     getAttachmentById,
     uploadAttachment,
     downloadAttachment,
     viewAttachment,
-    deleteAttachment
+    deleteAttachment,
+    replaceAttachment
 };

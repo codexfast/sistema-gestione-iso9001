@@ -12,7 +12,7 @@
 import React, { useState } from "react";
 import "./AttachmentSection.css";
 
-function AttachmentSection({ questionId, attachmentManager }) {
+function AttachmentSection({ questionId, attachmentManager, onUploadSuccess }) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
 
   // Get attachments for this question
@@ -43,6 +43,11 @@ function AttachmentSection({ questionId, attachmentManager }) {
     } else {
       // Success notification (silent - no alert)
       console.log(`✅ ${result.uploaded} allegati caricati`);
+    }
+
+    // Notifica parent per aggiornare AttachmentPreview
+    if (result.success && onUploadSuccess) {
+      onUploadSuccess(questionId);
     }
   };
 
