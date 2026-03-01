@@ -32,7 +32,7 @@ export function validateQuestion(question) {
 
     // Status deve essere valido (supporta sia nuovo formato che legacy)
     const validStatusesLegacy = Object.values(CHECKLIST_STATUS); // compliant, non_compliant, etc.
-    const validStatusesNew = ['C', 'NC', 'OSS', 'OM', 'NA', 'NOT_ANSWERED']; // Nuovo formato ISO 9001:2015
+    const validStatusesNew = ['C', 'NC', 'OSS', 'OM', 'NA', 'NV', 'NOT_ANSWERED']; // Nuovo formato ISO 9001:2015
     const allValidStatuses = [...validStatusesLegacy, ...validStatusesNew];
 
     if (!allValidStatuses.includes(question.status)) {

@@ -36,6 +36,7 @@ const STATUS = {
   OSS: "OSS", // Osservazione (ex Parzialmente conforme)
   OM: "OM", // Opportunità di Miglioramento
   NA: "NA", // Non Applicabile
+  NV: "NV", // Non Verificato
   NOT_ANSWERED: "NOT_ANSWERED", // Non risposto (default)
 };
 
@@ -532,6 +533,13 @@ function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId
             title="Non Applicabile"
           >
             NA
+          </button>
+          <button
+            className={`status-btn not-verified ${getStatusClass(STATUS.NV)}`}
+            onClick={() => handleStatusChange(STATUS.NV)}
+            title="Non Verificato"
+          >
+            NV
           </button>
         </div>
       </div>

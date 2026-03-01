@@ -415,6 +415,10 @@
   border-left: 4px solid #6c757d; /* Grigio - Non Applicabile */
 }
 
+.question-card.status-NV {
+  border-left: 4px solid #6a1b9a; /* Viola - Non Verificato */
+}
+
 .question-card.status-NOT_ANSWERED {
   border-left: 4px solid #e9ecef; /* Grigio chiaro - Non risposto */
 }
@@ -522,6 +526,17 @@
   background: #17a2b8;
   color: white;
   border-color: #17a2b8;
+}
+
+.status-btn.not-verified {
+  color: #6a1b9a;
+  font-size: 12px;
+}
+
+.status-btn.not-verified.active {
+  background: #6a1b9a;
+  color: white;
+  border-color: #6a1b9a;
 }
 
 .notes-toggle {
