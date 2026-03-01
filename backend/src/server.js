@@ -112,10 +112,10 @@ app.get(`${API_BASE}/response-options`, responseController.getResponseOptions);
 
 // Endpoint autenticati
 app.use(API_BASE, authRoutes);
+app.use(API_BASE, attachmentRoutes); // Prima degli altri: authenticateDownload accetta ?token=, i router successivi hanno router.use(authenticate) globale che bloccherebbe le richieste senza Bearer
 app.use(API_BASE, auditRoutes);
 app.use(API_BASE, responseRoutes);
 app.use(API_BASE, ncRoutes);
-app.use(API_BASE, attachmentRoutes);
 app.use(API_BASE, checklistRoutes);
 app.use(API_BASE, syncRoutes);
 app.use(API_BASE, standardRoutes);

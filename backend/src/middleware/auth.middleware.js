@@ -196,7 +196,14 @@ function verifyOrganization(req, res, next) {
 function authenticateDownload(req, res, next) {
     // Prova header prima (priorità), poi query param come fallback
     const authHeader = req.headers.authorization;
-    const queryToken = req.query.token;
+
+    // req.query.token può essere vuoto se il query parser non è attivo sul router;
+    // come fallback si legge il token direttamente da req.url
+    let queryToken = req.query.token;
+    if (!queryToken) {
+        const urlMatch = (req.url || '').match(/[?&]token=([^&]+)/);
+        if (urlMatch) queryToken = decodeURIComponent(urlMatch[1]);
+    }
 
     if (!authHeader && !queryToken) {
         return res.status(401).json({
