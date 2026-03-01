@@ -200,13 +200,13 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
           </p>
           <p className="hint">
             Clicca il pulsante qui sotto per inizializzare la struttura con le
-            domande previste dalla norma ISO 9001:2015 (clausole 4-10).
+            domande previste dalla norma {checklistKey.replace(/_/g, " ")}.
           </p>
           <button
             className="btn btn-primary btn-large"
             onClick={() => initializeChecklist(checklistKey)}
           >
-            ✨ Inizializza Checklist ISO 9001
+            ✨ Inizializza Checklist {checklistKey.replace(/_/g, " ")}
           </button>
         </div>
       </div>
