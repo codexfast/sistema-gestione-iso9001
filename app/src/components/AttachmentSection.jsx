@@ -15,8 +15,12 @@ import "./AttachmentSection.css";
 function AttachmentSection({ questionId, attachmentManager, onUploadSuccess }) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
 
-  // Get attachments for this question
-  const questionAttachments = attachmentManager.listAttachments(questionId);
+  // Mostra solo allegati NON ancora confermati sul server (pendingSync=true o senza serverAttachmentId)
+  // Quelli confermati sono già visibili in AttachmentPreview — evita doppio banner
+  const allAttachments = attachmentManager.listAttachments(questionId);
+  const questionAttachments = allAttachments.filter(
+    (att) => att.pendingSync || !att.serverAttachmentId
+  );
   const stats = attachmentManager.getStats(questionId);
 
   /**
