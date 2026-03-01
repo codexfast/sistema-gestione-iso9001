@@ -1100,15 +1100,14 @@ async function getNcResponses(req, res) {
                 ar.notes,
                 ar.updated_at,
                 cq.question_text,
-                cq.clause_number,
-                cq.requirement_reference
+                cq.section_code
              FROM audit_responses ar
              LEFT JOIN checklist_questions cq ON ar.question_id = cq.question_id
              JOIN audits a ON ar.audit_id = a.audit_id
              WHERE (ar.audit_id = TRY_CAST(@audit_id AS INT) OR a.audit_uuid = @audit_id)
                AND a.organization_id = @organization_id
                AND ar.conformity_status IN ('NC', 'OSS', 'NV')
-             ORDER BY ar.conformity_status, cq.clause_number`,
+             ORDER BY ar.conformity_status, cq.section_code`,
             { audit_id: String(audit_id), organization_id }
         );
 

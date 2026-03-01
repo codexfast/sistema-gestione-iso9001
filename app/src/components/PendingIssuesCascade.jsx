@@ -136,7 +136,7 @@ function PendingIssuesCascade() {
           <div className="issues-list">
             {issues.map((issue) => {
               const cfg = STATUS_CONFIG[issue.conformity_status] || null;
-              const clauseLabel = issue.clause_number || issue.requirement_reference || null;
+              const clauseLabel = issue.section_code || null;
               const description = issue.question_text || clauseLabel || `Risposta #${issue.response_id}`;
               return (
                 <div
