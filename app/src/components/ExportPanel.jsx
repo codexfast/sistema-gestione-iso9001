@@ -61,12 +61,29 @@ const ExportPanel = () => {
       const auditForExport = { ...currentAudit };
       const auditId = currentAudit.metadata?.id || currentAudit.id;
 
-      // Fetch rilievi pendenti
+      // Fetch rilievi pendenti: usa checkReaudit + getNcResponses (audit_responses reali)
+      // La tabella pending_issues non è ancora popolata automaticamente → legge direttamente
+      // le risposte NC/OSS/NV dall'audit precedente dello stesso cliente.
       try {
-        const pendingResult = await apiService.getPendingIssues(auditId);
-        if (pendingResult?.pending_issues?.length > 0) {
-          auditForExport.pendingIssues = pendingResult.pending_issues;
-          console.log(`📋 [EXPORT] ${pendingResult.pending_issues.length} rilievi pendenti da DB`);
+        const clientName = currentAudit.metadata?.clientName;
+        const auditUuid  = currentAudit.metadata?.id || null;
+        if (clientName) {
+          const reauditInfo = await apiService.checkReaudit(clientName, auditUuid);
+          if (reauditInfo.has_previous_audit && reauditInfo.last_audit_id) {
+            const ncData = await apiService.getNcResponses(reauditInfo.last_audit_id);
+            const rawIssues = (ncData.responses || []).filter(i => i.conformity_status !== 'OM');
+            if (rawIssues.length > 0) {
+              // Normalizza campi per buildPendingIssuesOoxml (wordExportHelpers.js)
+              auditForExport.pendingIssues = rawIssues.map(i => ({
+                clause:            i.section_code || '',
+                description:       i.question_text || `Domanda ${i.question_id}`,
+                originAuditNumber: reauditInfo.last_audit_number || `#${reauditInfo.last_audit_id}`,
+                status:            'open',
+                resolutionNotes:   i.notes || '',
+              }));
+              console.log(`📋 [EXPORT] ${rawIssues.length} rilievi pendenti da audit_responses`);
+            }
+          }
         }
       } catch (err) {
         console.warn('[EXPORT] pending issues non disp., uso locali:', err.message);
