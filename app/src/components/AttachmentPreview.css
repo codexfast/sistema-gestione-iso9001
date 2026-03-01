@@ -109,7 +109,7 @@
   opacity: 1;
 }
 
-/* === Link file (PDF / altri) === */
+/* === Link file (PDF / altri) — ora <button> invece di <a> === */
 .preview-file-link {
   display: flex;
   align-items: center;
@@ -123,6 +123,16 @@
   font-size: 0.78rem;
   max-width: 180px;
   transition: border-color 0.15s, background 0.15s;
+  /* Reset browser defaults per <button> */
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.preview-file-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .preview-file-link:hover {
@@ -301,15 +311,23 @@
 .lightbox-download {
   padding: 6px 16px;
   border-radius: 4px;
+  border: none;
   background: rgba(255, 255, 255, 0.15);
   color: white;
   text-decoration: none;
   font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
   transition: background 0.15s;
 }
 
 .lightbox-download:hover {
   background: rgba(255, 255, 255, 0.28);
+}
+
+.lightbox-download:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Bottone Sostituisci nel lightbox — solo desktop */

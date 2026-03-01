@@ -539,12 +539,61 @@ class ApiService {
     }
 
     /**
-     * URL visualizzazione inline (immagini/PDF si aprono nel browser, altri scaricati)
-     * Usa ?token= così funziona in <img src> e <iframe src> senza fetch
+     * URL visualizzazione inline — manteniamo per compatibilità legacy.
+     * NOTA: preferire fetchAttachmentBlob() per evitare problemi token in URL.
+     * @deprecated usa fetchAttachmentBlob invece
      */
     getAttachmentViewUrl(attachmentId) {
         const token = this.getToken();
         return `${this.baseUrl}/attachments/${attachmentId}/view?token=${token}`;
+    }
+
+    /**
+     * Recupera un allegato come Blob usando Authorization: Bearer header.
+     * Soluzione robusta per immagini/PDF/documenti in SPA cross-origin.
+     * Ritorna: { blob, mimeType, fileName }
+     */
+    async fetchAttachmentBlob(attachmentId, mode = 'view') {
+        const token = this.getToken();
+        const url = `${this.baseUrl}/attachments/${attachmentId}/${mode}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                errorData.error || 'Caricamento allegato fallito',
+                response.status,
+                errorData.code || 'FETCH_BLOB_ERROR'
+            );
+        }
+
+        const blob = await response.blob();
+        const mimeType = response.headers.get('Content-Type') || blob.type;
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const fileNameMatch = disposition.match(/filename="?([^";\n]+)"?/i);
+        const fileName = fileNameMatch?.[1] || `allegato_${attachmentId}`;
+
+        return { blob, mimeType, fileName };
+    }
+
+    /**
+     * Scarica un allegato via fetch (Authorization header) e salva tramite link.
+     * Funziona sempre, anche cross-origin.
+     */
+    async downloadAttachmentBlob(attachmentId, suggestedName) {
+        const { blob, fileName } = await this.fetchAttachmentBlob(attachmentId, 'download');
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = suggestedName || fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     }
 
     /**
