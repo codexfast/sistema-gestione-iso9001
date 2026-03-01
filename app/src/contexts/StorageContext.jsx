@@ -279,6 +279,15 @@ export function StorageProvider({ children, useMockData = false }) {
             // CONVERTI: Backend (snake_case) → Frontend (camelCase + nested)
             serverAudits = converter.convertAuditsFromBackend(backendAudits);
             console.log(`✅ [DOWNLOAD] Scaricati ${serverAudits.length} audit dal server`);
+
+            // PULIZIA QUEUE STANTIA: rimuove dalla sync_queue le operazioni
+            // create_audit / update_audit per audit già presenti sul server.
+            // Impedisce che dati in cache di altri dispositivi sovrascrivano
+            // i dati freschi appena scaricati (server-wins enforcement).
+            if (serverAudits.length > 0) {
+              const serverUuids = serverAudits.map(a => a.metadata?.id || a.id).filter(Boolean);
+              syncService.clearQueueForServerAudits(serverUuids).catch(() => {});
+            }
           } catch (err) {
             console.warn("⚠️ [DOWNLOAD] Errore download server, uso cache locale:", err.message);
           }

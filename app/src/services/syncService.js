@@ -711,6 +711,61 @@ export class SyncService {
     }
 
     /**
+     * Rimuove dalla sync queue tutte le operazioni create_audit / update_audit
+     * per gli audit già presenti sul server.
+     *
+     * Chiamare DOPO ogni download server riuscito: evita che operazioni
+     * accumulatesi in sessioni precedenti (su questo o altri dispositivi)
+     * sovrascrivano i dati più recenti appena scaricati.
+     *
+     * Le operazioni accodate DOPO questa chiamata (nuove modifiche utente)
+     * vengono regolarmente processate.
+     *
+     * @param {string[]} serverAuditUuids - UUID degli audit scaricati dal server
+     * @returns {Promise<number>} Numero di item rimossi
+     */
+    async clearQueueForServerAudits(serverAuditUuids) {
+        if (!serverAuditUuids || serverAuditUuids.length === 0) return 0;
+
+        const uuidSet = new Set(serverAuditUuids);
+
+        try {
+            const db = await this.init();
+            const transaction = db.transaction([SYNC_QUEUE_STORE], 'readonly');
+            const store = transaction.objectStore(SYNC_QUEUE_STORE);
+
+            const items = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+
+            let removedCount = 0;
+
+            for (const item of items) {
+                if (item.type !== 'create_audit' && item.type !== 'update_audit') continue;
+
+                const uuid = item.payload?.audit_uuid;
+                if (uuid && uuidSet.has(uuid)) {
+                    await this.removeFromQueue(item.id);
+                    removedCount++;
+                }
+            }
+
+            if (removedCount > 0) {
+                console.log(`🧹 [SYNC] Rimossi ${removedCount} item stantii dalla queue (audit già sul server)`);
+            }
+
+            return removedCount;
+
+        } catch (error) {
+            // Non bloccante: se fallisce, il normale conflict-resolution gestisce tutto
+            console.warn('⚠️ [SYNC] clearQueueForServerAudits fallito (non bloccante):', error.message);
+            return 0;
+        }
+    }
+
+    /**
      * Conta item in queue
      */
     async getQueueSize() {
