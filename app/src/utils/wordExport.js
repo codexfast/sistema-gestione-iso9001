@@ -26,9 +26,11 @@ import {
     PageNumber,
     TableOfContents,
     ShadingType,
-    Footer
+    Footer,
+    ExternalHyperlink
 } from 'docx';
 import { saveAs } from 'file-saver';
+import apiService from '../services/apiService';
 
 /**
  * Colori aziendali e palette template
@@ -145,129 +147,140 @@ function formatDateLong(dateString) {
 }
 
 /**
- * Crea la pagina di copertina con header professionale
+ * Crea la tabella di intestazione del documento (ripetuta su ogni pagina come header)
+ * Struttura 3 colonne:
+ *   [LOGO] | {clientName} / Check-List Interna Audit | AUDIT REPORT {num} / PR / Rev / Data
  */
 function createCoverPage(audit) {
     const metadata = audit.metadata;
 
+    // Codice procedura: PR01.04 da auditNumber "2026-01" → split(-)[1] = "01" → "PR01.04"
+    const auditSeq = (metadata.auditNumber || '').split('-')[1] || '01';
+    const procedureCode = `PR${auditSeq}.04`;
+
     return [
-        // Header con logo e titolo (simulato con tabella)
         new Table({
             rows: [
                 new TableRow({
                     children: [
-                        // Colonna logo (placeholder)
+                        // Colonna 1: [LOGO] (placeholder – in futuro immagine dall'anagrafica)
                         new TableCell({
                             children: [
                                 new Paragraph({
-                                    text: '[LOGO]',
+                                    children: [new TextRun({
+                                        text: '[LOGO]',
+                                        bold: true,
+                                        size: 20,
+                                        color: '9CA3AF'
+                                    })],
                                     alignment: AlignmentType.CENTER,
-                                    spacing: { before: 100, after: 100 }
-                                }),
-                                new Paragraph({
-                                    text: metadata.clientName || 'Cliente',
-                                    alignment: AlignmentType.CENTER,
-                                    bold: true,
-                                    size: 20
+                                    spacing: { before: 80, after: 80 }
                                 })
                             ],
-                            width: { size: 25, type: WidthType.PERCENTAGE },
+                            width: { size: 18, type: WidthType.PERCENTAGE },
                             verticalAlign: VerticalAlign.CENTER,
+                            margins: { top: 80, bottom: 80, left: 120, right: 120 },
                             borders: {
-                                top: { style: BorderStyle.NONE },
-                                bottom: { style: BorderStyle.NONE },
-                                left: { style: BorderStyle.NONE },
-                                right: { style: BorderStyle.SINGLE, size: 1, color: COLORS.lightGray }
+                                top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                                bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                                left: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                                right: { style: BorderStyle.SINGLE, size: 2, color: COLORS.lightGray }
                             }
                         }),
-                        // Colonna titolo centrale
+                        // Colonna 2: Nome cliente + "Check-List Interna Audit"
                         new TableCell({
                             children: [
                                 new Paragraph({
-                                    text: `AUDIT REPORT ${metadata.auditNumber || 'N/A'}`,
-                                    alignment: AlignmentType.CENTER,
-                                    bold: true,
-                                    size: 32,
-                                    color: COLORS.primary,
-                                    spacing: { before: 200, after: 50 }
+                                    children: [new TextRun({
+                                        text: metadata.clientName || 'Cliente',
+                                        bold: true,
+                                        size: 24,
+                                        color: COLORS.primary
+                                    })],
+                                    alignment: AlignmentType.LEFT,
+                                    spacing: { before: 60, after: 40 }
                                 }),
                                 new Paragraph({
-                                    text: 'Check-List Interna Audit',
-                                    alignment: AlignmentType.CENTER,
-                                    size: 24,
-                                    spacing: { after: 200 }
+                                    children: [new TextRun({
+                                        text: 'Check-List Interna Audit',
+                                        size: 20,
+                                        color: COLORS.secondary
+                                    })],
+                                    alignment: AlignmentType.LEFT,
+                                    spacing: { before: 0, after: 60 }
                                 })
                             ],
-                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            width: { size: 55, type: WidthType.PERCENTAGE },
                             verticalAlign: VerticalAlign.CENTER,
+                            margins: { top: 80, bottom: 80, left: 160, right: 120 },
                             borders: {
-                                top: { style: BorderStyle.NONE },
-                                bottom: { style: BorderStyle.NONE },
+                                top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                                bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
                                 left: { style: BorderStyle.NONE },
-                                right: { style: BorderStyle.SINGLE, size: 1, color: COLORS.lightGray }
+                                right: { style: BorderStyle.SINGLE, size: 2, color: COLORS.lightGray }
                             }
                         }),
-                        // Colonna metadata
+                        // Colonna 3: AUDIT REPORT + procedura + Rev + Data
                         new TableCell({
                             children: [
                                 new Paragraph({
-                                    text: `PR${metadata.auditNumber?.split('-')[1] || '00'}.04`,
+                                    children: [new TextRun({
+                                        text: `AUDIT REPORT ${metadata.auditNumber || 'N/A'}`,
+                                        bold: true,
+                                        size: 20,
+                                        color: COLORS.primary
+                                    })],
                                     alignment: AlignmentType.CENTER,
-                                    size: 18
+                                    spacing: { before: 40, after: 20 }
                                 }),
                                 new Paragraph({
-                                    text: 'Rev.0',
+                                    children: [new TextRun({ text: procedureCode, size: 18 })],
                                     alignment: AlignmentType.CENTER,
-                                    size: 18
+                                    spacing: { before: 0, after: 0 }
                                 }),
                                 new Paragraph({
-                                    text: formatDate(metadata.auditDate),
+                                    children: [new TextRun({ text: 'Rev.0', size: 18 })],
                                     alignment: AlignmentType.CENTER,
-                                    size: 18
+                                    spacing: { before: 0, after: 0 }
+                                }),
+                                new Paragraph({
+                                    children: [new TextRun({
+                                        text: formatDate(metadata.auditDate),
+                                        size: 18
+                                    })],
+                                    alignment: AlignmentType.CENTER,
+                                    spacing: { before: 0, after: 40 }
                                 })
                             ],
-                            width: { size: 25, type: WidthType.PERCENTAGE },
+                            width: { size: 27, type: WidthType.PERCENTAGE },
                             verticalAlign: VerticalAlign.CENTER,
+                            margins: { top: 80, bottom: 80, left: 80, right: 120 },
                             borders: {
-                                top: { style: BorderStyle.NONE },
-                                bottom: { style: BorderStyle.NONE },
+                                top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                                bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
                                 left: { style: BorderStyle.NONE },
-                                right: { style: BorderStyle.NONE }
+                                right: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary }
                             }
                         })
                     ]
                 })
             ],
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            margins: {
-                top: 100,
-                bottom: 100,
-                left: 100,
-                right: 100
-            }
+            width: { size: 100, type: WidthType.PERCENTAGE }
         }),
 
-        new Paragraph({
-            text: '',
-            spacing: { after: 800 }
-        }),
+        new Paragraph({ text: '', spacing: { after: 600 } }),
 
-        // Indice (Table of Contents)
+        // Indice
         new Paragraph({
             text: 'Sommario',
             heading: HeadingLevel.HEADING_1,
             spacing: { before: 400, after: 200 }
         }),
-
         new TableOfContents('Sommario', {
             hyperlink: true,
             headingStyleRange: '1-3'
         }),
-
-        new Paragraph({
-            text: '',
-            pageBreakBefore: true
-        })
+        new Paragraph({ text: '', pageBreakBefore: true })
     ];
 }
 
@@ -609,35 +622,61 @@ function createQuestionRow(question, auditAttachments = []) {
 /**
  * Helper: crea UNA riga dedicata per gli allegati di una domanda.
  * Una sola riga che occupa tutte e 3 le colonne (columnSpan 3),
- * con l'elenco degli allegati separati da virgola.
+ * con i nomi dei file come link cliccabili verso il server.
  */
 function createAttachmentRows(attachments) {
     if (!attachments || attachments.length === 0) {
         return [];
     }
 
-    const fileList = attachments
-        .map((att, index) => {
-            const fileName = att.fileName || att.name || 'File sconosciuto';
-            return `${index + 1}. ${fileName}`;
-        })
-        .join('   |   ');
+    // Costruisce i children del paragrafo: prefisso + link per ogni allegato
+    const children = [
+        new TextRun({ text: '📎 Allegati: ', bold: true, color: '1E40AF' })
+    ];
+
+    attachments.forEach((att, index) => {
+        const fileName = att.fileName || att.name || 'File sconosciuto';
+        const attId = att.id || att.attachment_id || att.serverAttachmentId;
+
+        // Separatore tra allegati
+        if (index > 0) {
+            children.push(new TextRun({ text: '   |   ', color: '9CA3AF' }));
+        }
+
+        // Link cliccabile se abbiamo un ID server valido
+        if (attId) {
+            const url = apiService.getAttachmentViewUrl(attId);
+            children.push(
+                new ExternalHyperlink({
+                    link: url,
+                    children: [
+                        new TextRun({
+                            text: fileName,
+                            style: 'Hyperlink',
+                            color: '2563EB',
+                            underline: { type: 'single' }
+                        })
+                    ]
+                })
+            );
+        } else {
+            // Nessun ID server: solo testo
+            children.push(new TextRun({ text: fileName, color: '374151' }));
+        }
+    });
 
     return [
         new TableRow({
             children: [
                 new TableCell({
                     children: [new Paragraph({
-                        children: [
-                            new TextRun({ text: '📎 Allegati: ', bold: true, color: '1E40AF' }),
-                            new TextRun({ text: fileList, color: '374151' })
-                        ],
+                        children,
                         spacing: { before: 60, after: 60 }
                     })],
-                    columnSpan: 3,  // occupa tutte e 3 le colonne
+                    columnSpan: 3,
                     verticalAlign: VerticalAlign.CENTER,
                     margins: { top: 60, bottom: 60, left: 150, right: 100 },
-                    shading: { fill: 'EFF6FF', type: ShadingType.CLEAR } // Blu chiarissimo
+                    shading: { fill: 'EFF6FF', type: ShadingType.CLEAR }
                 })
             ]
         })
