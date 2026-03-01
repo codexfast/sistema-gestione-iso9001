@@ -1,20 +1,65 @@
 # Open Points - Sistema Gestione ISO 9001
 
-**Ultimo aggiornamento**: 2026-01-11 19:20  
+**Ultimo aggiornamento**: 2026-03-01 (pomeriggio) — commit `9894ed5`
 **Owner**: Team SGQ ISO  
-**Stato Generale**: 🟢 **Nessun Blocco Critico** - Issue #001 risolta ✅
+**Stato Generale**: 🟢 **Nessun blocco critico** — ISO 14001 frontend completato, export Word e test E2E prossimi
 
 ---
 
-## 🎯 Priorità Immediate (da fare OGGI)
+## 🎯 Priorità (prossima sessione)
 
-### P0 - CRITICO 🔴
+### P1 - TEST E2E 🟡
 
-**Nessun blocco critico attivo** ✅
+- [ ] **Test Netlify**: creare audit con ISO 9001 + ISO 14001 dal modal → verificare `selectedStandards` salvato
+- [ ] **Test accordion**: tab ISO 14001 visibile dopo selezione da Dati Generali 1.1
+- [ ] **Test sync**: `standard_id: 2` inviato correttamente al server per ISO 14001
+- [ ] **Test riapertura**: risposte ISO 14001 ripristinate dal server al ricaricamento
+
+### P2 - EXPORT WORD ISO 14001 🟠
+
+- [ ] Aggiungere sezione ISO 14001 nel `wordExport.js` (46 domande → NC/OSS/OM riepilogati)
 
 ---
 
-## ✅ Risolti Recentemente
+## ✅ Risolti il 01/03/2026 (seconda sessione)
+
+### **#006 - ✅ RISOLTO - Norme selezionate nel modal ignorate**
+
+**Commit**: `9894ed5` | **File**: `AuditSelector.jsx`  
+**Sintomo**: Selezionando ISO 14001 + ISO 9001 nel modal di creazione, il nuovo audit veniva creato sempre solo con `["ISO_9001"]`.  
+**Root cause**: `formData.norms` (array locale del modal) non era mai copiato in `submitData.selectedStandards` prima di chiamare `onCreate()`. `createNewAudit()` legge `metadata.selectedStandards`, trovava `undefined` e usava il default.  
+**Fix**: `submitData.selectedStandards = formData.norms` aggiunto nel `handleSubmit` prima di `onCreate(submitData)`.
+
+---
+
+### **#007 - ✅ RISOLTO - Tab checklist ISO 14001 non visibile dopo selezione da Dati Generali**
+
+**Commit**: `9894ed5` | **File**: `AuditAccordionLayout.jsx`  
+**Sintomo**: Aggiungendo ISO 14001 da accordion Dati Generali → 1.1, il tab checklist ISO 14001 non appariva nella sezione Checklist.  
+**Root cause**: `GeneralDataSection` salva il `standard_code` del DB (`"ISO_14001_2015"`), ma l'accordeon usava `selectedStandards.includes("ISO_14001")` che non matchava.  
+**Fix**: Sostituito con `selectedStandards.some(s => s === "ISO_14001" || s === "ISO_14001_2015")` — stesso pattern già corretto per ISO 9001.
+
+---
+
+### **#008 - ✅ RISOLTO - `backendToFrontend` formato inconsistente**
+
+**Commit**: `9894ed5` | **File**: `auditConverter.js`  
+**Sintomo**: Audit caricati dal server avevano `selectedStandards: ["ISO_9001_2015"]` mentre audit creati localmente avevano `["ISO_9001"]` → stesso componente si comportava diversamente a seconda dell'origine.  
+**Root cause**: `backendToFrontend` restituiva il codice con anno (`ISO_9001_2015`); non sfruttava il campo `standards` (CSV da `audit_standards` JOIN) già presente nella risposta `listAudits`.  
+**Fix**: Normalizzazione a formato canonico senza anno; ora usa `backendAudit.standards` per multi-standard reale, con fallback su `standard_id`.
+
+---
+
+### **#009 - ✅ RISOLTO - `syncService` inviava `standard_ids: ["ISO_9001"]` (stringa)**
+
+**Commit**: `9894ed5` | **File**: `syncService.js`  
+**Sintomo**: La sync inviava al server `standard_ids: ["ISO_9001"]` (array di codici stringa). Il backend `/audits/sync` legge `standard_id: number` (intero singolo) → il valore veniva ignorato, tutti gli audit sincronizzati ricevevano `standard_id=1`.  
+**Root cause**: nessuna conversione codice→intero nel payload sync; confusione tra `/audits` (usa `standard_ids[]`) e `/audits/sync` (usa `standard_id` singolo).  
+**Fix**: Aggiunta funzione `resolveStandardId()` che converte `"ISO_14001"` → `2`; ora invia `standard_id: 2` per ISO 14001.
+
+---
+
+## ✅ Risolti Recentemente (sessioni precedenti)
 
 ### **#001 - ✅ RISOLTO - Le risposte checklist si salvano correttamente su database**
 

@@ -1,0 +1,157 @@
+# Session Notes – 01 marzo 2026
+
+**Branch**: `main` | **Deploy**: Netlify auto da `main` | **Backend PID**: riavviato più volte, ultimo stabile
+
+---
+
+## ✅ Completato in questa sessione
+
+### Bug fix & funzionalità
+
+| Commit | Descrizione |
+|---|---|
+| `ca0dc93` | Bottone **NV** aggiunto alla checklist (viola `#6a1b9a`) |
+| `176620d` | OM escluso dai rilievi pendenti; sezione nascosta su nuovo audit; lista read-only |
+| `f6ff93a` | `PendingIssuesCascade` fetch live da API (era mock) |
+| `a298190` | Fix errore 500: `clause_number` → `section_code` (colonna inesistente) |
+| `2fbf717` | Note sempre visibili nei rilievi (con placeholder se vuote) |
+| `8630c3b` | Gestione allegati completa: upload → refresh preview, replace desktop, cache-bust |
+| `fb6e3fe` | Fix auth allegati: sostituisce `?token=` in URL con `fetch + blob` (token mancante cross-origin) |
+| `62fe79f` | Refactor preview: banner cliccabili lazy (nessuna thumbnail), blob fetch al click |
+| `0825d0c` | Fix doppio banner + Office Online Viewer per Word/Excel |
+| `72bb07e` | Rimozione Office Online Viewer (porta 8443 non raggiungibile da Microsoft) |
+
+### Architettura allegati (definitiva)
+
+| Tipo file | Azione | Comportamento |
+|---|---|---|
+| Immagini (jpg/png/webp/gif) | ↗ Apri | `fetch blob` → `URL.createObjectURL` → nuova scheda. Blob in RAM, revocato dopo 10s |
+| PDF | ↗ Apri | Idem |
+| Testo / CSV | ↗ Apri | Idem |
+| Word / Excel / PPT | ⬇ Scarica | `fetch blob` → `<a download>` → cartella Downloads browser |
+| Replace | ✏️ (desktop-only) | `PUT /api/v1/attachments/:id/replace` → elimina file vecchio su disco, aggiorna DB |
+| Delete | ✕ | `DELETE /api/v1/attachments/:id` → elimina da DB e disco |
+
+### Doppio banner: fix
+`AttachmentSection` ora mostra **solo** i file `pendingSync: true` o senza `serverAttachmentId`.
+I file già confermati sul server appaiono solo in `AttachmentPreview`.
+
+### Nota su Office Online Viewer
+`view.officeapps.live.com` non raggiunge server su porta non-standard (8443).
+**Alternativa futura**: configurare Nginx per esporre backend anche su 443.
+
+---
+
+## ✅ Completato – seconda parte 01/03 (pomeriggio)
+
+### Analisi e fix flag selezione standard
+
+Analisi flusso completo dei flag ISO sul codice → trovati e corretti **4 bug**:
+
+| Commit | Descrizione |
+|---|---|
+| `9894ed5` | **Fix 4 bug standard selection** (vedi dettaglio sotto) |
+| `5fec508` | `docs: MANUALE_UTENTE.md` v1.1 creato con flusso verificato |
+
+#### Bug corretti (commit `9894ed5`)
+
+| # | File | Bug | Fix |
+|---|---|---|---|
+| 1 | `AuditSelector.jsx` | `formData.norms` (array norme modal) non veniva mappato a `selectedStandards` → nuovi audit sempre con solo ISO 9001 indipendentemente dalla selezione | Aggiunto `submitData.selectedStandards = formData.norms` nel `handleSubmit` |
+| 2 | `AuditAccordionLayout.jsx` | Accordion ISO 14001/45001 usava `includes("ISO_14001")` ma `GeneralDataSection` salva `"ISO_14001_2015"` → tab checklist non visibile dopo selezione da Dati Generali 1.1 | Sostituito con `.some(s => s === "ISO_14001" || s === "ISO_14001_2015")` (stesso pattern già usato per ISO 9001) |
+| 3 | `auditConverter.js` `backendToFrontend` | Restituiva `['ISO_9001_2015']` (formato con anno) mentre modal e checklist usano `'ISO_9001'` → inconsistenza formato; non sfruttava il campo `standards` (comma-separated da junction table) | Normalizzazione a formato canonico senza anno; ora usa `backendAudit.standards` per multi-standard reale, con fallback su `standard_id` |
+| 4 | `syncService.js` `syncUpsertAudit` | Inviava `standard_ids: ["ISO_9001"]` (array di stringhe) mentre `/audits/sync` legge `standard_id: 1` (intero singolo) → ISO 14001 non persistito sul server | Aggiunta funzione `resolveStandardId()` che converte codice stringa → intero; ora invia `standard_id: 2` per ISO 14001 |
+
+#### Note architetturali emerse
+
+- `checklist_sections.section_code` è `VARCHAR(10)` → max 10 caratteri (usare `14001_s4`, non `iso14001_s4`)
+- Il backend `/audits/sync` (upsert) usa `standard_id` singolo (non array). Il backend `/audits` (create) usa `standard_ids[]`. I due endpoint hanno interfaccia diversa — da allineare in futuro.
+- `auditConverter.js` ora legge il campo `standards` (CSV dal JOIN `audit_standards`) che il backend già restituisce in `listAudits`
+- `ChecklistModule.normalizeChecklistKey()` gestisce già correttamente i codici con anno (`ISO_9001_2015 → ISO_9001`) — non modificato
+
+#### Manuale utente
+
+Creato `docs/MANUALE_UTENTE.md` (v1.1) con:
+- Flusso completo login → export, ogni passo verificato sulla codebase reale
+- Richiami al codice sorgente per punti architetturali critici
+- §11 Limitazioni note + backlog (aggiornare ad ogni release)
+- §12 Changelog funzionalità (tabella da mantenere)
+
+---
+
+## 🔲 Prossimi step (priorità 2 roadmap)
+
+### 1. Test end-to-end su Netlify (prossima sessione)
+Verificare che i fix del commit `9894ed5` funzionino end-to-end su deploy produzione:
+- [ ] Creare audit con ISO 9001 + ISO 14001 selezionati dal modal → verificare `selectedStandards` nel metadata
+- [ ] Verificare che accordeon Checklist mostri entrambi i tab
+- [ ] Verificare che la sync invii `standard_id: 2` al server per ISO 14001
+- [ ] Riaprire l'audit (da IndexedDB) → risposte checklist ISO 14001 ripristinate
+- [ ] Modificare standard da Dati Generali 1.1 → tab checklist aggiornato in tempo reale
+
+### 2. Export Word ISO 14001 (priorità alta, backlog §L1)
+Il report `.docx` include solo ISO 9001. Aggiungere sezione ISO 14001.
+
+**Task frontend** (`wordExport.js` / `ExportPanel.jsx`):
+- [ ] Identificare funzione che costruisce la sezione checklist nel Word
+- [ ] Aggiungere sezione ISO 14001 con stessa struttura (46 domande → riepilogo NC/OSS/OM)
+
+### 3. Allineamento backend `/audits` vs `/audits/sync`
+- [ ] `/audits` (create) usa `standard_ids: number[]`
+- [ ] `/audits/sync` (upsert) usa `standard_id: number` singolo
+- [ ] Valutare se allineare `/audits/sync` ad array (migration + ALTER colonna journal)
+
+### 4. Multi-standard backend: junction table `audit_standards`
+Il campo `audits.standard_id` è legacy. Gli audit con più norme sono gestiti via `audit_standards` (già presente). La colonna `standard_id` su `audits` è ridondante ma ancora usata.
+- [ ] ADR per deprecazione `audits.standard_id` → solo `audit_standards`
+
+### 5. Report Word (priorità alta)
+- [ ] Verificare se `docx` è in `backend/package.json`
+- [ ] Sezione "Export Report" già visibile in UI → collegare a `apiService.getWordReport(auditId)`
+
+### 6. Allegati su porta 443 (bassa priorità, sblocca Office Online)
+- [ ] Configurare Nginx per proxy su 443 → localhost:3000 (aggiuntivo a 8443)
+
+### 4. Anagrafica / RBAC (backlog futuro)
+- [ ] `client_name` attualmente stringa libera → diventerà FK verso tabella `clients`
+- [ ] Auditor per organizzazione, ruoli editor/viewer
+
+---
+
+## 📌 Decisioni architetturali prese
+
+| Decisione | Motivazione |
+|---|---|
+| Una sola app (no split frontend/backend separati) | Semplicità operativa PMI |
+| `client_name` stabile come chiave | Diventerà FK quando faremo anagrafica |
+| `conformity_status`: `C, NC, OSS, OM, NA, NV` | CHECK constraint fisso in DB |
+| Pending issues trigger: `NC, OSS, NV` (OM escluso) | OM = Osservazione minore, non rilievo persistente |
+| Blob URL per allegati (no token in URL) | token in query-string non inviato su img/a cross-origin |
+| Server-wins su campi critici (stato audit, firme) | ISO 9001:2015 §7.5 tracciabilità |
+| Merge su note/evidenze in conflitto | Supporto offline-first |
+
+---
+
+## 🔑 Riferimenti tecnici
+
+```
+Server SSH:   ssh spascarella@www.fr-busato.it -p 1122 / Sistemi@2026
+Backend:      /var/www/sgq-backend/  porta 3000
+API base:     https://www.fr-busato.it:8443/api/v1
+Frontend:     https://systemgest.netlify.app
+DB:           SGQ_ISO9001 @ www.fr-busato.it,11043
+
+Restart backend (3 comandi separati):
+  fuser -k 3000/tcp
+  sleep 2 && cd /var/www/sgq-backend && nohup node src/server.js > /var/www/sgq-backend/app.log 2>&1 &
+  sleep 4 && cat /var/www/sgq-backend/app.log
+
+Upload file:
+  pscp -P 1122 -pw "Sistemi@2026" "localfile" spascarella@www.fr-busato.it:/var/www/sgq-backend/path/
+
+checklist_questions colonne:
+  question_id, question_uuid, section_code, question_text,
+  question_type, display_order, is_mandatory, is_active,
+  created_at, updated_at, standard_id
+  (NON esiste clause_number né requirement_reference)
+```

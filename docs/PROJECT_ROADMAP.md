@@ -241,5 +241,40 @@ Ruoli utente per organizzazione.
 
 ---
 
-**Ultimo Aggiornamento**: 01 marzo 2026
-**Prossimo Review**: dopo implementazione Export Report Word
+**Ultimo Aggiornamento**: 01 marzo 2026 (pomeriggio — commit `9894ed5`)
+**Prossimo Review**: dopo test E2E fix standard selection + Export Word ISO 14001
+
+---
+
+## Aggiornamento stato 01/03/2026 (seconda parte)
+
+### Nuovi completamenti
+
+| Area | Dettaglio | Commit |
+|---|---|---|
+| **ISO 14001 checklist DB** | 46 domande, sezioni `14001_s4`/`14001_s5`, questionId 122–167 | `9d4a0da` (sessione mattina) |
+| **Fix standard selection (4 bug)** | Vedi SESSION_NOTES_20260301.md §seconda parte | `9894ed5` |
+| **Manuale utente v1.1** | `docs/MANUALE_UTENTE.md` — flusso completo verificato su codice | `5fec508` |
+
+### Stato multi-standard aggiornato
+
+| Standard | DB | Frontend | Sync server | Export Word |
+|---|---|---|---|---|
+| ISO 9001:2015 | ✅ 35 q (id 87–121) | ✅ Completo | ✅ | ✅ |
+| ISO 14001:2015 | ✅ 46 q (id 122–167, sezioni `14001_s4`/`14001_s5`) | ✅ Completo | ✅ (fix `9894ed5`) | ❌ Backlog |
+| ISO 45001:2018 | ❌ 0 domande | ⚠️ Placeholder UI | ❌ | ❌ |
+
+### Debito tecnico standard_id (da ADR futuro)
+
+- `audits.standard_id` colonna legacy — ancora usata da `/audits/sync`
+- `audit_standards` junction table già presente per multi-standard
+- `/audits` (create) usa `standard_ids: number[]`; `/audits/sync` usa `standard_id: number` singolo — interfacce asimmetriche
+- `checklist_sections.section_code` è `VARCHAR(10)` — limite max 10 caratteri
+
+### Prossimi step ordinati per priorità
+
+1. **Test E2E Netlify** — verificare fix `9894ed5` in produzione (modal norme, accordion, sync)
+2. **Export Word ISO 14001** — aggiungere sezione ISO 14001 nel `wordExport.js`
+3. **Allineamento `/audits/sync`** — accettare `standard_ids[]` per supporto multi-standard server-side
+4. **ISO 45001** — seed DB + frontend (dopo ISO 14001 export completo)
+
