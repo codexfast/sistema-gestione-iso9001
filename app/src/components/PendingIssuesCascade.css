@@ -72,6 +72,22 @@
   color: #999;
 }
 
+.pending-loading {
+  padding: 20px;
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 0.95em;
+}
+
+.pending-error {
+  padding: 14px 18px;
+  background: #fff3f3;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  color: #c0392b;
+  font-size: 0.9em;
+}
+
 .issues-list {
   display: flex;
   flex-direction: column;
