@@ -57,10 +57,11 @@ const ExportPanel = () => {
     try {
       setIsExporting(true);
 
-      // Fetcha rilievi pendenti reali dal server (best-effort, non bloccante)
+      // Fetcha dati live dal server (best-effort, non bloccante)
       const auditForExport = { ...currentAudit };
       const auditId = currentAudit.metadata?.id || currentAudit.id;
 
+      // Fetch rilievi pendenti
       try {
         const pendingResult = await apiService.getPendingIssues(auditId);
         if (pendingResult?.pending_issues?.length > 0) {
@@ -68,8 +69,37 @@ const ExportPanel = () => {
           console.log(`📋 [EXPORT] ${pendingResult.pending_issues.length} rilievi pendenti da DB`);
         }
       } catch (err) {
-        // Non bloccante: usa dati locali se API non risponde
-        console.warn('[EXPORT] pending issues da DB non disp., uso locali:', err.message);
+        console.warn('[EXPORT] pending issues non disp., uso locali:', err.message);
+      }
+
+      // Fetch allegati dal server e normalizza in formato wordExport (camelCase)
+      try {
+        const rawAtts = await apiService.getAttachments(auditId);
+        // La risposta può essere array diretto o { data: [...] } a seconda del backend
+        const serverAtts = Array.isArray(rawAtts) ? rawAtts : (rawAtts?.data ?? rawAtts?.attachments ?? []);
+        if (serverAtts?.length > 0) {
+          // Normalizza snake_case → camelCase atteso da wordExport.js
+          const normalized = serverAtts.map(att => ({
+            id: att.attachment_id,
+            questionId: att.question_id,          // usato da createClauseTable per filtro
+            name: att.file_name,
+            fileName: att.file_name,
+            fileSize: att.file_size,
+            mimeType: att.mime_type,
+            category: att.category,
+            description: att.description,
+            serverAttachmentId: att.attachment_id
+          }));
+          // Merge: priorità allegati server; locali solo se question non ha nulla dal server
+          const serverQuestionIds = new Set(normalized.map(a => a.questionId).filter(Boolean));
+          const localOnly = (auditForExport.attachments || []).filter(
+            a => !serverQuestionIds.has(a.questionId)
+          );
+          auditForExport.attachments = [...normalized, ...localOnly];
+          console.log(`📎 [EXPORT] ${normalized.length} allegati da server + ${localOnly.length} solo locali`);
+        }
+      } catch (err) {
+        console.warn('[EXPORT] allegati server non disp., uso locali:', err.message);
       }
 
       const fileName = await exportAuditToWord(auditForExport);

@@ -79,6 +79,12 @@ const STATUS_CONFIG = {
         color: COLORS.lightGray,
         textColor: '6B7280'
     },
+    'NV': {
+        label: 'Non Valutato',
+        shortLabel: 'NV',
+        color: 'F3E8FF',        // Viola chiaro
+        textColor: '6B21A8'
+    },
     'NOT_ANSWERED': {
         label: 'Non Risposto',
         shortLabel: '-',
@@ -1195,6 +1201,7 @@ function calculateMetricsFromChecklist(checklist) {
         totalOSS: 0,
         totalOM: 0,
         totalNA: 0,
+        totalNV: 0,
         totalC: 0,
         totalNotAnswered: 0,
         totalQuestions: 0,
@@ -1232,6 +1239,9 @@ function calculateMetricsFromChecklist(checklist) {
                     metrics.answeredQuestions++;
                 } else if (status === 'NA' || status === 'not_applicable') {
                     metrics.totalNA++;
+                    metrics.answeredQuestions++;
+                } else if (status === 'NV') {
+                    metrics.totalNV++;
                     metrics.answeredQuestions++;
                 } else {
                     // NOT_ANSWERED o undefined
@@ -1365,6 +1375,24 @@ function createOutcomeSection(auditOutcome, checklist) {
                         verticalAlign: VerticalAlign.CENTER
                     })
                 ]
+            }),
+            new TableRow({
+                children: [
+                    new TableCell({
+                        children: [new Paragraph({ text: 'Non Valutato (NV)', bold: true })],
+                        margins: { top: 80, bottom: 80, left: 100, right: 100 }
+                    }),
+                    new TableCell({
+                        children: [new Paragraph({
+                            text: String(metrics.totalNV),
+                            bold: true,
+                            alignment: AlignmentType.CENTER,
+                            size: 28
+                        })],
+                        shading: metrics.totalNV > 0 ? { fill: 'F3E8FF' } : undefined,
+                        verticalAlign: VerticalAlign.CENTER
+                    })
+                ]
             })
         ],
         width: { size: 60, type: WidthType.PERCENTAGE },
@@ -1386,7 +1414,8 @@ function createOutcomeSection(auditOutcome, checklist) {
         `Risposte evase: ${metrics.answeredQuestions}\n` +
         `Non conformità: ${metrics.totalNC}\n` +
         `Osservazioni: ${metrics.totalOSS}\n` +
-        `Opportunità di miglioramento: ${metrics.totalOM}`;
+        `Opportunità di miglioramento: ${metrics.totalOM}\n` +
+        (metrics.totalNV > 0 ? `Non valutato: ${metrics.totalNV}` : '');
 
     sections.push(
         new Paragraph({
