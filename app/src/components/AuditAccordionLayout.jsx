@@ -111,7 +111,14 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
         console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
         initializeChecklist("ISO_9001");
       }
-      // TODO: Implementare ISO_14001 e ISO_45001 quando disponibili
+      if (standard === "ISO_14001" || standard === "ISO_14001_2015") {
+        console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
+        initializeChecklist("ISO_14001");
+      }
+      if (standard === "ISO_45001" || standard === "ISO_45001_2018") {
+        console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
+        initializeChecklist("ISO_45001");
+      }
     });
 
     // TODO: Rimuovere checklist per standard deselezionati
@@ -318,9 +325,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
 
                   {openSubSections["iso-14001"] && (
                     <div className="subsection-content">
-                      <div className="checklist-placeholder">
-                        <p>Checklist ISO 14001 - In sviluppo</p>
-                      </div>
+                      <ChecklistModule defaultNorm="ISO_14001" />
                     </div>
                   )}
                 </div>

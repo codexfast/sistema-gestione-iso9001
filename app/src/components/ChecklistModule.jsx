@@ -40,7 +40,7 @@ const STATUS = {
   NOT_ANSWERED: "NOT_ANSWERED", // Non risposto (default)
 };
 
-function ChecklistModule() {
+function ChecklistModule({ defaultNorm = "ISO_9001" }) {
   const {
     currentAudit,
     updateCurrentAudit,
@@ -50,7 +50,7 @@ function ChecklistModule() {
   } = useStorage();
 
   const [expandedClauses, setExpandedClauses] = useState(new Set([])); // Tutti chiusi
-  const [selectedNorm, setSelectedNorm] = useState("ISO_9001");
+  const [selectedNorm, setSelectedNorm] = useState(defaultNorm);
   const [searchTerm, setSearchTerm] = useState("");
   const [responseOptions, setResponseOptions] = useState(null); // Opzioni dal backend
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -93,27 +93,34 @@ function ChecklistModule() {
     loadResponseOptions();
   }, []); // Esegui solo al mount
 
-  // Auto-inizializza checklist quando audit viene caricato con standard selezionati
-  // ma senza checklist già compilata (es. audit caricato da IndexedDB o server)
+  // Auto-inizializza checklist per tutti gli standard selezionati sull'audit
+  // (es. audit caricato da IndexedDB o server senza checklist già compilata)
   // NOTA: {} è truthy in JS, quindi serve il check su Object.keys().length
   useEffect(() => {
     if (!currentAudit) return;
 
     const selectedStandards = currentAudit.metadata?.selectedStandards || [];
 
-    // Normalizza: "ISO_9001_2015" e "ISO_9001" entrambi producono key "ISO_9001"
-    const hasISO9001 = selectedStandards.some(
-      (s) => s === "ISO_9001" || s === "ISO_9001_2015"
-    );
+    // Mappa codice norma → chiave interna normalizzata
+    const normKeyMap = {
+      ISO_9001:       "ISO_9001",
+      ISO_9001_2015:  "ISO_9001",
+      ISO_14001:      "ISO_14001",
+      ISO_14001_2015: "ISO_14001",
+      ISO_45001:      "ISO_45001",
+      ISO_45001_2018: "ISO_45001",
+    };
 
-    // Considera vuota: mancante, null, oppure oggetto {} senza clausole
-    const isoChecklist = currentAudit.checklist?.ISO_9001;
-    const isChecklistEmpty = !isoChecklist || Object.keys(isoChecklist).length === 0;
-
-    if (hasISO9001 && isChecklistEmpty) {
-      console.log("[ChecklistModule] Auto-init checklist ISO_9001 per audit caricato");
-      initializeChecklist("ISO_9001");
-    }
+    selectedStandards.forEach((s) => {
+      const key = normKeyMap[s];
+      if (!key) return;
+      const isoChecklist = currentAudit.checklist?.[key];
+      const isEmpty = !isoChecklist || Object.keys(isoChecklist).length === 0;
+      if (isEmpty) {
+        console.log(`[ChecklistModule] Auto-init checklist ${key} per audit caricato`);
+        initializeChecklist(key);
+      }
+    });
   }, [currentAudit?.id]); // Esegui solo al cambio audit (non ad ogni update)
 
   // TUTTI gli hooks devono essere prima degli early returns

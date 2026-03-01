@@ -105,9 +105,10 @@ export const ISO_9001_TEMPLATE = {
 };
 
 /**
- * Template ISO 14001:2015 (Sistema di Gestione Ambientale)
- * Clausole 4-10 — 35 domande di audit
- * questionId: null = domande non ancora nel DB (sync silenzioso)
+ * Template ISO 14001:2015 – Checklist Legislativa Ambiente & Sicurezza
+ * 2 sezioni normative — 46 domande
+ * Fonte: CheckList\ChekList14001.txt (cliente)
+ * questionId: null = domande non ancora nel DB (sync silenzioso; vedere migration 012)
  */
 export const ISO_14001_TEMPLATE = {
   standardId: 2,
@@ -116,77 +117,62 @@ export const ISO_14001_TEMPLATE = {
   sections: [
     {
       sectionCode: "clause4",
-      sectionTitle: "Contesto dell'Organizzazione",
+      sectionTitle: "4 – AMBIENTE E SICUREZZA",
       displayOrder: 1,
       questions: [
-        { questionId: null, questionText: "Comprensione del contesto esterno e interno rilevante per la gestione ambientale (4.1)", questionType: "conformity", isMandatory: true, displayOrder: 1 },
-        { questionId: null, questionText: "Identificazione delle parti interessate e dei requisiti legali e altri requisiti ambientali (4.2)", questionType: "conformity", isMandatory: true, displayOrder: 2 },
-        { questionId: null, questionText: "Campo di applicazione del SGA: confini, attività, prodotti, servizi definiti e documentati (4.3)", questionType: "conformity", isMandatory: true, displayOrder: 3 },
-        { questionId: null, questionText: "Il SGA include processi necessari e le loro interazioni secondo i requisiti della norma (4.4)", questionType: "conformity", isMandatory: true, displayOrder: 4 }
+        { questionId: null, questionText: "EDILIZIA/AGIBILITA'", questionType: "conformity", isMandatory: true, displayOrder: 2 },
+        { questionId: null, questionText: "INDUSTRIE INSALUBRI", questionType: "conformity", isMandatory: true, displayOrder: 3 },
+        { questionId: null, questionText: "IMPIANTI TERMICI", questionType: "conformity", isMandatory: true, displayOrder: 4 },
+        { questionId: null, questionText: "INCIDENTI RILEVANTI", questionType: "conformity", isMandatory: true, displayOrder: 5 },
+        { questionId: null, questionText: "PREVENZIONE INCENDI / RISCHIO INCENDI", questionType: "conformity", isMandatory: true, displayOrder: 6 },
+        { questionId: null, questionText: "PIANO DI EMERGENZA", questionType: "conformity", isMandatory: true, displayOrder: 7 },
+        { questionId: null, questionText: "ADDETTI ALLE EMERGENZE", questionType: "conformity", isMandatory: true, displayOrder: 8 },
+        { questionId: null, questionText: "GAS TOSSICI", questionType: "conformity", isMandatory: true, displayOrder: 9 },
+        { questionId: null, questionText: "AMIANTO E RELATIVI RISCHI", questionType: "conformity", isMandatory: true, displayOrder: 10 },
+        { questionId: null, questionText: "TRASPORTO MATERIALI PERICOLOSI (ADR / RID)", questionType: "conformity", isMandatory: true, displayOrder: 11 },
+        { questionId: null, questionText: "SOSTANZE E PREPARATI PERICOLOSI / RISCHIO CHIMICO PER LA SALUTE E LA SICUREZZA", questionType: "conformity", isMandatory: true, displayOrder: 12 },
+        { questionId: null, questionText: "PCB / PCT", questionType: "conformity", isMandatory: true, displayOrder: 13 },
+        { questionId: null, questionText: "RADIAZIONI IONIZZANTI E RELATIVI RISCHI", questionType: "conformity", isMandatory: true, displayOrder: 14 }
       ]
     },
     {
       sectionCode: "clause5",
-      sectionTitle: "Leadership",
+      sectionTitle: "5. AMBIENTE",
       displayOrder: 2,
       questions: [
-        { questionId: null, questionText: "L'alta direzione dimostra leadership e impegno verso il SGA (5.1)", questionType: "conformity", isMandatory: true, displayOrder: 5 },
-        { questionId: null, questionText: "Politica ambientale definita, comunicata e disponibile (5.2)", questionType: "conformity", isMandatory: true, displayOrder: 6 },
-        { questionId: null, questionText: "Ruoli, responsabilità e autorità per il SGA assegnati e comunicati (5.3)", questionType: "conformity", isMandatory: true, displayOrder: 7 }
-      ]
-    },
-    {
-      sectionCode: "clause6",
-      sectionTitle: "Pianificazione",
-      displayOrder: 3,
-      questions: [
-        { questionId: null, questionText: "Identificazione degli aspetti ambientali significativi (6.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 8 },
-        { questionId: null, questionText: "Valutazione degli obblighi di conformità (requisiti legali e altri) (6.1.3)", questionType: "conformity", isMandatory: true, displayOrder: 9 },
-        { questionId: null, questionText: "Pianificazione delle azioni per affrontare rischi, opportunità, aspetti significativi (6.1.4)", questionType: "conformity", isMandatory: true, displayOrder: 10 },
-        { questionId: null, questionText: "Obiettivi ambientali stabiliti, misurabili e monitorati (6.2)", questionType: "conformity", isMandatory: true, displayOrder: 11 }
-      ]
-    },
-    {
-      sectionCode: "clause7",
-      sectionTitle: "Supporto",
-      displayOrder: 4,
-      questions: [
-        { questionId: null, questionText: "Risorse necessarie per il SGA disponibili e adeguate (7.1)", questionType: "conformity", isMandatory: true, displayOrder: 12 },
-        { questionId: null, questionText: "Competenze del personale che opera sotto il controllo dell'organizzazione (7.2)", questionType: "conformity", isMandatory: true, displayOrder: 13 },
-        { questionId: null, questionText: "Consapevolezza del personale sulla politica, aspetti significativi e conseguenze (7.3)", questionType: "conformity", isMandatory: true, displayOrder: 14 },
-        { questionId: null, questionText: "Comunicazione interna ed esterna sull'SGA (7.4)", questionType: "conformity", isMandatory: true, displayOrder: 15 },
-        { questionId: null, questionText: "Informazioni documentate richieste dalla norma create, aggiornate e controllate (7.5)", questionType: "conformity", isMandatory: true, displayOrder: 16 }
-      ]
-    },
-    {
-      sectionCode: "clause8",
-      sectionTitle: "Attività Operative",
-      displayOrder: 5,
-      questions: [
-        { questionId: null, questionText: "Pianificazione e controllo operativo degli aspetti ambientali significativi (8.1)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
-        { questionId: null, questionText: "Preparazione e risposta alle emergenze ambientali (8.2)", questionType: "conformity", isMandatory: true, displayOrder: 18 },
-        { questionId: null, questionText: "Gestione dei fornitori e appaltatori riguardo agli aspetti ambientali (8.1 - ciclo vita)", questionType: "conformity", isMandatory: true, displayOrder: 19 },
-        { questionId: null, questionText: "Controllo dei processi in outsourcing con impatti ambientali significativi (8.1)", questionType: "conformity", isMandatory: true, displayOrder: 20 }
-      ]
-    },
-    {
-      sectionCode: "clause9",
-      sectionTitle: "Valutazione delle Prestazioni",
-      displayOrder: 6,
-      questions: [
-        { questionId: null, questionText: "Monitoraggio, misurazione, analisi e valutazione delle prestazioni ambientali (9.1.1)", questionType: "conformity", isMandatory: true, displayOrder: 21 },
-        { questionId: null, questionText: "Valutazione della conformità agli obblighi di conformità (9.1.2)", questionType: "conformity", isMandatory: true, displayOrder: 22 },
-        { questionId: null, questionText: "Programma di audit interno attuato e risultati disponibili (9.2)", questionType: "conformity", isMandatory: true, displayOrder: 23 },
-        { questionId: null, questionText: "Riesame della direzione eseguito con tutti gli input richiesti e output documentati (9.3)", questionType: "conformity", isMandatory: true, displayOrder: 24 }
-      ]
-    },
-    {
-      sectionCode: "clause10",
-      sectionTitle: "Miglioramento",
-      displayOrder: 7,
-      questions: [
-        { questionId: null, questionText: "Gestione delle non conformità, azioni correttive adottate e verificate (10.2)", questionType: "conformity", isMandatory: true, displayOrder: 25 },
-        { questionId: null, questionText: "Miglioramento continuo del SGA (10.3)", questionType: "conformity", isMandatory: true, displayOrder: 26 }
+        { questionId: null, questionText: "VALUTAZIONE IMPATTO AMBIENTALE (VIA) e VALUTAZIONE AMBIENTALE STRATEGICA (VAS)", questionType: "conformity", isMandatory: true, displayOrder: 15 },
+        { questionId: null, questionText: "AUTORIZZAZIONE INTEGRATA AMBIENTALE (AIA) e IPPC", questionType: "conformity", isMandatory: true, displayOrder: 16 },
+        { questionId: null, questionText: "AUTORIZZAZIONE UNICA AMBIENTALE (AUA)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
+        { questionId: null, questionText: "APPROVVIGIONAMENTO IDRICO", questionType: "conformity", isMandatory: true, displayOrder: 18 },
+        { questionId: null, questionText: "SCARICHI IDRICI", questionType: "conformity", isMandatory: true, displayOrder: 19 },
+        { questionId: null, questionText: "QUALITA' DELL'ARIA", questionType: "conformity", isMandatory: true, displayOrder: 20 },
+        { questionId: null, questionText: "EMISSIONI IN ATMOSFERA", questionType: "conformity", isMandatory: true, displayOrder: 21 },
+        { questionId: null, questionText: "EMISSIONI ODORIGENE", questionType: "conformity", isMandatory: true, displayOrder: 22 },
+        { questionId: null, questionText: "RIFIUTI", questionType: "conformity", isMandatory: true, displayOrder: 23 },
+        { questionId: null, questionText: "GESTIONE IMBALLAGGI (CONAI E CONSORZI DI FILIERA)", questionType: "conformity", isMandatory: true, displayOrder: 24 },
+        { questionId: null, questionText: "DISCARICHE E IMPIANTI DI INCENERIMENTO", questionType: "conformity", isMandatory: true, displayOrder: 25 },
+        { questionId: null, questionText: "TERRE E ROCCE DA SCAVO", questionType: "conformity", isMandatory: true, displayOrder: 26 },
+        { questionId: null, questionText: "BONIFICA SITI CONTAMINATI", questionType: "conformity", isMandatory: true, displayOrder: 27 },
+        { questionId: null, questionText: "CONTAMINAZIONE SUOLO E SOTTOSUOLO (Serbatoi Interrati)", questionType: "conformity", isMandatory: true, displayOrder: 28 },
+        { questionId: null, questionText: "GAS AD EFFETTO SERRA E LESIVI DELL'OZONO", questionType: "conformity", isMandatory: true, displayOrder: 29 },
+        { questionId: null, questionText: "INQUINAMENTO ACUSTICO", questionType: "conformity", isMandatory: true, displayOrder: 30 },
+        { questionId: null, questionText: "GESTIONE ENERGETICA ED ENERGY MANAGER", questionType: "conformity", isMandatory: true, displayOrder: 31 },
+        { questionId: null, questionText: "MOBILITY MANAGER", questionType: "conformity", isMandatory: true, displayOrder: 32 },
+        { questionId: null, questionText: "INQUINAMENTO ELETTROMAGNETICO", questionType: "conformity", isMandatory: true, displayOrder: 33 },
+        { questionId: null, questionText: "INQUINAMENTO LUMINOSO", questionType: "conformity", isMandatory: true, displayOrder: 34 },
+        { questionId: null, questionText: "SOSTENIBILITA' / CORPORATE SUSTAINABILITY REPORTING DIRECTIVE (CSRD)", questionType: "conformity", isMandatory: true, displayOrder: 35 },
+        { questionId: null, questionText: "MEDI IMPIANTI DI COMBUSTIONE", questionType: "conformity", isMandatory: true, displayOrder: 36 },
+        { questionId: null, questionText: "GRANDI IMPIANTI DI COMBUSTIONE", questionType: "conformity", isMandatory: true, displayOrder: 37 },
+        { questionId: null, questionText: "ATTIVITA' DI GESTIONE DEI RIFIUTI ED IMPIANTI DI RECUPERO (art. 208 e segg. D.Lgs. 152/06)", questionType: "conformity", isMandatory: true, displayOrder: 38 },
+        { questionId: null, questionText: "OLI USATI", questionType: "conformity", isMandatory: true, displayOrder: 39 },
+        { questionId: null, questionText: "RIFIUTI SANITARI/ORIGINE ANIMALE, SOTTOPRODOTTI DI ORIGINE ANIMALE", questionType: "conformity", isMandatory: true, displayOrder: 40 },
+        { questionId: null, questionText: "UTILIZZO FANGHI IN AGRICOLTURA", questionType: "conformity", isMandatory: true, displayOrder: 41 },
+        { questionId: null, questionText: "SOTTOPRODOTTI", questionType: "conformity", isMandatory: true, displayOrder: 42 },
+        { questionId: null, questionText: "ATTIVITA' DI AUTOSMALTIMENTO DI RIFIUTI PERICOLOSI", questionType: "conformity", isMandatory: true, displayOrder: 43 },
+        { questionId: null, questionText: "RISPARMIO ED EFFICIENZA ENERGETICA", questionType: "conformity", isMandatory: true, displayOrder: 44 },
+        { questionId: null, questionText: "EUDR, European Union Deforestation Regulation", questionType: "conformity", isMandatory: true, displayOrder: 45 },
+        { questionId: null, questionText: "PPWR (Packaging and Packaging Waste Regulation)", questionType: "conformity", isMandatory: true, displayOrder: 46 },
+        { questionId: null, questionText: "Prescrizioni AIA, AUA", questionType: "conformity", isMandatory: true, displayOrder: 47 }
       ]
     }
   ]
