@@ -31,12 +31,24 @@ export function backendToFrontend(backendAudit) {
             conformitiesCount: backendAudit.conformities_count || 0,
             nonConformitiesCount: backendAudit.non_conformities_count || 0,
             completionPercentage: backendAudit.completion_percentage || 0,
-            // selectedStandards: derivato da standard_id (1=ISO_9001_2015, 2=ISO_14001, 3=ISO_45001)
+            // selectedStandards: formato canonico senza suffisso anno (es 'ISO_9001', non 'ISO_9001_2015')
+            // Usa il campo 'standards' (comma-separated da audit_standards JOIN) se disponibile,
+            // altrimenti cade su standard_id singolo per retrocompatibilità
             selectedStandards: (() => {
+                const NORMALIZE = {
+                    ISO_9001_2015: 'ISO_9001', ISO_9001: 'ISO_9001',
+                    ISO_14001_2015: 'ISO_14001', ISO_14001: 'ISO_14001',
+                    ISO_45001_2018: 'ISO_45001', ISO_45001: 'ISO_45001',
+                };
+                if (backendAudit.standards) {
+                    return backendAudit.standards.split(',')
+                        .map(s => NORMALIZE[s.trim()] || s.trim())
+                        .filter(Boolean);
+                }
                 const id = backendAudit.standard_id;
                 if (id === 2) return ['ISO_14001'];
                 if (id === 3) return ['ISO_45001'];
-                return ['ISO_9001_2015']; // default: ISO 9001
+                return ['ISO_9001'];
             })(),
             createdAt: backendAudit.created_at,
             updatedAt: backendAudit.updated_at,
@@ -90,7 +102,13 @@ export function frontendToBackend(frontendAudit) {
         conformities_count: frontendAudit.metrics?.conformitiesCount || meta.conformitiesCount || 0,
         non_conformities_count: frontendAudit.metrics?.nonConformitiesCount || meta.nonConformitiesCount || 0,
         completion_percentage: frontendAudit.metrics?.completionPercentage || meta.completionPercentage || 0,
-        standard_id: 1, // ISO 9001 (default)
+        // Deriva standard_id da selectedStandards (primo standard selezionato)
+        standard_id: (() => {
+            const stds = meta.selectedStandards || [];
+            if (stds.some(s => s === 'ISO_14001' || s === 'ISO_14001_2015')) return 2;
+            if (stds.some(s => s === 'ISO_45001' || s === 'ISO_45001_2018')) return 3;
+            return 1; // ISO 9001 default
+        })(),
         created_at: meta.createdAt,
         updated_at: meta.updatedAt || new Date().toISOString()
     };

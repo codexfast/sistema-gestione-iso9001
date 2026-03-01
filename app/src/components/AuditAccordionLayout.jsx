@@ -306,8 +306,10 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
                 </div>
               )}
 
-              {/* ISO 14001 - Solo se selezionato */}
-              {selectedStandards.includes("ISO_14001") && (
+              {/* ISO 14001 - Solo se selezionato (accetta sia "ISO_14001" che "ISO_14001_2015") */}
+              {selectedStandards.some(
+                (s) => s === "ISO_14001" || s === "ISO_14001_2015"
+              ) && (
                 <div className="accordion-subsection standard-section">
                   <button
                     className={`accordion-subheader standard-header ${
@@ -332,8 +334,10 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
                 </div>
               )}
 
-              {/* ISO 45001 - Solo se selezionato */}
-              {selectedStandards.includes("ISO_45001") && (
+              {/* ISO 45001 - Solo se selezionato (accetta sia "ISO_45001" che "ISO_45001_2018") */}
+              {selectedStandards.some(
+                (s) => s === "ISO_45001" || s === "ISO_45001_2018"
+              ) && (
                 <div className="accordion-subsection standard-section">
                   <button
                     className={`accordion-subheader standard-header ${

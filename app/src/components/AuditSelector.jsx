@@ -293,6 +293,8 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
 
     // Propaga rilievi pendenti dell'audit precedente nel nuovo audit (re-audit e nuovo con storico)
     const submitData = { ...formData };
+    // Mappa norms → selectedStandards (atteso da createNewAudit in auditDataModel.js)
+    submitData.selectedStandards = formData.norms;
     if (pendingInfo?.issues?.length > 0) {
       submitData.pendingIssues = pendingInfo.issues
         .filter((issue) => issue.conformity_status !== 'OM')

@@ -269,19 +269,37 @@ export class SyncService {
      * Sync: Upsert audit (INSERT or UPDATE)
      */
     async syncUpsertAudit(auditData) {
+        // Mappa codici stringa norma → ID numerico backend
+        const STANDARD_CODE_TO_ID = {
+            ISO_9001: 1, ISO_9001_2015: 1,
+            ISO_14001: 2, ISO_14001_2015: 2,
+            ISO_45001: 3, ISO_45001_2018: 3,
+        };
+        /**
+         * Ricava il primo standard_id numerico dalla lista selectedStandards.
+         * Il backend /audits/sync accetta standard_id singolo (non array).
+         */
+        const resolveStandardId = (codes) => {
+            if (!Array.isArray(codes) || codes.length === 0) return 1;
+            const first = codes[0];
+            return typeof first === 'number' ? first : (STANDARD_CODE_TO_ID[first] ?? 1);
+        };
+
         try {
             // Mappa campi frontend→backend per multi-standard support
+            const rawCodes = auditData.selectedStandards || auditData.standard_ids || auditData.standardIds ||
+                (auditData.standardId ? [auditData.standardId] : ['ISO_9001']);
             const mappedAudit = {
                 ...auditData,
-                // Mappa selectedStandards (frontend) → standard_ids (backend API)
-                standard_ids: auditData.selectedStandards || auditData.standard_ids || auditData.standardIds ||
-                    (auditData.standardId ? [auditData.standardId] : [1]) // Retrocompatibilità + default ISO 9001
+                // Converte codici stringa (es. "ISO_14001") → ID numerico (es. 2) richiesto da /audits/sync
+                standard_id: resolveStandardId(rawCodes),
             };
 
             // Rimuovi campi legacy per pulire payload
             delete mappedAudit.selectedStandards;
             delete mappedAudit.standardIds;
             delete mappedAudit.standardId;
+            delete mappedAudit.standard_ids; // rimuovi array legacy se presente
 
             const result = await apiService.upsertAudit(mappedAudit);
 
