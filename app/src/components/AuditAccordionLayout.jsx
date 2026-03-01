@@ -78,11 +78,12 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
         currentAudit.id
       );
       initializeChecklist("ISO_9001");
-      // Idrata subito con risposte reali dal server (audit esistente)
-      const numericId = currentAudit.metadata?.auditId;
-      if (numericId) {
-        fetchAndApplyServerResponses(numericId);
-      }
+    }
+
+    // Idrata risposte dal server per TUTTI gli standard (audit esistente con auditId)
+    const numericId = currentAudit.metadata?.auditId;
+    if (numericId) {
+      fetchAndApplyServerResponses(numericId);
     }
   }, [currentAudit?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
