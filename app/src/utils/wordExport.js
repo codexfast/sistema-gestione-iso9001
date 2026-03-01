@@ -724,10 +724,14 @@ function createClauseTable(questions, auditAttachments = []) {
         // Riga domanda principale
         allRows.push(createQuestionRow(q, auditAttachments));
 
-        // Righe allegati (una riga per file)
-        const questionAttachments = auditAttachments.filter(att => att.questionId === q.id);
+        // Righe allegati: confronta q.questionId (INT server) con att.questionId (INT server)
+        // q.id è l'ID locale stringa ("qclause4_1") — NON usare per il confronto
+        const qServerId = q.questionId;
+        const questionAttachments = qServerId != null
+            ? auditAttachments.filter(att => Number(att.questionId) === Number(qServerId))
+            : [];
         const attachmentRows = createAttachmentRows(questionAttachments);
-        allRows.push(...attachmentRows); // Spread per aggiungere tutte le righe
+        allRows.push(...attachmentRows);
     }); return new Table({
         rows: [
             createTableHeaderRow(),
