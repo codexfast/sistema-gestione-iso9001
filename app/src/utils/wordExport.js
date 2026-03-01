@@ -27,6 +27,7 @@ import {
     TableOfContents,
     ShadingType,
     Footer,
+    Header,
     ExternalHyperlink
 } from 'docx';
 import { saveAs } from 'file-saver';
@@ -147,134 +148,135 @@ function formatDateLong(dateString) {
 }
 
 /**
- * Crea la tabella di intestazione del documento (ripetuta su ogni pagina come header)
- * Struttura 3 colonne:
+ * Crea l'oggetto Header Word (tabella 3 colonne ripetuta su ogni pagina):
  *   [LOGO] | {clientName} / Check-List Interna Audit | AUDIT REPORT {num} / PR / Rev / Data
  */
-function createCoverPage(audit) {
+function createPageHeader(audit) {
     const metadata = audit.metadata;
-
-    // Codice procedura: PR01.04 da auditNumber "2026-01" → split(-)[1] = "01" → "PR01.04"
     const auditSeq = (metadata.auditNumber || '').split('-')[1] || '01';
     const procedureCode = `PR${auditSeq}.04`;
 
+    const headerTable = new Table({
+        rows: [
+            new TableRow({
+                children: [
+                    // Col 1: LOGO placeholder
+                    new TableCell({
+                        children: [
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: '[LOGO]',
+                                    bold: true,
+                                    size: 18,
+                                    color: '9CA3AF'
+                                })],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 60, after: 60 }
+                            })
+                        ],
+                        width: { size: 18, type: WidthType.PERCENTAGE },
+                        verticalAlign: VerticalAlign.CENTER,
+                        margins: { top: 60, bottom: 60, left: 120, right: 80 },
+                        borders: {
+                            top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            left: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            right: { style: BorderStyle.SINGLE, size: 2, color: COLORS.lightGray }
+                        }
+                    }),
+                    // Col 2: Nome cliente + tipo documento
+                    new TableCell({
+                        children: [
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: metadata.clientName || 'Cliente',
+                                    bold: true,
+                                    size: 22,
+                                    color: COLORS.primary
+                                })],
+                                alignment: AlignmentType.LEFT,
+                                spacing: { before: 40, after: 20 }
+                            }),
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: 'Check-List Interna Audit',
+                                    size: 18,
+                                    color: COLORS.secondary
+                                })],
+                                alignment: AlignmentType.LEFT,
+                                spacing: { before: 0, after: 40 }
+                            })
+                        ],
+                        width: { size: 55, type: WidthType.PERCENTAGE },
+                        verticalAlign: VerticalAlign.CENTER,
+                        margins: { top: 60, bottom: 60, left: 160, right: 80 },
+                        borders: {
+                            top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            left: { style: BorderStyle.NIL },
+                            right: { style: BorderStyle.SINGLE, size: 2, color: COLORS.lightGray }
+                        }
+                    }),
+                    // Col 3: Riferimento documento
+                    new TableCell({
+                        children: [
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: `AUDIT REPORT ${metadata.auditNumber || 'N/A'}`,
+                                    bold: true,
+                                    size: 18,
+                                    color: COLORS.primary
+                                })],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 30, after: 10 }
+                            }),
+                            new Paragraph({
+                                children: [new TextRun({ text: procedureCode, size: 16 })],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 0, after: 0 }
+                            }),
+                            new Paragraph({
+                                children: [new TextRun({ text: 'Rev.0', size: 16 })],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 0, after: 0 }
+                            }),
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: formatDate(metadata.auditDate),
+                                    size: 16
+                                })],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 0, after: 30 }
+                            })
+                        ],
+                        width: { size: 27, type: WidthType.PERCENTAGE },
+                        verticalAlign: VerticalAlign.CENTER,
+                        margins: { top: 60, bottom: 60, left: 80, right: 120 },
+                        borders: {
+                            top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
+                            left: { style: BorderStyle.NIL },
+                            right: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary }
+                        }
+                    })
+                ]
+            })
+        ],
+        width: { size: 100, type: WidthType.PERCENTAGE }
+    });
+
+    return new Header({ children: [headerTable] });
+}
+
+/**
+ * Crea il sommario (copertina senza tabella intestazione — quella è nell'header di pagina)
+ */
+function createCoverPage(audit) {
     return [
-        new Table({
-            rows: [
-                new TableRow({
-                    children: [
-                        // Colonna 1: [LOGO] (placeholder – in futuro immagine dall'anagrafica)
-                        new TableCell({
-                            children: [
-                                new Paragraph({
-                                    children: [new TextRun({
-                                        text: '[LOGO]',
-                                        bold: true,
-                                        size: 20,
-                                        color: '9CA3AF'
-                                    })],
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { before: 80, after: 80 }
-                                })
-                            ],
-                            width: { size: 18, type: WidthType.PERCENTAGE },
-                            verticalAlign: VerticalAlign.CENTER,
-                            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-                            borders: {
-                                top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                left: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                right: { style: BorderStyle.SINGLE, size: 2, color: COLORS.lightGray }
-                            }
-                        }),
-                        // Colonna 2: Nome cliente + "Check-List Interna Audit"
-                        new TableCell({
-                            children: [
-                                new Paragraph({
-                                    children: [new TextRun({
-                                        text: metadata.clientName || 'Cliente',
-                                        bold: true,
-                                        size: 24,
-                                        color: COLORS.primary
-                                    })],
-                                    alignment: AlignmentType.LEFT,
-                                    spacing: { before: 60, after: 40 }
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({
-                                        text: 'Check-List Interna Audit',
-                                        size: 20,
-                                        color: COLORS.secondary
-                                    })],
-                                    alignment: AlignmentType.LEFT,
-                                    spacing: { before: 0, after: 60 }
-                                })
-                            ],
-                            width: { size: 55, type: WidthType.PERCENTAGE },
-                            verticalAlign: VerticalAlign.CENTER,
-                            margins: { top: 80, bottom: 80, left: 160, right: 120 },
-                            borders: {
-                                top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                left: { style: BorderStyle.NONE },
-                                right: { style: BorderStyle.SINGLE, size: 2, color: COLORS.lightGray }
-                            }
-                        }),
-                        // Colonna 3: AUDIT REPORT + procedura + Rev + Data
-                        new TableCell({
-                            children: [
-                                new Paragraph({
-                                    children: [new TextRun({
-                                        text: `AUDIT REPORT ${metadata.auditNumber || 'N/A'}`,
-                                        bold: true,
-                                        size: 20,
-                                        color: COLORS.primary
-                                    })],
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { before: 40, after: 20 }
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({ text: procedureCode, size: 18 })],
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { before: 0, after: 0 }
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({ text: 'Rev.0', size: 18 })],
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { before: 0, after: 0 }
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({
-                                        text: formatDate(metadata.auditDate),
-                                        size: 18
-                                    })],
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { before: 0, after: 40 }
-                                })
-                            ],
-                            width: { size: 27, type: WidthType.PERCENTAGE },
-                            verticalAlign: VerticalAlign.CENTER,
-                            margins: { top: 80, bottom: 80, left: 80, right: 120 },
-                            borders: {
-                                top: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                bottom: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary },
-                                left: { style: BorderStyle.NONE },
-                                right: { style: BorderStyle.SINGLE, size: 4, color: COLORS.primary }
-                            }
-                        })
-                    ]
-                })
-            ],
-            width: { size: 100, type: WidthType.PERCENTAGE }
-        }),
-
-        new Paragraph({ text: '', spacing: { after: 600 } }),
-
-        // Indice
         new Paragraph({
             text: 'Sommario',
             heading: HeadingLevel.HEADING_1,
-            spacing: { before: 400, after: 200 }
+            spacing: { before: 200, after: 200 }
         }),
         new TableOfContents('Sommario', {
             hyperlink: true,
@@ -1624,13 +1626,15 @@ export async function exportAuditToWord(audit) {
                 properties: {
                     page: {
                         margin: {
-                            top: 1440,
+                            top: 2200,
                             right: 1440,
                             bottom: 1440,
-                            left: 1440
+                            left: 1440,
+                            header: 400
                         }
                     }
                 },
+                headers: { default: createPageHeader(audit) },
                 footers: createFooter(),
                 children: documentChildren
             }
@@ -1699,7 +1703,22 @@ export async function exportAuditToFileSystem(audit) {
         ];
 
         const doc = new Document({
-            sections: [{ footers: createFooter(), children: documentChildren }]
+            sections: [{
+                properties: {
+                    page: {
+                        margin: {
+                            top: 2200,
+                            right: 1440,
+                            bottom: 1440,
+                            left: 1440,
+                            header: 400
+                        }
+                    }
+                },
+                headers: { default: createPageHeader(audit) },
+                footers: createFooter(),
+                children: documentChildren
+            }]
         });
 
         const blob = await Packer.toBlob(doc);
