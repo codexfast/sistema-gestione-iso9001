@@ -207,6 +207,16 @@
   line-height: 1.6;
 }
 
+.issue-notes.issue-notes-empty {
+  border-left-color: #ccc;
+  background: #fafafa;
+}
+
+.issue-notes.issue-notes-empty em {
+  color: #aaa;
+  font-style: italic;
+}
+
 .issue-notes strong {
   color: #2c3e50;
 }

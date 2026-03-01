@@ -158,11 +158,10 @@ function PendingIssuesCascade() {
                       </div>
                     </div>
                   </div>
-                  {issue.notes && (
-                    <div className="issue-notes">
-                      <strong>Note:</strong> {issue.notes}
-                    </div>
-                  )}
+                  <div className={`issue-notes${!issue.notes ? " issue-notes-empty" : ""}`}>
+                    <strong>Note:</strong>{" "}
+                    {issue.notes || <em>Nessuna nota registrata</em>}
+                  </div>
                 </div>
               );
             })}
