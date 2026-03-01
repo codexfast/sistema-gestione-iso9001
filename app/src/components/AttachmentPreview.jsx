@@ -21,22 +21,17 @@ import "./AttachmentPreview.css";
 
 // ---- helpers ----------------------------------------------------------------
 
-// Office Online Viewer: apre Word/Excel/PPT direttamente nel browser via Microsoft.
-// Funziona perché il server è pubblico e il token JWT è nel query-string.
-// Microsoft richiede la URL del file, il nostro backend la serve con authenticateDownload.
-const OFFICE_ONLINE = "https://view.officeapps.live.com/op/view.aspx?src=";
-
 function getFileInfo(mimeType) {
   if (!mimeType) return { icon: "📎", action: "download" };
   if (mimeType.startsWith("image/")) return { icon: "🖼️", action: "open" };
   if (mimeType === "application/pdf") return { icon: "📄", action: "open" };
   if (mimeType.startsWith("text/")) return { icon: "📃", action: "open" };
   if (mimeType.includes("word") || mimeType.includes("msword"))
-    return { icon: "📝", action: "office" };
+    return { icon: "📝", action: "download" };
   if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
-    return { icon: "📊", action: "office" };
+    return { icon: "📊", action: "download" };
   if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
-    return { icon: "📊", action: "office" };
+    return { icon: "📊", action: "download" };
   return { icon: "📎", action: "download" };
 }
 
@@ -83,16 +78,6 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
     setOpening(att.attachment_id);
     try {
       const { action } = getFileInfo(att.mime_type);
-
-      if (action === "office") {
-        // Office Online Viewer: nessun fetch locale, apre direttamente nel browser.
-        // Microsoft scarica il file dal nostro server pubblico usando la URL con token JWT.
-        const fileUrl = apiService.getAttachmentViewUrl(att.attachment_id);
-        const officeUrl = OFFICE_ONLINE + encodeURIComponent(fileUrl);
-        window.open(officeUrl, "_blank", "noopener,noreferrer");
-        setOpening(null);
-        return;
-      }
 
       const endpoint = action === "open" ? "view" : "download";
       const { blob } = await apiService.fetchAttachmentBlob(att.attachment_id, endpoint);
@@ -207,8 +192,6 @@ function AttachmentPreview({ auditId, questionId, refreshKey = 0 }) {
                     ? "Caricamento..."
                     : action === "open"
                     ? "↗ Apri"
-                    : action === "office"
-                    ? "↗ Apri in Office"
                     : "⬇ Scarica"}
                 </span>
               </button>
