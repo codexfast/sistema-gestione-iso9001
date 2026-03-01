@@ -553,21 +553,23 @@ function formatEvidenceText(evidence, auditorNotes) {
 
 /**
  * Helper: crea una singola riga tabella per una domanda
+ * Colonna 3 = solo il campo "note" inserito dall'auditor
  */
 function createQuestionRow(question, auditAttachments = []) {
     const statusConfig = STATUS_CONFIG[question.status] || STATUS_CONFIG['NOT_ANSWERED'];
 
-    // NON passiamo più attachments a formatEvidenceText
-    const evidenceText = formatEvidenceText(question.evidence, question.notes);
+    // Colonna 3: solo il testo note inserito dall'auditor
+    const notesText = (question.notes && question.notes.trim())
+        ? question.notes.trim()
+        : '—';
 
-    // Costruisci testo con riferimento puntato (es. "4.1 - Comprendere l'Organizzazione...")
     const questionRef = question.clauseRef || '';
     const questionText = question.question || question.text || 'Domanda non definita';
     const fullQuestionText = questionRef ? `${questionRef} - ${questionText}` : questionText;
 
     return new TableRow({
         children: [
-            // Colonna 1: Attività/processo (con riferimento puntato 4.1, 4.2, etc.)
+            // Colonna 1: Attività/processo
             new TableCell({
                 children: [new Paragraph({
                     text: fullQuestionText,
@@ -590,10 +592,10 @@ function createQuestionRow(question, auditAttachments = []) {
                 margins: { top: 100, bottom: 100, left: 50, right: 50 },
                 width: { size: 20, type: WidthType.PERCENTAGE }
             }),
-            // Colonna 3: Dettaglio attività operative auditate (evidenze)
+            // Colonna 3: Note auditor
             new TableCell({
                 children: [new Paragraph({
-                    text: evidenceText,
+                    text: notesText,
                     spacing: { before: 0, after: 0 }
                 })],
                 verticalAlign: VerticalAlign.TOP,
@@ -605,55 +607,41 @@ function createQuestionRow(question, auditAttachments = []) {
 }
 
 /**
- * Helper: crea righe dedicate per allegati di una domanda
- * Restituisce un array di righe (una riga per ogni allegato)
- * Layout a 2 colonne: "Allegato N" (45%) | Info file (55% = unione col 2+3)
+ * Helper: crea UNA riga dedicata per gli allegati di una domanda.
+ * Una sola riga che occupa tutte e 3 le colonne (columnSpan 3),
+ * con l'elenco degli allegati separati da virgola.
  */
 function createAttachmentRows(attachments) {
     if (!attachments || attachments.length === 0) {
         return [];
     }
 
-    return attachments.map((att, index) => {
-        const sizeMB = ((att.size || 0) / (1024 * 1024)).toFixed(2);
-        const categoryLabel = att.category === 'foto' ? 'Foto' :
-            att.category === 'documenti' ? 'Documenti' :
-                att.category === 'verbali' ? 'Verbali' : att.category;
+    const fileList = attachments
+        .map((att, index) => {
+            const fileName = att.fileName || att.name || 'File sconosciuto';
+            return `${index + 1}. ${fileName}`;
+        })
+        .join('   |   ');
 
-        const fileName = att.fileName || att.name || 'File sconosciuto';
-        const uploadDate = att.uploadedAt || att.uploadDate;
-        const date = uploadDate ? new Date(uploadDate).toLocaleDateString('it-IT') : 'N/D';
-
-        return new TableRow({
+    return [
+        new TableRow({
             children: [
-                // Colonna 1: "Allegato N" (45%, stessa larghezza di "Attività/processo")
                 new TableCell({
                     children: [new Paragraph({
-                        text: `Allegato ${index + 1}`,
-                        bold: true,
-                        color: '1E40AF', // Blu scuro
-                        spacing: { before: 0, after: 0 }
+                        children: [
+                            new TextRun({ text: '📎 Allegati: ', bold: true, color: '1E40AF' }),
+                            new TextRun({ text: fileList, color: '374151' })
+                        ],
+                        spacing: { before: 60, after: 60 }
                     })],
-                    verticalAlign: VerticalAlign.TOP,
-                    margins: { top: 100, bottom: 100, left: 100, right: 100 },
-                    width: { size: 45, type: WidthType.PERCENTAGE },
-                    shading: { fill: 'F3F4F6', type: ShadingType.CLEAR } // Grigio chiarissimo
-                }),
-                // Colonna 2: Info file (55%, unisce "Valutazione 20%" + "Dettaglio 35%")
-                new TableCell({
-                    children: [new Paragraph({
-                        text: `${fileName} (${categoryLabel}, ${sizeMB} MB) - ${date}`,
-                        spacing: { before: 0, after: 0 }
-                    })],
-                    verticalAlign: VerticalAlign.TOP,
-                    margins: { top: 100, bottom: 100, left: 100, right: 100 },
-                    width: { size: 55, type: WidthType.PERCENTAGE },
-                    shading: { fill: 'F3F4F6', type: ShadingType.CLEAR },
-                    columnSpan: 2 // UNISCE colonne 2+3 (Valutazione + Dettaglio)
+                    columnSpan: 3,  // occupa tutte e 3 le colonne
+                    verticalAlign: VerticalAlign.CENTER,
+                    margins: { top: 60, bottom: 60, left: 150, right: 100 },
+                    shading: { fill: 'EFF6FF', type: ShadingType.CLEAR } // Blu chiarissimo
                 })
             ]
-        });
-    });
+        })
+    ];
 }
 
 /**
