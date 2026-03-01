@@ -195,24 +195,18 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
   });
 
   const [errors, setErrors] = useState({});
-  const [pendingInfo, setPendingInfo] = useState(null); // { count, lastAuditId }
+  const [pendingInfo, setPendingInfo] = useState(null); // { count, lastAuditId, issues }
 
-  // Se re-audit, verifica pending issues all'apertura modal
-  React.useEffect(() => {
-    if (isReaudit && currentAudit) {
-      checkPendingIssues(currentAudit);
-    }
-  }, [isReaudit, currentAudit]);
-
-  const checkPendingIssues = async (audit) => {
-    const clientName = audit?.metadata?.clientName || audit?.client_name;
-    const currentUuid = audit?.metadata?.id || null;
-    if (!clientName) return;
-
+  /**
+   * Verifica se il cliente ha rilievi pendenti (NC/OSS/NV) da audit precedenti.
+   * @param {string} clientName  - nome cliente da cercare
+   * @param {string|null} excludeUuid - UUID dell'audit corrente da escludere (re-audit)
+   */
+  const checkPendingIssues = async (clientName, excludeUuid = null) => {
+    if (!clientName?.trim()) return;
     try {
-      const result = await apiService.checkReaudit(clientName, currentUuid);
+      const result = await apiService.checkReaudit(clientName.trim(), excludeUuid);
       if (result.has_previous_audit && result.pending_count > 0) {
-        // Carica il dettaglio NC/OSS/OM dall'ultimo audit
         let issues = [];
         try {
           const ncResult = await apiService.getNcResponses(result.last_audit_id);
@@ -220,7 +214,6 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
         } catch (err) {
           console.warn('[Re-Audit] getNcResponses fallito (non bloccante):', err.message);
         }
-
         setPendingInfo({
           count: result.pending_count,
           lastAuditId: result.last_audit_id,
@@ -232,9 +225,24 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
         setPendingInfo(null);
       }
     } catch (err) {
-      // Errore non bloccante: il modal si apre comunque
       console.warn('[Re-Audit] check-reaudit fallito:', err.message);
       setPendingInfo(null);
+    }
+  };
+
+  // Re-audit: controlla pending all'apertura modal (cliente già noto dall'audit corrente)
+  React.useEffect(() => {
+    if (isReaudit && currentAudit) {
+      const cn   = currentAudit.metadata?.clientName;
+      const uuid = currentAudit.metadata?.id || null;
+      checkPendingIssues(cn, uuid);
+    }
+  }, [isReaudit, currentAudit]);
+
+  // Nuovo audit: controlla pending quando l'utente lascia il campo clientName (min 3 char)
+  const handleClientNameBlur = () => {
+    if (!isReaudit && formData.clientName.trim().length >= 3) {
+      checkPendingIssues(formData.clientName.trim(), null);
     }
   };
 
@@ -283,23 +291,26 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
       return;
     }
 
-    // Re-audit: propaga rilievi pendenti dell'audit precedente nel nuovo audit
+    // Propaga rilievi pendenti dell'audit precedente nel nuovo audit (re-audit e nuovo con storico)
     const submitData = { ...formData };
-    if (isReaudit && pendingInfo?.issues?.length > 0) {
+    if (pendingInfo?.issues?.length > 0) {
       submitData.pendingIssues = pendingInfo.issues
         .filter((issue) => issue.conformity_status !== 'OM')
         .map((issue) => ({
-        id: `issue_${issue.response_id}`,
-        description: issue.question_text || issue.requirement_reference || `Domanda ${issue.question_id}`,
-        notes: issue.notes || '',
-        fromAuditNumber: pendingInfo.lastAuditNumber || `#${pendingInfo.lastAuditId}`,
-        originalStatus: issue.conformity_status,
-        clauseNumber: issue.clause_number || issue.requirement_reference || '',
-        sourceResponseId: issue.response_id,
-        questionId: issue.question_id || null,
-        resolved: false,
-        createdDate: new Date().toISOString(),
-      }));
+          // Campi richiesti da buildPendingIssuesOoxml in wordExportHelpers.js
+          clause:            issue.section_code || '',
+          description:       issue.question_text || `Domanda ${issue.question_id}`,
+          originAuditNumber: pendingInfo.lastAuditNumber || `#${pendingInfo.lastAuditId}`,
+          status:            'open',
+          resolutionNotes:   '',
+          // Campi di tracciamento interno
+          id:               `issue_${issue.response_id}`,
+          originalStatus:   issue.conformity_status,
+          fromAuditNumber:  pendingInfo.lastAuditNumber || `#${pendingInfo.lastAuditId}`,
+          sourceResponseId: issue.response_id,
+          questionId:       issue.question_id || null,
+          createdDate:      new Date().toISOString(),
+        }));
     }
 
     onCreate(submitData);
@@ -316,8 +327,8 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
           </button>
         </div>
 
-        {/* Sezione rilievi pendenti (solo re-audit) */}
-        {isReaudit && pendingInfo && pendingInfo.count > 0 && (
+        {/* Sezione rilievi pendenti — re-audit o nuovo audit con storico cliente */}
+        {pendingInfo && pendingInfo.count > 0 && (
           <div className="pending-issues-section">
             <div className="pending-issues-header">
               <span className="pending-issues-icon">⚠️</span>
@@ -376,6 +387,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
               name="clientName"
               value={formData.clientName}
               onChange={handleChange}
+              onBlur={handleClientNameBlur}
               disabled={isReaudit}
               className={`form-control ${errors.clientName ? "error" : ""} ${isReaudit ? "readonly" : ""}`}
               placeholder={isReaudit ? "Azienda da re-auditare" : "es. Acme Industries SpA"}

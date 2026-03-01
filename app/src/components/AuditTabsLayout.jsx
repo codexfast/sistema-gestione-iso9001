@@ -9,7 +9,7 @@ import "./AuditTabsLayout.css";
 // Import sezioni
 import GeneralDataSection from "./GeneralDataSection";
 import AuditObjectiveSection from "./AuditObjectiveSection";
-// import PendingIssuesSection from './PendingIssuesSection';
+import PendingIssuesCascade from "./PendingIssuesCascade";
 // import ChecklistSection from './ChecklistSection';
 // import AuditOutcomeSection from './AuditOutcomeSection';
 
@@ -61,12 +61,7 @@ function AuditTabsLayout({ currentAudit, onUpdate }) {
         );
 
       case "pending-issues":
-        return (
-          <div className="tab-content-placeholder">
-            <h2>⏳ Rilievi Pendenti</h2>
-            <p>Integrazione componente PendingIssuesCascade esistente</p>
-          </div>
-        );
+        return <PendingIssuesCascade />;
 
       case "clause-4":
       case "clause-5":
