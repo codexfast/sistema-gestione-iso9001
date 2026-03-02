@@ -24,7 +24,7 @@ Sostituisce fogli Excel/Word con un sistema centralizzato, tracciabile e conform
 | **Offline** | IndexedDB | Audit e risposte cachati localmente |
 | **Backend** | Node.js 20, Express 4 | VPS Ubuntu, porta 3000 → HTTPS 8443 via Nginx |
 | **Database** | SQL Server (`mssql`) | `www.fr-busato.it,11043` / `SGQ_ISO9001` |
-| **Auth** | JWT in cookie httpOnly | `SameSite=None; Secure`, Axios `withCredentials` |
+| **Auth** | JWT in cookie httpOnly (desktop) | `SameSite=None; Secure`, Axios `withCredentials` — mobile: localStorage ([ADR-004](docs/adr/ADR-004-mobile-auth-localstorage.md)) |
 | **Export** | `docxtemplater` + `pizzip` + OOXML injection | Template `.docx` editabile in Word |
 | **HTTP client** | Axios v1.7 con interceptor | Vietato `fetch` diretto |
 
@@ -107,34 +107,47 @@ Esclude `<w:pPr>` — errore storico che corrompeva il file (commit `975ed3e`).
 
 ## Stato funzionalità (2026-03-01)
 
-### ✅ Completate
+### ✅ Completate (2026-03-02)
 
 | Funzionalità | Commit | Note |
 |---|---|---|
 | Auth JWT cookie (login/register/refresh) | — | httpOnly, SameSite=None |
 | Gestione audit CRUD multi-tenant | — | |
-| Checklist ISO 9001:2015 (35 domande) | — | |
-| Risposte conformità (C/NC/OSS/OM/NA/NV) | — | |
+| Checklist ISO 9001:2015 (35 domande, id 87-121) | migration-010 | standard_id=1 |
+| Checklist ISO 14001:2015 (46 domande, id 122-167) | migration-012 | standard_id=2, sezioni `14001_s4`/`14001_s5` |
+| Risposte conformità (C/NC/OSS/OM/NA/NV) | — | CHECK constraint fisso in DB |
 | Non conformità CRUD | — | |
-| Allegati upload/download/preview | `0520182` | `?token=` per `<img src>` |
-| Export Word (template-based) | `975ed3e` | Template editabile in Word |
+| Allegati upload/download/preview/replace/delete | `0520182` | fetch blob + URL.createObjectURL (NON img src) |
+| Export Word (template-based) ISO 9001 | `975ed3e` | Template editabile in Word |
 | Logo nel report Word | `57aabcf` | File template committato |
-| Rilievi pendenti tra audit | — | tabella `pending_issues` (migration 018) |
-| `check-reaudit` API | — | Verifica re-audit per cliente |
-| Sync offline-first (IndexedDB → server) | — | |
-| Fix AUTH_TOKEN_MISSING su allegati | `1bc59f3`, `0520182` | `attachmentRoutes` prima degli altri |
+| Rilievi pendenti tra audit | migration-018 | tabella `pending_issues`, FK NO ACTION |
+| `check-reaudit` API + UI selector | — | deployato su VPS |
+| Sync offline-first (IndexedDB → server) | — | standard_id intero (fix `9894ed5`) |
+| Fix 4 bug selezione standard | `9894ed5` | norms→selectedStandards, accordion _2015, standard_id |
+| Manuale Utente v1.1 | `5fec508` | `docs/MANUALE_UTENTE.md` |
 
-### 🔲 Backlog (Fase 2)
+### Multi-standard State
 
-| Priorità | Funzionalità |
-|---|---|
-| Alta | **Componente `<AttachmentPreview>`** — preview inline allegati nella checklist |
-| Alta | **Sezione "Rilievi Pendenti" in `CreateAuditModal`** — dati reali da `checkReaudit` |
-| Media | **SyncService offline allegati** — file da IndexedDB → server al sync |
-| Media | **Report Word rilievi pendenti reali** — sezione "3 - RILIEVI PENDENTI" da DB |
-| Bassa | **Multi-standard** — seed domande ISO 14001 / ISO 45001 |
-| Bassa | **Logo in codice** per template ISO 14001 / ISO 45001 |
-| Bassa | **Refresh token** automatico (interceptor Axios) |
+| Standard | DB | Frontend | Sync | Export Word |
+|---|---|---|---|---|
+| ISO 9001:2015 | ✅ 35 domande | ✅ | ✅ | ✅ |
+| ISO 14001:2015 | ✅ 46 domande | ✅ | ✅ fix `9894ed5` | ❌ Backlog |
+| ISO 45001:2018 | ❌ 0 domande | ⚠️ Placeholder | ❌ | ❌ |
+
+### 🔲 Backlog (Fase 2) — con file coinvolti
+
+| Priorità | Funzionalità | File coinvolti |
+|---|---|---|
+| 🔴 | Test E2E fix standard su Netlify | — |
+| 🔴 | **Export Word ISO 14001** | `wordExport.js`, `wordExportHelpers.js`, template .docx |
+| 🔴 | **Rilievi Pendenti reali in Word** | `wordExport.js` — `RILIEVI_MARKER` → dati da `GET /audits/:id/pending-issues` |
+| 🔴 | **Modal Re-Audit con lista pending** | `AuditSelector.jsx`, nuovo `ReauditModal.jsx` |
+| 🟡 | **Fix Auth Mobile (ADR-004)** | `auth.controller.js`, `apiService.js`, `AuthContext.jsx`, `auth.middleware.js` |
+| 🟡 | **SyncService offline allegati** | `syncService.js`, `IndexedDBProvider.js` (v3), `useAttachmentManager.js` |
+| 🟡 | **Seed ISO 45001** | `database/migrations/019_seed_iso45001.sql` |
+| 🟢 | Refresh token automatico | `apiService.js` interceptor 401, `POST /auth/refresh` |
+| 🟢 | Auto-logout inattività 4h | `AuthContext.jsx` |
+| 🟢 | Allineamento `/audits` vs `/audits/sync` | debito tecnico — standard_ids[] vs standard_id scalare |
 
 ---
 
@@ -221,4 +234,4 @@ git push origin main
 
 ---
 
-*Aggiornato: 2026-03-01 — Sessione fix-auth + architettura Word export template-based*
+*Aggiornato: 2026-03-02 — Sessione fix standard (4 bug), ISO 14001 frontend, ADR-004/005, handoff Cursor*
