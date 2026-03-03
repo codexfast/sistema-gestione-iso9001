@@ -98,18 +98,25 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 | 5 | **SyncService offline allegati** | `syncService.js`, `IndexedDBProvider.js` (v3), `useAttachmentManager.js` | Store `attachments` mancante in IndexedDB |
 | 6 | **Seed ISO 45001** | `database/migrations/019_seed_iso45001.sql` | Stesso pattern di `migration-012.js` |
 
+#### 🟡 MEDIA — Nuovi requisiti (03/03/2026)
+
+| # | Task | File coinvolti | Note |
+|---|---|---|---|
+| 6 | **Audit locking — accesso concorrente** | `audit.controller.js`, nuovo `AuditLockBanner.jsx` | Due utenti non possono modificare lo stesso audit contemporaneamente → pessimistic lock con TTL + notifica visiva |
+| 7 | **Offline resilience Android** | `syncService.js`, `IndexedDBProvider.js`, `useAttachmentManager.js` | Su Android: quota 50MB IndexedDB, Service Worker limitato, File API assente → gestione esplicita errori + feedback utente |
+
 #### 🟢 BASSA
 
 | # | Task | Note |
 |---|---|---|
-| 7 | Multi-tab sync logout | `AuthContext.jsx` — `window.addEventListener('storage', ...)` |
-| 8 | Auto-logout inattività 4h | `AuthContext.jsx` — `setTimeout` reset su eventi utente |
-| 9 | CSP header | `app/index.html` |
-| 10 | Refresh token automatico | interceptor Axios 401 → `POST /auth/refresh` |
-| 11 | Email alert NC scadute | cron job backend |
-| 12 | Nginx porta 443 | prerequisito per Office Online preview Word/Excel |
-| 13 | Allineamento `/audits` vs `/audits/sync` | `/audits` usa `standard_ids[]`, `/audits/sync` usa `standard_id` singolo |
-| 14 | Deprecare `audits.standard_id` | → solo `audit_standards` junction table |
+| 8 | Multi-tab sync logout | `AuthContext.jsx` — `window.addEventListener('storage', ...)` |
+| 9 | Auto-logout inattività 4h | `AuthContext.jsx` — `setTimeout` reset su eventi utente |
+| 10 | CSP header | `app/index.html` |
+| 11 | Refresh token automatico | interceptor Axios 401 → `POST /auth/refresh` |
+| 12 | Email alert NC scadute | cron job backend |
+| 13 | Nginx porta 443 | prerequisito per Office Online preview Word/Excel |
+| 14 | Allineamento `/audits` vs `/audits/sync` | `/audits` usa `standard_ids[]`, `/audits/sync` usa `standard_id` singolo |
+| 15 | Deprecare `audits.standard_id` | → solo `audit_standards` junction table |
 
 ---
 

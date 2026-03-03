@@ -69,6 +69,56 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 
 ---
 
+### Fase 0.B — Requisiti Trasversali (da integrare nelle fasi successive)
+
+Questi due aspetti impattano su più fasi e vanno considerati in ogni decisione architetturale.
+
+#### Audit Locking — accesso concorrente (Fase 1)
+**Problema**: se due auditor aprono lo stesso audit contemporaneamente si sovrascrivono le risposte.
+**Soluzione**: pessimistic lock con TTL (time-to-live).
+
+```
+Flusso proposto:
+  - Utente A apre audit → backend registra lock (audit_id, user_id, expires_at = now+15min)
+  - Utente B apre stesso audit → backend risponde "locked by Utente A"
+  - Frontend mostra banner: "Audit in uso da [nome] — accesso sola lettura"
+  - Lock si rinnova automaticamente ogni 10 min se utente è attivo
+  - Lock scade se utente chiude tab / va offline / inattivo >15 min
+
+Tabella DB:
+  audit_locks (audit_id FK, user_id FK, locked_at, expires_at, session_token)
+  INDEX su expires_at per cleanup automatico
+
+Backend:
+  POST /audits/:id/lock    → acquisisce lock (o restituisce chi lo ha)
+  DELETE /audits/:id/lock  → rilascia lock
+  PUT /audits/:id/lock     → rinnova lock (heartbeat ogni 10 min)
+
+Frontend:
+  AuditLockBanner.jsx      → banner avviso accesso concorrente
+  Heartbeat in useEffect   → rinnova lock finche audit e aperto
+```
+
+#### Offline Resilience Android — gestione disconnessione (Fase 0 + Fase 2)
+**Problema**: su Android PWA la connessione può cadere durante la compilazione.
+Il Service Worker e limitato, la quota IndexedDB e ~50MB, la File API non e supportata.
+
+**Stato attuale**: sync offline-first gia implementato per risposte. Mancano:
+- Feedback visivo chiaro quando si e in modalita offline
+- Gestione upload allegati offline (store blob in IndexedDB → upload al reconnect)
+- Warning quando IndexedDB si avvicina al limite quota
+- Fallback export Word su Android (gia parzialmente gestito con file-saver)
+
+**Piano**:
+```
+Fase 0.3 (Auth Mobile ADR-004) — prerequisito
+Fase 2 — SyncService v3: store attachments_offline in IndexedDB v3
+          StorageQuotaService: monitor spazio ogni 5 min, warning a 60%, cleanup a 80%
+          ConnectionStatusBanner: indicatore permanente online/offline
+```
+
+---
+
 ### Fase 1 — Fondamenta Multi-Tenant e RBAC (6-8 settimane)
 
 **Obiettivo**: struttura dati e autorizzazioni per supportare auditor multipli con i loro clienti.
