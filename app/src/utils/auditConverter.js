@@ -41,9 +41,12 @@ export function backendToFrontend(backendAudit) {
                     ISO_45001_2018: 'ISO_45001', ISO_45001: 'ISO_45001',
                 };
                 if (backendAudit.standards) {
-                    return backendAudit.standards.split(',')
-                        .map(s => NORMALIZE[s.trim()] || s.trim())
-                        .filter(Boolean);
+                    // GET /audits/:id  → standards è un array di oggetti [{standard_code,...}]
+                    // GET /audits      → standards è una stringa CSV "ISO_9001_2015,ISO_14001_2015"
+                    const codes = Array.isArray(backendAudit.standards)
+                        ? backendAudit.standards.map(s => s.standard_code || String(s))
+                        : String(backendAudit.standards).split(',').map(s => s.trim());
+                    return codes.map(s => NORMALIZE[s] || s).filter(Boolean);
                 }
                 const id = backendAudit.standard_id;
                 if (id === 2) return ['ISO_14001'];

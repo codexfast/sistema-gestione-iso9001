@@ -289,17 +289,24 @@ export class SyncService {
             // Mappa campi frontend→backend per multi-standard support
             const rawCodes = auditData.selectedStandards || auditData.standard_ids || auditData.standardIds ||
                 (auditData.standardId ? [auditData.standardId] : ['ISO_9001']);
+
+            // Converti ogni codice stringa → ID numerico (es. "ISO_14001" → 2)
+            const resolvedIds = rawCodes.map(c =>
+                typeof c === 'number' ? c : (STANDARD_CODE_TO_ID[c] ?? 1)
+            );
+
             const mappedAudit = {
                 ...auditData,
-                // Converte codici stringa (es. "ISO_14001") → ID numerico (es. 2) richiesto da /audits/sync
+                // standard_id scalare (retrocompatibilità campo legacy audits.standard_id)
                 standard_id: resolveStandardId(rawCodes),
+                // standard_ids array → aggiorna audit_standards junction table con TUTTI gli standard
+                standard_ids: resolvedIds,
             };
 
-            // Rimuovi campi legacy per pulire payload
+            // Rimuovi campi legacy frontend per pulire payload
             delete mappedAudit.selectedStandards;
             delete mappedAudit.standardIds;
             delete mappedAudit.standardId;
-            delete mappedAudit.standard_ids; // rimuovi array legacy se presente
 
             const result = await apiService.upsertAudit(mappedAudit);
 

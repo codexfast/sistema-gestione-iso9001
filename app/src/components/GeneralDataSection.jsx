@@ -39,9 +39,18 @@ const CATEGORY_LABELS = {
   safety: "Sicurezza",
 };
 
+// Normalizza codice standard verso forma canonica senza anno (es. "ISO_9001_2015" → "ISO_9001")
+// Deve essere coerente con auditConverter.js NORMALIZE
+const NORMALIZE_STD = {
+  ISO_9001_2015: "ISO_9001",  ISO_9001: "ISO_9001",
+  ISO_14001_2015: "ISO_14001", ISO_14001: "ISO_14001",
+  ISO_45001_2018: "ISO_45001", ISO_45001: "ISO_45001",
+};
+
 function GeneralDataSection({
   generalData,
   selectedStandards = [],
+  standardsWithData = [],
   onUpdate,
   onStandardsUpdate,
 }) {
@@ -130,17 +139,22 @@ function GeneralDataSection({
           ) : (
             <div className="standards-grid">
               {availableStandards.map((standard) => {
-                // Supporta sia vecchio formato (id) che nuovo (standard_code)
-                const stdId = standard.standard_code || standard.id;
+                // Normalizza verso forma canonica senza anno (es. "ISO_9001_2015" → "ISO_9001")
+                // per essere coerente con selectedStandards che usa la forma corta
+                const stdId = NORMALIZE_STD[standard.standard_code] || standard.standard_code || standard.id;
+                const hasData = standardsWithData.includes(stdId);
                 return (
                   <label
                     key={stdId}
-                    className={`standard-checkbox category-${standard.category}`}
+                    className={`standard-checkbox category-${standard.category}${hasData ? " has-data" : ""}`}
+                    title={hasData ? `${standard.standard_name}: impossibile deselezionare, esistono già risposte nella checklist` : ""}
                   >
                     <input
                       type="checkbox"
-                      checked={selectedStandards.includes(stdId)}
+                      checked={selectedStandards.includes(stdId) || hasData}
+                      disabled={hasData}
                       onChange={(e) => {
+                        if (hasData) return;
                         const updated = e.target.checked
                           ? [...selectedStandards, stdId]
                           : selectedStandards.filter((s) => s !== stdId);

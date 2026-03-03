@@ -141,6 +141,12 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
   // Verifica quali standard sono selezionati
   const selectedStandards = currentAudit.metadata.selectedStandards || [];
 
+  // Calcola quali standard hanno già risposte nella checklist locale
+  // (usato da GeneralDataSection per bloccare la deselezione e proteggere i dati)
+  const standardsWithData = Object.entries(currentAudit.checklist || {})
+    .filter(([, data]) => data && Object.keys(data).length > 0)
+    .map(([key]) => key); // es. ["ISO_9001", "ISO_14001"]
+
   return (
     <div className="audit-accordion-layout">
       {/* Header con info audit */}
@@ -204,6 +210,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
                     <GeneralDataSection
                       generalData={currentAudit.metadata.generalData}
                       selectedStandards={selectedStandards}
+                      standardsWithData={standardsWithData}
                       onUpdate={handleGeneralDataUpdate}
                       onStandardsUpdate={handleStandardsUpdate}
                     />
