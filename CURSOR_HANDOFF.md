@@ -1,11 +1,11 @@
 # 🤖 CURSOR AI AGENT — Handoff Document
 # Sistema Gestione ISO 9001 / 14001 / 45001
 
-> **Data handoff**: 2026-03-02  
-> **Da**: GitHub Copilot (VS Code)  
-> **A**: Cursor AI  
-> **Stato progetto**: Beta — flusso auditor desktop funzionante, fix mobile + backlog Fase 2 aperti  
-> **Ultimo commit**: `fb4509f` (branch `main`)
+> **Data handoff**: 2026-03-03  
+> **Da**: Sessione Cursor AI 03/03/2026  
+> **A**: Prossima sessione Cursor AI  
+> **Stato progetto**: Beta — flusso auditor desktop funzionante; 4 bug multi-standard risolti; visione SaaS multi-tenant definita  
+> **Ultimo commit**: `6317215` (branch `main`)
 
 ---
 
@@ -49,6 +49,19 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 
 ## 📊 STATO FUNZIONALITÀ (2026-03-02)
 
+### ✅ Completato in sessione 03/03/2026 (commit `6317215`)
+
+| Fix | File | Descrizione |
+|---|---|---|
+| auditConverter array/string | `auditConverter.js` | `standards` gestito sia come stringa CSV (lista) che array oggetti (dettaglio) |
+| Checkbox standard | `GeneralDataSection.jsx` | Normalizza `ISO_9001_2015` → `ISO_9001` per match corretto con `selectedStandards` |
+| Blocco deselezione | `GeneralDataSection.jsx` + `AuditAccordionLayout.jsx` | Standard con dati esistenti non deselezionabili (prop `standardsWithData`) |
+| Sync multi-standard | `syncService.js` + `audit.controller.js` | Invia `standard_ids:[1,2]` — aggiorna `audit_standards` per tutti gli standard |
+
+**Deploy backend eseguito**: `audit.controller.js` caricato via pscp + `systemctl restart sgq-backend` (systemd gestisce il backend, NON usare `fuser` da solo).
+
+---
+
 ### ✅ Completato e Deployato su VPS + Netlify
 
 | Area | Componenti/File chiave |
@@ -68,14 +81,15 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 
 ### 🔲 Backlog ordinato per priorità
 
-#### 🔴 ALTA — Prossimi sprint
+#### 🔴 ALTA — Bug minori da chiudere (prossima sessione)
 
 | # | Task | File coinvolti | Note |
 |---|---|---|---|
-| 1 | **Test E2E fix standard** su Netlify | — | Verificare commit `9894ed5` in produzione |
-| 2 | **Export Word ISO 14001** | `wordExport.js` | Aggiungere sezione ISO 14001 (46 domande → NC/OSS/OM) |
-| 3 | **Rilievi Pendenti in Word** | `wordExport.js` | Sezione `RILIEVI_MARKER` hardcoded → dati reali da `GET /audits/:id/pending-issues` |
-| 4 | **Modal Re-Audit con lista pending** | `AuditSelector.jsx`, nuovo `ReauditModal.jsx` | `checkReaudit()` già integrato, manca la UI della lista |
+| 1 | **Rilievi pendenti: errore caricamento** | `PendingIssuesCascade.jsx` | API funziona (verificata), probabile timing issue o auth token non ancora disponibile al mount |
+| 2 | **Checklist vuota dopo reload** | `StorageContext.jsx`, `fetchAndApplyServerResponses` | Legato a `audit_standards` fix: dopo primo sync con nuovo backend si risolve; verificare |
+| 3 | **Fix Auth Mobile (ADR-004)** | `auth.controller.js`, `apiService.js`, `AuthContext.jsx` | localStorage JWT per Android PWA — prerequisito per molti altri fix |
+| 4 | **Export Word ISO 14001** | `wordExport.js`, `wordExportHelpers.js` | Aggiungere sezione 46 domande ISO 14001 |
+| 5 | **Rilievi Pendenti reali in Word** | `wordExport.js` | `RILIEVI_MARKER` → dati reali da `GET /audits/:id/pending-issues` |
 
 #### 🟡 MEDIA
 
@@ -357,12 +371,47 @@ ARCHITETTURA_ESRS_PWA_PER_AI_AGENT.md  ← data model audit completo
 
 ---
 
+## 🏛️ VISIONE STRATEGICA — SaaS Multi-Tenant (decisione 03/03/2026)
+
+### Modello di business
+```
+QS Studio (admin globale)
+  └── Auditor/Studio consulenza (nostro cliente, paga abbonamento per standard)
+        └── Aziende auditate (clienti dell'auditor, accesso read-only ai propri audit)
+```
+
+### Approccio di sviluppo: Dark Launch (feature flag per tab)
+Ogni nuovo modulo (standard, anagrafica, checklist libera) viene sviluppato come **tab nascosta**:
+- Visibile solo agli admin QS Studio durante sviluppo e test
+- Rilasciata agli auditor solo quando stabile e collaudata
+- Zero interruzioni all'operatività corrente
+
+### Roadmap fasi (dettaglio in `docs/PROJECT_ROADMAP.md`)
+| Fase | Contenuto | Stima |
+|---|---|---|
+| **0** | Chiusura bug minori correnti | 1-2 settimane |
+| **1** | DB multi-tenant + RBAC + anagrafica aziende | 6-8 settimane |
+| **2** | UI a tab per standard + feature flags + nuova UX | 6-8 settimane |
+| **3** | Sistema licenze/abbonamenti per standard | 3-4 settimane |
+| **4** | Checklist libera + gap analysis + query conformità | 6-8 settimane |
+| **5** | Workflow implementazione SGQ (post-audit) | 8-12 settimane |
+
+### Decisione architetturale: backend systemd
+Il backend gira come **servizio systemd** (`sgq-backend.service`).
+- ✅ Restart corretto: `sudo systemctl restart sgq-backend.service`
+- ❌ NON usare `fuser -k 3000/tcp` da solo — systemd lo rilancia immediatamente
+- Comando completo: `echo 'Sistemi@2026' | sudo -S systemctl restart sgq-backend.service`
+
+---
+
 ## ⚠️ TRAPPOLE CRITICHE (da NON ripetere)
 
 | Trappola | Dettaglio |
 |---|---|
 | `tail -N file` dopo `fuser` | NON funziona su questa shell SSH → usare `cat` |
 | Concatenare restart con `;` | `fuser -k 3000/tcp ; nohup...` → il nohup non parte → comandi su righe separate |
+| Restart con fuser diretto | Il backend gira su **systemd** → `fuser -k` viene ignorato (systemd rilancia) → usare `systemctl restart` |
+| SSH da shell Cursor | La porta 1122 può essere bloccata dalla rete — se timeout, usare PowerShell esterno o verificare con `Test-NetConnection -Port 1122` |
 | `clause_number` in query | La colonna NON esiste → usare `section_code` (errore 500 commit `a298190`) |
 | `<img src="...?token=">` | CORS blocca su porta 8443 da Netlify → usare `fetch()` + blob |
 | Package npm `docx` | Il progetto usa `docxtemplater` + `pizzip` — sono diversi! |
