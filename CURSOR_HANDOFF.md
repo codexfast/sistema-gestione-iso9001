@@ -4,8 +4,8 @@
 > **Data handoff**: 2026-03-04 (sessione odierna)
 > **Da**: Sessione Cursor AI 04/03/2026  
 > **A**: Prossima sessione Cursor AI  
-> **Stato progetto**: Beta — **Fase 0 completata al 100%** — tutti i bug chiusi; pronto per Fase 1 (DB multi-tenant)  
-> **Ultimo commit**: `c4da815` (branch `main`)
+> **Stato progetto**: Beta — **Fase 1 multi-tenant completata** — server come fonte di verità, dev locale robusto  
+> **Ultimo commit**: `7daf871` (branch `main`)
 
 ---
 
