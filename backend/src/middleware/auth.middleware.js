@@ -49,12 +49,13 @@ function authenticate(req, res, next) {
             });
         }
 
-        // Attacca dati utente alla request
+        // Attacca dati utente alla request (auditor_org_id per RBAC Fase 1)
         req.user = {
             user_id: decoded.user_id,
             email: decoded.email,
             role: decoded.role || 'auditor',
-            organization_id: decoded.organization_id
+            organization_id: decoded.organization_id,
+            auditor_org_id: decoded.auditor_org_id ?? null
         };
 
         logger.debug('Auth: Utente autenticato', {
@@ -239,7 +240,8 @@ function authenticateDownload(req, res, next) {
             user_id: decoded.user_id,
             email: decoded.email,
             role: decoded.role || 'auditor',
-            organization_id: decoded.organization_id
+            organization_id: decoded.organization_id,
+            auditor_org_id: decoded.auditor_org_id ?? null
         };
 
         next();
@@ -258,9 +260,40 @@ function authenticateDownload(req, res, next) {
     }
 }
 
+/**
+ * Middleware: Verifica che l'utente abbia accesso all'auditor_org (Fase 1 RBAC)
+ * - Superadmin (admin senza auditor_org_id): accesso a tutti
+ * - Auditor: solo al proprio auditor_org_id
+ * - Se auditor_org_id richiesto ma utente non ce l'ha: 403
+ */
+function requireAuditorOrgOrSuperadmin(req, res, next) {
+    if (!req.user) {
+        return res.status(500).json({ error: 'Errore middleware', code: 'MIDDLEWARE_ERROR' });
+    }
+    const requestedOrgId = parseInt(req.params.auditor_org_id || req.body.auditor_org_id || req.query.auditor_org_id, 10);
+    const userOrgId = req.user.auditor_org_id;
+    const isSuperadmin = req.user.role === 'admin' && !userOrgId;
+
+    if (isSuperadmin) return next();
+    if (!userOrgId) {
+        return res.status(403).json({
+            error: 'Accesso negato: risorsa richiede auditor_org',
+            code: 'AUTH_AUDITOR_ORG_REQUIRED'
+        });
+    }
+    if (requestedOrgId && requestedOrgId !== userOrgId) {
+        return res.status(403).json({
+            error: 'Accesso negato: auditor_org diverso',
+            code: 'AUTH_AUDITOR_ORG_MISMATCH'
+        });
+    }
+    next();
+}
+
 module.exports = {
     authenticate,
     authenticateDownload,
     authorize,
-    verifyOrganization
+    verifyOrganization,
+    requireAuditorOrgOrSuperadmin
 };

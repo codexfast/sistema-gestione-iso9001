@@ -23,6 +23,8 @@ const attachmentRoutes = require('./routes/attachment.routes');
 const checklistRoutes = require('./routes/checklist.routes');
 const syncRoutes = require('./routes/sync.routes');
 const standardRoutes = require('./routes/standard.routes');
+const companyRoutes = require('./routes/company.routes');
+const auditorOrgRoutes = require('./routes/auditorOrg.routes');
 
 const app = express();
 const PORT = process.env.PORT || 10443;
@@ -119,6 +121,8 @@ app.use(API_BASE, ncRoutes);
 app.use(API_BASE, checklistRoutes);
 app.use(API_BASE, syncRoutes);
 app.use(API_BASE, standardRoutes);
+app.use(API_BASE, companyRoutes);
+app.use(API_BASE, auditorOrgRoutes);
 
 // Static files (uploads)
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));

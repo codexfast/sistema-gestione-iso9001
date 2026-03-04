@@ -114,11 +114,11 @@ async function login(req, res) {
             });
         }
 
-        // Query utente con organizzazione
+        // Query utente con organizzazione (include auditor_org_id per Fase 1 RBAC)
         let userQuery = `
       SELECT 
         u.user_id, u.email, u.password_hash, u.full_name, u.role, 
-        u.organization_id, u.is_active,
+        u.organization_id, u.auditor_org_id, u.is_active,
         o.organization_code, o.organization_name, o.is_active AS org_active
       FROM users u
       INNER JOIN organizations o ON u.organization_id = o.organization_id
@@ -168,12 +168,13 @@ async function login(req, res) {
       WHERE user_id = @user_id
     `, { user_id: user.user_id });
 
-        // Genera token
+        // Genera token (include auditor_org_id per RBAC Fase 1)
         const token = generateToken({
             user_id: user.user_id,
             email: user.email,
             role: user.role,
-            organization_id: user.organization_id
+            organization_id: user.organization_id,
+            auditor_org_id: user.auditor_org_id ?? null
         });
 
         const refreshToken = generateRefreshToken({
@@ -191,7 +192,8 @@ async function login(req, res) {
                 full_name: user.full_name,
                 role: user.role,
                 organization_id: user.organization_id,
-                organization_name: user.organization_name
+                organization_name: user.organization_name,
+                auditor_org_id: user.auditor_org_id ?? null
             },
             token,
             refreshToken
@@ -224,9 +226,9 @@ async function refreshToken(req, res) {
         // Verifica refresh token
         const decoded = jwt.verify(refreshToken, JWT_SECRET);
 
-        // Ottieni dati utente aggiornati
+        // Ottieni dati utente aggiornati (include auditor_org_id)
         const result = await query(`
-      SELECT user_id, email, role, organization_id, is_active
+      SELECT user_id, email, role, organization_id, auditor_org_id, is_active
       FROM users
       WHERE user_id = @user_id
     `, { user_id: decoded.user_id });
@@ -245,7 +247,8 @@ async function refreshToken(req, res) {
             user_id: user.user_id,
             email: user.email,
             role: user.role,
-            organization_id: user.organization_id
+            organization_id: user.organization_id,
+            auditor_org_id: user.auditor_org_id ?? null
         });
 
         res.json({
@@ -280,7 +283,7 @@ async function getCurrentUser(req, res) {
         const result = await query(`
       SELECT 
         u.user_id, u.email, u.full_name, u.role, 
-        u.organization_id, u.created_at, u.last_login,
+        u.organization_id, u.auditor_org_id, u.created_at, u.last_login,
         o.organization_code, o.organization_name
       FROM users u
       INNER JOIN organizations o ON u.organization_id = o.organization_id
