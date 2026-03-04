@@ -28,6 +28,7 @@ function PendingIssuesCascade() {
   const [sourceAuditNumber, setSourceAuditNumber] = useState(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
+  const [retryCount, setRetryCount]   = useState(0);
 
   const auditUuid  = currentAudit?.id;                  // UUID (per escludere se stesso)
   const clientName = currentAudit?.metadata?.clientName;
@@ -66,7 +67,9 @@ function PendingIssuesCascade() {
       } catch (err) {
         console.error('[PendingIssues] Errore:', err?.status, err?.message, err);
         if (!cancelled) {
-          setError(`Impossibile caricare i rilievi pendenti (${err?.status || 'NET'}: ${err?.message || err})`);
+          const code = err?.status || 'NET';
+          const msg  = err?.message || String(err);
+          setError(`Impossibile caricare i rilievi pendenti (${code}: ${msg})`);
           setIssues([]);
         }
       } finally {
@@ -76,7 +79,7 @@ function PendingIssuesCascade() {
 
     load();
     return () => { cancelled = true; };
-  }, [clientName, auditUuid]);
+  }, [clientName, auditUuid, retryCount]);
 
   // Sezione nascosta se nessun rilievo (nuovo audit o cliente senza storico)
   if (!loading && issues.length === 0 && !error) return null;
@@ -103,7 +106,15 @@ function PendingIssuesCascade() {
       )}
 
       {error && (
-        <div className="pending-error">⚠️ {error}</div>
+        <div className="pending-error">
+          ⚠️ {error}
+          <button
+            className="pending-retry-btn"
+            onClick={() => setRetryCount((n) => n + 1)}
+          >
+            Riprova
+          </button>
+        </div>
       )}
 
       {!loading && !error && issues.length > 0 && (

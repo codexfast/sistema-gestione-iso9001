@@ -15,6 +15,14 @@ import ChecklistModule from "./ChecklistModule";
 import AuditOutcomeSection from "./AuditOutcomeSection";
 import ExportPanel from "./ExportPanel";
 
+// Mappa standard → codici normalizzati accettati.
+// Per aggiungere un nuovo standard inserire qui una nuova voce, senza toccare altro.
+const STANDARD_INIT_MAP = {
+  ISO_9001:  ["ISO_9001",  "ISO_9001_2015"],
+  ISO_14001: ["ISO_14001", "ISO_14001_2015"],
+  ISO_45001: ["ISO_45001", "ISO_45001_2018"],
+};
+
 function AuditAccordionLayout({ currentAudit, onUpdate }) {
   const { initializeChecklist, fetchAndApplyServerResponses } = useStorage();
 
@@ -62,23 +70,21 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
     onUpdate("auditOutcome", updatedData);
   };
 
-  // Auto-inizializza checklist al caricamento dell'audit (anche senza aprire il sotto-accordeon)
+  // Auto-inizializza checklist al caricamento dell'audit per tutti gli standard selezionati
   useEffect(() => {
     if (!currentAudit) return;
     const standards = currentAudit.metadata?.selectedStandards || [];
-    const hasISO9001 = standards.some(
-      (s) => s === "ISO_9001" || s === "ISO_9001_2015"
-    );
-    const isoChecklist = currentAudit.checklist?.ISO_9001;
-    const isChecklistEmpty =
-      !isoChecklist || Object.keys(isoChecklist).length === 0;
-    if (hasISO9001 && isChecklistEmpty) {
-      console.log(
-        "[AuditAccordionLayout] Auto-init checklist ISO_9001 per audit:",
-        currentAudit.id
-      );
-      initializeChecklist("ISO_9001");
-    }
+
+    // Per ogni standard supportato: se selezionato e checklist vuota → inizializza template
+    Object.entries(STANDARD_INIT_MAP).forEach(([key, codes]) => {
+      const isSelected = standards.some((s) => codes.includes(s));
+      const checklist = currentAudit.checklist?.[key];
+      const isEmpty = !checklist || Object.keys(checklist).length === 0;
+      if (isSelected && isEmpty) {
+        console.log(`[AuditAccordionLayout] Auto-init checklist ${key} per audit:`, currentAudit.id);
+        initializeChecklist(key);
+      }
+    });
 
     // Idrata risposte dal server per TUTTI gli standard (audit esistente con auditId)
     const numericId = currentAudit.metadata?.auditId;
