@@ -174,6 +174,17 @@ setTimeout(() => URL.revokeObjectURL(url), 10000);
 
 ---
 
+### Template Word — uno per sistema (decisione 04/03/2026)
+
+Ogni standard avrà **il proprio template** e la propria tab nell'UI:
+- ISO 9001 → `ISO9001-audit-report.docx` (versione attuale da ripristinare a solo ISO 9001)
+- ISO 14001 → template da estrarre da file sorgente utente
+- ISO 45001 → template da estrarre da file sorgente utente
+
+Il template attuale (modificato in sessione 04/03 con intestazioni multi-standard) va **riportato alla versione precedente** quando si implementerà la UI a tab per standard (Fase 2). L'utente ha i file sorgente per estrarre i template di ogni sistema.
+
+---
+
 ### Word Export (architettura template-based)
 
 ```

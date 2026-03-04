@@ -286,6 +286,73 @@ Storico modifiche audit (ISO 9001:2015 punto 7.5.3 - Tracciabilità)
 
 ---
 
+### 🏛️ **Fase 1 — Tabelle Multi-Tenant (Migration 020)**
+
+#### auditor_orgs
+
+Studi di consulenza (nostri clienti), sotto l'organizzazione QS Studio.
+
+| Colonna          | Tipo          | Nullable | Note                    |
+| ---------------- | ------------- | -------- | ----------------------- |
+| id               | INT IDENTITY  | NO       | PK                      |
+| organization_id  | INT           | NO       | FK → organizations      |
+| name             | NVARCHAR(255) | NO       |                         |
+| email            | NVARCHAR(255) | YES      |                         |
+| subscription_plan| NVARCHAR(50) | YES      |                         |
+| is_active        | BIT           | NO       | Default 1               |
+| created_at       | DATETIME2     | NO       |                         |
+| updated_at       | DATETIME2     | NO       |                         |
+
+#### companies
+
+Aziende auditate (clienti degli auditor).
+
+| Colonna        | Tipo          | Nullable | Note               |
+| -------------- | ------------- | -------- | ------------------ |
+| id             | INT IDENTITY  | NO       | PK                 |
+| auditor_org_id | INT           | NO       | FK → auditor_orgs  |
+| name           | NVARCHAR(255) | NO       |                    |
+| vat_number     | NVARCHAR(50)  | YES      |                    |
+| sector         | NVARCHAR(255) | YES      |                    |
+| address        | NVARCHAR(MAX) | YES      |                    |
+| is_active      | BIT           | NO       | Default 1          |
+| created_at     | DATETIME2     | NO       |                    |
+| updated_at     | DATETIME2     | NO       |                    |
+
+#### user_org_roles
+
+Ruoli per utente per organizzazione (RBAC).
+
+| Colonna    | Tipo         | Nullable | Constraint                              |
+| ---------- | ------------ | -------- | --------------------------------------- |
+| user_id    | INT           | NO       | FK → users, PK (composite)              |
+| org_id     | INT           | NO       | FK → organizations, PK (composite)      |
+| role       | NVARCHAR(30)  | NO       | CHECK ('superadmin','admin','auditor','viewer') |
+| created_at | DATETIME2     | NO       |                                         |
+
+#### subscriptions
+
+Abbonamenti per standard per auditor_org.
+
+| Colonna        | Tipo         | Nullable | Note              |
+| -------------- | ------------ | -------- | ----------------- |
+| id             | INT IDENTITY | NO       | PK                |
+| auditor_org_id | INT          | NO       | FK → auditor_orgs |
+| standard_id    | INT          | NO       | FK → standards    |
+| plan           | NVARCHAR(50) | YES      |                   |
+| valid_from     | DATE         | NO       |                   |
+| valid_to       | DATE         | NO       |                   |
+| is_active      | BIT          | NO       | Default 1         |
+| created_at     | DATETIME2    | NO       |                   |
+| updated_at     | DATETIME2    | NO       |                   |
+
+**Modifiche tabelle esistenti (Migration 020):**
+
+- `users.auditor_org_id` INT NULL, FK → auditor_orgs
+- `audits.company_id` INT NULL, FK → companies (client_name resta per retrocompatibilità)
+
+---
+
 ### 🚫 **non_conformities**
 
 Non conformità rilevate durante audit
@@ -333,7 +400,8 @@ Metadati sincronizzazione offline
 | 008  | create_response_options    | Nuova versione con UI columns                  | 2026-01-11 |
 | 008b | alter_response_options     | Aggiunti campi UI (icon, color)                | -          |
 | 009  | create_audit_standards     | Multi-standard support per audit               | 2026-01-17 |
-| 010  | update_iso9001_35questions | ⏳ **DA ESEGUIRE** - Riduce da 78 a 35 domande | 2026-01-17 |
+| 010  | update_iso9001_35questions | Riduce da 78 a 35 domande | 2026-01-17 |
+| 020  | fase1_multi_tenant_foundations | **Fase 1** auditor_orgs, companies, user_org_roles, subscriptions | 2026-03-04 |
 
 ---
 
