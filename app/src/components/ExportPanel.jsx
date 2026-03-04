@@ -249,7 +249,9 @@ const ExportPanel = () => {
       <div className="export-sections">
         {/* Export Audit Corrente - WORD */}
         <div className="export-section export-word-section">
-          <h4>📄 Report Word (ISO 9001)</h4>
+          <h4>📄 Report Word{currentAudit?.metadata?.selectedStandards?.length > 0
+            ? ` (${currentAudit.metadata.selectedStandards.join(' + ')})`
+            : ''}</h4>
           {!currentAudit ? (
             <p className="export-info">
               Seleziona un audit per abilitare export

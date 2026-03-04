@@ -14,6 +14,25 @@
  *   => Apri app/public/templates/ISO9001-audit-report.docx in Word
  */
 
+// Nomi leggibili dei standard — aggiungere qui nuovi standard
+const STANDARD_LABELS = {
+    ISO_9001:  'ISO 9001:2015 — Sistema di Gestione per la Qualità',
+    ISO_14001: 'ISO 14001:2015 — Sistema di Gestione Ambientale',
+    ISO_45001: 'ISO 45001:2018 — Sistema di Gestione per la Salute e Sicurezza sul Lavoro',
+};
+
+/**
+ * Estrae il numero di sezione dalla chiave della clausola.
+ * "14001_s4" → "4",  "clause4" → "4",  "section_10" → "10", "9001_p2" → "2"
+ */
+function extractSectionNum(key) {
+    const afterMarker = key.match(/[_-][a-z](\d+)$/i);      // es. _s4, _p2
+    if (afterMarker) return afterMarker[1];
+    const nums = key.match(/\d+/g);
+    if (nums && nums.length >= 2) return nums[nums.length - 1]; // es. 14001_4 → "4"
+    return nums ? nums[0] : key;
+}
+
 export const STATUS_CFG = {
     C:           { label: 'Conforme',           fill: 'D1FAE5', text: '065F46' },
     NC:          { label: 'Non Conforme',        fill: 'FEE2E2', text: '991B1B' },
@@ -222,21 +241,30 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
 
     xml += xmlPara('3 - RILIEVI PENDENTI', { sb: 0, sa: 300 });
     xml += buildPendingIssuesOoxml(pendingIssues);
-    xml += xmlPara('', { pageBreak: true, sa: 0 });
 
     if (!checklist || !Object.keys(checklist).length) return xml;
 
-    Object.entries(checklist).forEach(([, normData]) => {
+    Object.entries(checklist).forEach(([stdKey, normData]) => {
         if (!normData || typeof normData !== 'object') return;
+
+        // Intestazione di standard (es. "CHECKLIST — ISO 14001:2015 …")
+        const stdLabel = STANDARD_LABELS[stdKey] || stdKey;
+        xml += xmlPara('', { pageBreak: true, sa: 0 });
+        xml += xmlPara(
+            escXml('CHECKLIST — ' + stdLabel),
+            { sb: 0, sa: 300 }
+        );
+
         Object.entries(normData)
             .sort(([a], [b]) =>
-                parseFloat(a.match(/\d+/)?.[0] ?? 0) - parseFloat(b.match(/\d+/)?.[0] ?? 0)
+                (parseInt(extractSectionNum(a), 10) || 0) -
+                (parseInt(extractSectionNum(b), 10) || 0)
             )
             .forEach(([clauseKey, clause]) => {
                 if (!clause || typeof clause !== 'object') return;
-                const num   = clauseKey.match(/\d+/)?.[0] || clauseKey;
-                const title = (clause.title || '').replace(/^\d+\.?\s*-?\s*/, '');
-                xml += xmlPara(escXml(num + ' - ' + title.toUpperCase()), { sb: 400, sa: 200 });
+                const num   = extractSectionNum(clauseKey);
+                const title = (clause.title || '').replace(/^\d+\.?\s*[-–]\s*/, '');
+                xml += xmlPara(escXml(num + ' — ' + title.toUpperCase()), { sb: 400, sa: 200 });
                 xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl);
                 xml += xmlPara('', { sa: 300 });
             });
@@ -269,11 +297,22 @@ export function buildRileviSummaryOoxml(checklist) {
 
     const rows = [headerRow, apRow];
 
-    Object.values(checklist).forEach(normData => {
+    Object.entries(checklist).forEach(([stdKey, normData]) => {
         if (!normData || typeof normData !== 'object') return;
+
+        // Riga separatore per standard (in blu chiaro, a tutta larghezza)
+        const stdLabel = STANDARD_LABELS[stdKey] || stdKey;
+        rows.push(xmlRow([
+            xmlCell(
+                xmlPara(xmlRun(stdLabel, { bold: true, size: 18 }), { align: 'center' }),
+                { span: 6, fill: 'DBEAFE', pct: 100 }
+            ),
+        ]));
+
         Object.entries(normData)
             .sort(([a], [b]) =>
-                parseFloat(a.match(/\d+/)?.[0] ?? 0) - parseFloat(b.match(/\d+/)?.[0] ?? 0)
+                (parseInt(extractSectionNum(a), 10) || 0) -
+                (parseInt(extractSectionNum(b), 10) || 0)
             )
             .forEach(([, clause]) => {
                 if (!clause?.questions) return;
