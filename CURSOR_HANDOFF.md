@@ -1,11 +1,11 @@
 # 🤖 CURSOR AI AGENT — Handoff Document
 # Sistema Gestione ISO 9001 / 14001 / 45001
 
-> **Data handoff**: 2026-03-03  
-> **Da**: Sessione Cursor AI 03/03/2026  
+> **Data handoff**: 2026-03-04 (sessione odierna)
+> **Da**: Sessione Cursor AI 04/03/2026  
 > **A**: Prossima sessione Cursor AI  
-> **Stato progetto**: Beta — flusso auditor desktop funzionante; 4 bug multi-standard risolti; visione SaaS multi-tenant definita  
-> **Ultimo commit**: `6317215` (branch `main`)
+> **Stato progetto**: Beta — **Fase 0 completata al 100%** — tutti i bug chiusi; pronto per Fase 1 (DB multi-tenant)  
+> **Ultimo commit**: `c4da815` (branch `main`)
 
 ---
 
@@ -49,6 +49,20 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 
 ## 📊 STATO FUNZIONALITÀ (2026-03-02)
 
+### ✅ Completato in sessione 04/03/2026 — FASE 0 CHIUSA (commit `c4da815`)
+
+| Fix/Feature | File | Descrizione |
+|---|---|---|
+| Auto-init checklist ISO 14001/45001 | `AuditAccordionLayout.jsx` | `STANDARD_INIT_MAP` scalabile — fix checklist vuota dopo reload (bug 0.2) |
+| Retry rilievi pendenti | `PendingIssuesCascade.jsx` + `.css` | Pulsante Riprova per errori transitori rate-limiter/rete (bug 0.1) |
+| Backend committato | `audit.controller.js` | Fix multi-standard già deployato, ora anche su git (commit `696df52`) |
+| Word export multi-standard | `wordExportHelpers.js` | Intestazioni per standard, `extractSectionNum` corretto per ISO 14001 |
+| ExportPanel titolo dinamico | `ExportPanel.jsx` | Titolo mostra standard effettivi (es. "ISO_9001 + ISO_14001") |
+| ADR-004 auth mobile | — | **GIÀ IMPLEMENTATA** — `apiService.js` usa già localStorage + Bearer token |
+| Rilievi pendenti reali in Word | `ExportPanel.jsx` | **GIÀ IMPLEMENTATA** — usa `checkReaudit` + `getNcResponses` |
+
+**Commit history sessione**: `531dc1a` → `696df52` → `c4da815`
+
 ### ✅ Completato in sessione 03/03/2026 (commit `6317215`)
 
 | Fix | File | Descrizione |
@@ -81,15 +95,11 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 
 ### 🔲 Backlog ordinato per priorità
 
-#### 🔴 ALTA — Bug minori da chiudere (prossima sessione)
+#### ✅ FASE 0 — Completata al 100% (sessione 04/03/2026)
 
-| # | Task | File coinvolti | Note |
-|---|---|---|---|
-| 1 | **Rilievi pendenti: errore caricamento** | `PendingIssuesCascade.jsx` | API funziona (verificata), probabile timing issue o auth token non ancora disponibile al mount |
-| 2 | **Checklist vuota dopo reload** | `StorageContext.jsx`, `fetchAndApplyServerResponses` | Legato a `audit_standards` fix: dopo primo sync con nuovo backend si risolve; verificare |
-| 3 | **Fix Auth Mobile (ADR-004)** | `auth.controller.js`, `apiService.js`, `AuthContext.jsx` | localStorage JWT per Android PWA — prerequisito per molti altri fix |
-| 4 | **Export Word ISO 14001** | `wordExport.js`, `wordExportHelpers.js` | Aggiungere sezione 46 domande ISO 14001 |
-| 5 | **Rilievi Pendenti reali in Word** | `wordExport.js` | `RILIEVI_MARKER` → dati reali da `GET /audits/:id/pending-issues` |
+Tutti i bug e feature di Fase 0 sono chiusi. Nessun task ALTA in sospeso.
+
+**Prossima fase**: Fase 1 — DB multi-tenant + RBAC + anagrafica aziende (6-8 settimane)
 
 #### 🟡 MEDIA
 
@@ -461,7 +471,31 @@ localStorage.getItem('authToken');
 
 ## 🚀 PROSSIME AZIONI (prossima sessione)
 
-### Sessione immediata — Test E2E su Netlify (commit `9894ed5`)
+### Sessione immediata — Inizio Fase 1: DB multi-tenant
+
+```
+PRIMA DI SCRIVERE CODICE:
+1. Leggere docs/PROJECT_ROADMAP.md §Fase 1 per schema tabelle
+2. Leggere docs/DATABASE_SCHEMA.md per tabelle esistenti e vincoli
+3. Proporre all'utente la migration SQL e aspettare approvazione esplicita
+4. Solo dopo approvazione: eseguire migration su DB di test (organization_id=99)
+5. Poi adattare backend middleware RBAC
+6. Poi adattare frontend con pagina Anagrafica Aziende
+```
+
+**Tabelle nuove da creare (già progettate in PROJECT_ROADMAP.md §Fase 1)**:
+- `companies` (aziende auditate — clienti degli auditor)
+- `auditor_orgs` (studi di consulenza — nostri clienti)
+- `user_org_roles` (ruoli per utente per organizzazione)
+- `subscriptions` (abbonamenti per standard)
+
+**Modifiche tabelle esistenti**:
+- `audits.company_id` FK → `companies.id` (nullable, retrocompatibile)
+- `users.auditor_org_id` FK → `auditor_orgs.id`
+
+---
+
+### Sessione precedente — Test E2E su Netlify (commit `9894ed5`)
 
 ```
 1. Aprire https://systemgest.netlify.app
