@@ -339,7 +339,7 @@ Abbonamenti per standard per auditor_org.
 | id             | INT IDENTITY | NO       | PK                |
 | auditor_org_id | INT          | NO       | FK → auditor_orgs |
 | standard_id    | INT          | NO       | FK → standards    |
-| plan           | NVARCHAR(50) | YES      |                   |
+| plan           | NVARCHAR(50) | YES      | (keyword SQL: usare [plan]) |
 | valid_from     | DATE         | NO       |                   |
 | valid_to       | DATE         | NO       |                   |
 | is_active      | BIT          | NO       | Default 1         |

@@ -183,7 +183,7 @@ BEGIN
         id INT IDENTITY(1,1) NOT NULL,
         auditor_org_id INT NOT NULL,
         standard_id INT NOT NULL,
-        plan NVARCHAR(50) NULL,
+        [plan] NVARCHAR(50) NULL,
         valid_from DATE NOT NULL,
         valid_to DATE NOT NULL,
         is_active BIT NOT NULL DEFAULT 1,
