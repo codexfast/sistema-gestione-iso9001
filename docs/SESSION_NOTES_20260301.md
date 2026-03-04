@@ -24,6 +24,11 @@
 - `backend/scripts/verify-fase1.js` — API + DB Fase 1
 - `backend/scripts/verify-audit-2026-02.js` — dati audit e risposte
 
+### Commit
+| Hash | Descrizione |
+|---|---|
+| `7daf871` | feat: server come fonte di verità + dev locale robusto |
+
 ---
 
 ## ✅ Completato in questa sessione
