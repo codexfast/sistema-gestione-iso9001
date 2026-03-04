@@ -137,6 +137,29 @@ export class IndexedDBProvider {
     }
 
     /**
+     * Svuota lo store audit (per sostituzione completa con dati server)
+     * Usato quando online: server è fonte di verità, cache locale viene sostituita
+     */
+    async clearAuditsStore() {
+        if (!this.db) throw new Error('Database non inizializzato');
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_AUDITS], 'readwrite');
+            const store = transaction.objectStore(STORE_AUDITS);
+            const request = store.clear();
+
+            request.onsuccess = () => {
+                console.log('🗑️ [IndexedDB] Cache audit svuotata (sostituzione con dati server)');
+                resolve();
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+        });
+    }
+
+    /**
      * Carica tutti gli audit
      */
     async loadAllAudits() {

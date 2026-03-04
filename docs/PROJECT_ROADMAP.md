@@ -50,9 +50,11 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 | Fix Auth Mobile ADR-004 | localStorage JWT già implementato in apiService.js | Completato (già presente) |
 | Bug: rilievi caricamento | Pulsante Riprova aggiunto, issue probabile rate-limiter | Completato (531dc1a) |
 | Bug: checklist vuota reload | STANDARD_INIT_MAP in AuditAccordionLayout | Completato (531dc1a) |
-| **Fase 1: DB multi-tenant** | companies, auditor_orgs, user_org_roles, subscriptions | **PROSSIMA** |
+| **Fase 1: DB multi-tenant** | companies, auditor_orgs, user_org_roles, subscriptions | Completato |
+| **Server come fonte di verità** | Cache IndexedDB sostituita ad ogni download server | Completato (04/03) |
+| **Dev locale robusto** | Proxy Vite, SW disabilitato su localhost | Completato (04/03) |
 
-**Progress Overall**: ~72% funzionalità core
+**Progress Overall**: ~75% funzionalità core
 
 ---
 

@@ -307,9 +307,13 @@ export function StorageProvider({ children, useMockData = false }) {
           : localAudits;
 
         if (mergedAudits && mergedAudits.length > 0) {
-          // Salva audit server in IndexedDB (aggiorna cache)
+          // Server come fonte di verità: sostituisci completamente la cache locale
+          // (evita dati obsoleti quando si cambia device o dopo problemi di rete)
           if (serverAudits.length > 0) {
-            console.log("💾 [MERGE] Aggiorno IndexedDB con dati server...");
+            if (typeof fsProvider.clearAuditsStore === "function") {
+              await fsProvider.clearAuditsStore();
+            }
+            console.log("💾 [MERGE] Aggiorno IndexedDB con dati server (sostituzione cache)...");
             for (const frontendAudit of serverAudits) {
               await fsProvider.saveAudit(frontendAudit);
             }
@@ -394,8 +398,11 @@ export function StorageProvider({ children, useMockData = false }) {
         
         console.log(`✅ [LOGIN] Scaricati ${serverAudits.length} audit dal server`);
         
-        // Salva in IndexedDB + aggiorna stato
+        // Server come fonte di verità: sostituisci cache
         if (serverAudits.length > 0) {
+          if (typeof fsProvider.clearAuditsStore === "function") {
+            await fsProvider.clearAuditsStore();
+          }
           for (const audit of serverAudits) {
             await fsProvider.saveAudit(audit);
           }

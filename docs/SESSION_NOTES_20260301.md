@@ -1,6 +1,28 @@
-# Session Notes – 01 marzo 2026
+# Session Notes – 01 marzo 2026 (aggiornato 04/03)
 
 **Branch**: `main` | **Deploy**: Netlify auto da `main` | **Backend PID**: riavviato più volte, ultimo stabile
+
+---
+
+## ✅ Completato – sessione 04/03 (stato stabile e robusto)
+
+### Dev locale + Server come fonte di verità
+
+| Modifica | Descrizione |
+|---|---|
+| **Proxy Vite** | `/api/v1` → backend remoto; evita CORS in sviluppo |
+| **Service Worker** | Disabilitato su localhost; bypass richieste `/api/` nel SW |
+| **Server-wins** | Cache IndexedDB sostituita completamente ad ogni download server |
+| **IndexedDBProvider** | Nuovo `clearAuditsStore()` per sostituzione cache |
+
+### Best practice implementate
+- **Fonte di verità**: DB server quando online; cache locale solo per offline
+- **Cambio device**: dati sempre aggiornati dal DB
+- **Dev senza CORS**: proxy Vite su localhost:5173
+
+### Script di verifica
+- `backend/scripts/verify-fase1.js` — API + DB Fase 1
+- `backend/scripts/verify-audit-2026-02.js` — dati audit e risposte
 
 ---
 
@@ -112,9 +134,32 @@ Il campo `audits.standard_id` è legacy. Gli audit con più norme sono gestiti v
 ### 6. Allegati su porta 443 (bassa priorità, sblocca Office Online)
 - [ ] Configurare Nginx per proxy su 443 → localhost:3000 (aggiuntivo a 8443)
 
-### 4. Anagrafica / RBAC (backlog futuro)
-- [ ] `client_name` attualmente stringa libera → diventerà FK verso tabella `clients`
-- [ ] Auditor per organizzazione, ruoli editor/viewer
+### Fase 1 Multi-Tenant – Commit recenti
+| Commit | Descrizione |
+|---|---|
+| `cc78b86` | Fix migration 020 (batch separati, `[plan]` SQL Server) |
+| `b853d05` | feat(fase1) RBAC + endpoint CRUD companies e auditor-orgs |
+| `758b216` | feat(fase1) integrazione CompaniesPage in app con navigazione Anagrafica Aziende |
+
+### Verifica audit 2026-02 (04/03)
+- **DB**: 81 risposte in `audit_responses` per audit_id 4914
+- **API**: GET /audits/4914/responses restituisce 81 risposte correttamente
+- **Locale e Netlify**: usano lo stesso backend e DB — dati identici
+
+### Server come fonte di verità (04/03)
+- **Fix cache obsoleta**: quando il download dal server ha successo, la cache IndexedDB viene **sostituita completamente** con i dati server
+- **Cambio device**: i dati provengono sempre dal DB — nessuna cache locale obsoleta
+- **IndexedDBProvider**: nuovo metodo `clearAuditsStore()` per svuotare la cache prima di salvare i dati server
+
+### 7. Fase 1 Multi-Tenant – Completato ✅
+- [x] Migration 020: `auditor_orgs`, `companies`, `user_org_roles`, `subscriptions`; colonne `users.auditor_org_id`, `audits.company_id`
+- [x] Backend: RBAC, CRUD companies, list/get auditor_orgs; `auditor_org_id` in JWT e login
+- [x] Frontend: `CompaniesPage` con lista/crea/modifica/elimina aziende; navigazione "🏢 Anagrafica Aziende" in header
+- [ ] (Opzionale) Integrazione audit → company: selettore azienda nel flusso audit
+
+### 8. Anagrafica / RBAC (backlog futuro)
+- [ ] `client_name` attualmente stringa libera → diventerà FK verso tabella `companies`
+- [ ] Ruoli editor/viewer per auditor org
 
 ---
 

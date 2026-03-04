@@ -3,7 +3,7 @@
 
 // Versione cache: aggiornare BUILD_DATE ad ogni deploy per invalidare cache vecchie
 // Netlify inietta automaticamente hash nei bundle JS/CSS — questo invalida l'app shell
-const BUILD_DATE = '2026-03-01T17:42:31.630Z';
+const BUILD_DATE = '2026-03-04T20:01:40.075Z';
 const CACHE_NAME = `sgq-iso9001-${BUILD_DATE}`;
 const API_CACHE = 'sgq-api-v1';
 
@@ -60,32 +60,9 @@ self.addEventListener('fetch', (event) => {
         return; // Nessuna intercettazione, fetch nativa del browser
     }
 
-    // API requests locali: Network-First (con fallback cache)
+    // API requests: BYPASS totale — non intercettare, lascia passare al browser
+    // (evita problemi con proxy Vite in dev e CORS)
     if (url.pathname.startsWith('/api/')) {
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Cache successful API responses (SOLO GET - Cache API non supporta POST)
-                    if (response.ok && request.method === 'GET') {
-                        const responseClone = response.clone();
-                        caches.open(API_CACHE).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    // Fallback to cache se network fail
-                    return caches.match(request).then((cached) => {
-                        if (cached) {
-                            console.log('[SW] Serving API from cache (offline):', url.pathname);
-                            return cached;
-                        }
-                        // Nessun 503, lascia che la richiesta fallisca naturalmente
-                        throw new Error('Network error and no cache available');
-                    });
-                })
-        );
         return;
     }
 

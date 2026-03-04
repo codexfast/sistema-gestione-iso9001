@@ -669,7 +669,7 @@ class ApiService {
 
     async healthCheck() {
         try {
-            const response = await fetch(`${this.baseUrl.replace('/api/v1', '')}/health`, {
+            const response = await fetch(`${this.baseUrl}/health`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });

@@ -97,9 +97,14 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker: disabilitato in dev (localhost/porta 5173), attivo su Netlify -->
     <script>
       if ("serviceWorker" in navigator) {
+        var isDev = /^(localhost|127\.0\.0\.1|\[::1\]|::1)$/.test(window.location.hostname) || window.location.port === "5173" || window.location.port === "3000";
+        if (isDev) {
+          console.log("[SGQ] Dev mode: Service Worker disabilitato per proxy API");
+          navigator.serviceWorker.getRegistrations().then(function(regs) { regs.forEach(function(r) { r.unregister(); }); });
+        } else {
         window.addEventListener("load", () => {
           navigator.serviceWorker
             .register("/service-worker.js")
@@ -153,6 +158,7 @@
             setTimeout(() => window.location.reload(), 1500);
           });
         });
+        }
       }
     </script>
   </body>
