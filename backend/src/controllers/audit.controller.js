@@ -622,8 +622,15 @@ async function upsertAudit(req, res) {
             non_conformities_count,
             completion_percentage,
             standard_id,
+            standard_ids,   // array [1, 2] da syncService — aggiorna audit_standards completo
             updated_at
         } = req.body;
+
+        // Risolve la lista di standard_id da registrare in audit_standards
+        // Priorità: standard_ids array (nuovo) > standard_id scalare (legacy) > default ISO 9001
+        const standardIdsToSync = Array.isArray(standard_ids) && standard_ids.length > 0
+            ? standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0)
+            : [parseInt(standard_id) || 1];
 
         // Validazione campi obbligatori
         if (!audit_uuid || !audit_number || !client_name) {
@@ -725,6 +732,20 @@ async function upsertAudit(req, res) {
 
             logger.info(`[UPSERT] Audit aggiornato: ${audit_id} (${audit_uuid})`);
 
+            // Aggiorna audit_standards: delete + reinsert per garantire coerenza con tutti gli standard selezionati
+            try {
+                await query('DELETE FROM audit_standards WHERE audit_id = @audit_id', { audit_id });
+                for (const stdId of standardIdsToSync) {
+                    await query(
+                        'INSERT INTO audit_standards (audit_id, standard_id) VALUES (@audit_id, @standard_id)',
+                        { audit_id, standard_id: stdId }
+                    );
+                }
+                logger.info(`[UPSERT] audit_standards aggiornati per audit ${audit_id}: [${standardIdsToSync.join(',')}]`);
+            } catch (e) {
+                logger.warn('[UPSERT] audit_standards update failed:', e.message);
+            }
+
             // Ritorna updated_at server → il client lo memorizza per evitare conflict ciclici
             const serverUpdatedAt = updateResult.recordset?.[0]?.updated_at || new Date().toISOString();
 
@@ -809,13 +830,15 @@ async function upsertAudit(req, res) {
 
             const newAudit = result.recordset[0];
 
-            // Inserisce in audit_standards (junction table) - fix sync offline
-            const stdId = standard_id || 1;
+            // Inserisce in audit_standards (junction table) per tutti gli standard selezionati
             try {
-                await query(
-                    'IF NOT EXISTS (SELECT 1 FROM audit_standards WHERE audit_id=@audit_id AND standard_id=@standard_id) INSERT INTO audit_standards (audit_id, standard_id) VALUES (@audit_id, @standard_id)',
-                    { audit_id: newAudit.audit_id, standard_id: stdId }
-                );
+                for (const stdId of standardIdsToSync) {
+                    await query(
+                        'IF NOT EXISTS (SELECT 1 FROM audit_standards WHERE audit_id=@audit_id AND standard_id=@standard_id) INSERT INTO audit_standards (audit_id, standard_id) VALUES (@audit_id, @standard_id)',
+                        { audit_id: newAudit.audit_id, standard_id: stdId }
+                    );
+                }
+                logger.info(`[UPSERT] audit_standards inseriti per nuovo audit ${newAudit.audit_id}: [${standardIdsToSync.join(',')}]`);
             } catch (e) { logger.warn('[UPSERT] audit_standards insert failed:', e.message); }
 
             logger.info(`[UPSERT] Audit creato: ${newAudit.audit_id} (${newAudit.audit_uuid})`);
