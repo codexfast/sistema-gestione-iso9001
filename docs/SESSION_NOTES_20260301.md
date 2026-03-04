@@ -160,7 +160,7 @@ Il campo `audits.standard_id` è legacy. Gli audit con più norme sono gestiti v
 - [x] Migration 020: `auditor_orgs`, `companies`, `user_org_roles`, `subscriptions`; colonne `users.auditor_org_id`, `audits.company_id`
 - [x] Backend: RBAC, CRUD companies, list/get auditor_orgs; `auditor_org_id` in JWT e login
 - [x] Frontend: `CompaniesPage` con lista/crea/modifica/elimina aziende; navigazione "🏢 Anagrafica Aziende" in header
-- [ ] (Opzionale) Integrazione audit → company: selettore azienda nel flusso audit
+- [x] Integrazione audit → company: selettore azienda nel modal creazione audit; backend upsert con `company_id`; `auditConverter` e `auditDataModel` con `companyId`
 
 ### 8. Anagrafica / RBAC (backlog futuro)
 - [ ] `client_name` attualmente stringa libera → diventerà FK verso tabella `companies`

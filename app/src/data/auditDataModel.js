@@ -244,6 +244,7 @@ export function createNewAudit(metadata) {
         metadata: {
             id: crypto.randomUUID(),
             clientName: metadata.clientName || '',
+            companyId: metadata.companyId ?? null,
             projectYear: metadata.projectYear || new Date().getFullYear(),
             auditNumber: metadata.auditNumber || '',
             status: AUDIT_STATUS.DRAFT,

@@ -301,6 +301,8 @@ export class SyncService {
                 standard_id: resolveStandardId(rawCodes),
                 // standard_ids array → aggiorna audit_standards junction table con TUTTI gli standard
                 standard_ids: resolvedIds,
+                // company_id da metadata (Fase 1 multi-tenant)
+                company_id: auditData.metadata?.companyId ?? auditData.company_id ?? null,
             };
 
             // Rimuovi campi legacy frontend per pulire payload

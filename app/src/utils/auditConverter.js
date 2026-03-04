@@ -20,6 +20,7 @@ export function backendToFrontend(backendAudit) {
             auditId: backendAudit.audit_id, // Mantieni ID numerico server
             auditNumber: backendAudit.audit_number || '',
             clientName: backendAudit.client_name || '',
+            companyId: backendAudit.company_id ?? null,
             projectYear: backendAudit.project_year || new Date().getFullYear().toString(),
             auditDate: backendAudit.audit_date || new Date().toISOString().split('T')[0],
             auditorName: backendAudit.auditor_name || '',
@@ -94,6 +95,7 @@ export function frontendToBackend(frontendAudit) {
         audit_id: meta.auditId, // Se esiste (da server)
         audit_number: meta.auditNumber,
         client_name: meta.clientName,
+        company_id: meta.companyId ?? null,
         project_year: meta.projectYear,
         audit_date: meta.auditDate,
         auditor_name: meta.auditorName || meta.auditors?.[0] || '',

@@ -4,8 +4,9 @@
  * Sistema Gestione ISO 9001 - QS Studio
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useStorage } from "../contexts/StorageContext";
+import { useAuth } from "../contexts/AuthContext";
 import { getNextAuditNumber, sortAuditsByNumber } from "../utils/auditUtils";
 import apiService from "../services/apiService";
 import "./AuditSelector.css";
@@ -178,21 +179,51 @@ function AuditSelector() {
 // === MODAL CREAZIONE AUDIT ===
 
 function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }) {
+  const { user } = useAuth();
   const currentYear = new Date().getFullYear();
   const nextNumber = getNextAuditNumber(audits, currentYear);
 
-  // Pre-popola clientName se re-audit
+  // Pre-popola clientName e companyId se re-audit
   const initialClientName = isReaudit && currentAudit 
     ? currentAudit.metadata.clientName 
     : "";
+  const initialCompanyId = isReaudit && currentAudit?.metadata?.companyId 
+    ? currentAudit.metadata.companyId 
+    : null;
 
   const [formData, setFormData] = useState({
     auditNumber: nextNumber,
     clientName: initialClientName,
+    companyId: initialCompanyId,
     auditDate: new Date().toISOString().split("T")[0],
     auditorName: "",
     norms: ["ISO_9001"],
   });
+
+  // Carica aziende dall'anagrafica (Fase 1)
+  const [companies, setCompanies] = useState([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const effectiveOrgId = user?.auditor_org_id ?? null;
+
+  const loadCompanies = useCallback(async () => {
+    const orgId = effectiveOrgId;
+    if (!orgId) return;
+    setCompaniesLoading(true);
+    try {
+      const res = await apiService.getCompanies({ auditor_org_id: orgId });
+      setCompanies(res.data || []);
+    } catch (err) {
+      console.warn("Caricamento aziende:", err.message);
+      setCompanies([]);
+    } finally {
+      setCompaniesLoading(false);
+    }
+  }, [effectiveOrgId]);
+
+  useEffect(() => {
+    if (effectiveOrgId) loadCompanies();
+    else setCompanies([]);
+  }, [effectiveOrgId, loadCompanies]);
 
   const [errors, setErrors] = useState({});
   const [pendingInfo, setPendingInfo] = useState(null); // { count, lastAuditId, issues }
@@ -256,6 +287,23 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     }
   };
 
+  // Seleziona azienda dall'anagrafica → auto-compila clientName
+  const handleCompanySelect = (e) => {
+    const id = e.target.value;
+    if (!id) {
+      setFormData((prev) => ({ ...prev, companyId: null, clientName: "" }));
+      return;
+    }
+    const company = companies.find((c) => String(c.id) === id);
+    if (company) {
+      setFormData((prev) => ({
+        ...prev,
+        companyId: company.id,
+        clientName: company.name || "",
+      }));
+    }
+  };
+
   const handleNormToggle = (norm) => {
     setFormData((prev) => ({
       ...prev,
@@ -295,6 +343,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     const submitData = { ...formData };
     // Mappa norms → selectedStandards (atteso da createNewAudit in auditDataModel.js)
     submitData.selectedStandards = formData.norms;
+    submitData.companyId = formData.companyId || null;
     if (pendingInfo?.issues?.length > 0) {
       submitData.pendingIssues = pendingInfo.issues
         .filter((issue) => issue.conformity_status !== 'OM')
@@ -380,6 +429,28 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
             />
             <small className="form-hint">Generato automaticamente</small>
           </div>
+
+          {companies.length > 0 && !isReaudit && (
+            <div className="form-group">
+              <label htmlFor="companySelect">Azienda (da anagrafica)</label>
+              <select
+                id="companySelect"
+                value={formData.companyId ?? ""}
+                onChange={handleCompanySelect}
+                className="form-control"
+                disabled={companiesLoading}
+              >
+                <option value="">— Nuova azienda / Inserimento manuale —</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.vat_number ? ` (P.IVA ${c.vat_number})` : ""}
+                  </option>
+                ))}
+              </select>
+              <small className="form-hint">Seleziona un&apos;azienda esistente per compilare automaticamente il nome</small>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="clientName">Nome Cliente *</label>
