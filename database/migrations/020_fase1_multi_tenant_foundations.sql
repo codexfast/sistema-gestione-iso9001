@@ -217,55 +217,72 @@ PRINT '';
 
 PRINT '🛠️  STEP 6: ALTER users.auditor_org_id...';
 
+PRINT '🛠️  STEP 6: ALTER users.auditor_org_id...';
+
+-- Batch separati (GO) per evitare "Invalid column name" — SQL Server valida il batch prima dell'esecuzione
 IF NOT EXISTS (
-    SELECT 1 FROM sys.columns
-    WHERE object_id = OBJECT_ID('users') AND name = 'auditor_org_id'
+    SELECT 1 FROM sys.columns c
+    INNER JOIN sys.tables t ON c.object_id = t.object_id
+    WHERE t.name = 'users' AND c.name = 'auditor_org_id'
 )
 BEGIN
-    ALTER TABLE dbo.users
-        ADD auditor_org_id INT NULL;
+    ALTER TABLE dbo.users ADD auditor_org_id INT NULL;
+    PRINT '  ✅ users.auditor_org_id colonna aggiunta';
+END
+GO
 
-    ALTER TABLE dbo.users
-        ADD CONSTRAINT FK_users_auditor_org
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_users_auditor_org')
+BEGIN
+    ALTER TABLE dbo.users ADD CONSTRAINT FK_users_auditor_org
         FOREIGN KEY (auditor_org_id) REFERENCES dbo.auditor_orgs(id);
+    PRINT '  ✅ FK_users_auditor_org aggiunta';
+END
+GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.indexes i
+    INNER JOIN sys.tables t ON i.object_id = t.object_id
+    WHERE t.name = 'users' AND i.name = 'IX_users_auditor_org')
+BEGIN
     CREATE NONCLUSTERED INDEX IX_users_auditor_org
         ON dbo.users(auditor_org_id) WHERE auditor_org_id IS NOT NULL;
-
-    PRINT '  ✅ users.auditor_org_id aggiunta';
+    PRINT '  ✅ IX_users_auditor_org creato';
 END
-ELSE
-    PRINT '  ⚠️  users.auditor_org_id già esistente';
-
-PRINT '';
+GO
 
 -- ============================================================================
--- STEP 7: ALTER audits — aggiungi company_id
+-- STEP 7: ALTER audits — aggiungi company_id (batch separati)
 -- ============================================================================
 
 PRINT '🛠️  STEP 7: ALTER audits.company_id...';
 
 IF NOT EXISTS (
-    SELECT 1 FROM sys.columns
-    WHERE object_id = OBJECT_ID('audits') AND name = 'company_id'
+    SELECT 1 FROM sys.columns c
+    INNER JOIN sys.tables t ON c.object_id = t.object_id
+    WHERE t.name = 'audits' AND c.name = 'company_id'
 )
 BEGIN
-    ALTER TABLE dbo.audits
-        ADD company_id INT NULL;
+    ALTER TABLE dbo.audits ADD company_id INT NULL;
+    PRINT '  ✅ audits.company_id colonna aggiunta';
+END
+GO
 
-    ALTER TABLE dbo.audits
-        ADD CONSTRAINT FK_audits_company
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_audits_company')
+BEGIN
+    ALTER TABLE dbo.audits ADD CONSTRAINT FK_audits_company
         FOREIGN KEY (company_id) REFERENCES dbo.companies(id);
+    PRINT '  ✅ FK_audits_company aggiunta';
+END
+GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.indexes i
+    INNER JOIN sys.tables t ON i.object_id = t.object_id
+    WHERE t.name = 'audits' AND i.name = 'IX_audits_company')
+BEGIN
     CREATE NONCLUSTERED INDEX IX_audits_company
         ON dbo.audits(company_id) WHERE company_id IS NOT NULL;
-
-    PRINT '  ✅ audits.company_id aggiunta';
+    PRINT '  ✅ IX_audits_company creato';
 END
-ELSE
-    PRINT '  ⚠️  audits.company_id già esistente';
-
-PRINT '';
+GO
 
 -- ============================================================================
 -- STEP 8: Seed iniziale (opzionale — solo se auditor_orgs vuota)
