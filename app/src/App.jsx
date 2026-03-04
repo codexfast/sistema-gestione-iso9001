@@ -3,6 +3,7 @@ import { StorageProvider, useStorage } from "./contexts/StorageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/SharedComponents";
 import Dashboard from "./components/Dashboard";
+import CompaniesPage from "./components/CompaniesPage";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -17,6 +18,7 @@ function AppContent() {
   const { currentAudit, fsProvider, audits } = useStorage();
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
   const [settingsExpanded, setSettingsExpanded] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState("audit"); // 'audit' | 'companies'
 
   // Auto-save checkpoint ogni 30 secondi quando workspace collegato
   const checkpoint = useCheckpointSaver(currentAudit, fsProvider, {
@@ -38,6 +40,32 @@ function AppContent() {
     return <Login />;
   }
 
+  // Vista Anagrafica Aziende (Fase 1)
+  if (viewMode === "companies") {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="container header-flex">
+            <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
+            <div className="user-info">
+              <span className="user-name">👤 {user.full_name || user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
+            </div>
+          </div>
+        </header>
+        <main className="container">
+          <CompaniesPage onBack={() => setViewMode("audit")} />
+        </main>
+        <footer className="app-footer">
+          <div className="container">
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   // Se nessun audit selezionato E ci sono audit disponibili → mostra selector full-screen
   if (!currentAudit && audits.length > 0) {
     return (
@@ -45,7 +73,13 @@ function AppContent() {
         <header className="app-header">
           <div className="container header-flex">
             <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
-            <div className="user-info">
+            <div className="header-right">
+              <nav className="app-nav">
+                <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
+                  🏢 Anagrafica Aziende
+                </button>
+              </nav>
+              <div className="user-info">
               <span className="user-name">
                 👤 {user.full_name || user.name}
               </span>
@@ -53,6 +87,7 @@ function AppContent() {
               <button onClick={logout} className="btn-logout" title="Logout">
                 🚪 Esci
               </button>
+            </div>
             </div>
           </div>
         </header>
@@ -81,6 +116,11 @@ function AppContent() {
           <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
 
           <div className="header-right">
+            <nav className="app-nav">
+              <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
+                🏢 Aziende
+              </button>
+            </nav>
             {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}
             {currentAudit && (
               <WorkspaceManager compact={true} audit={currentAudit} />

@@ -362,6 +362,39 @@ class ApiService {
     }
 
     // ==========================================
+    // COMPANIES (Fase 1 Multi-Tenant)
+    // ==========================================
+
+    async getCompanies(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.get(`/companies${query ? '?' + query : ''}`);
+    }
+
+    async getCompany(id) {
+        return this.get(`/companies/${id}`);
+    }
+
+    async createCompany(data) {
+        return this.post('/companies', data);
+    }
+
+    async updateCompany(id, data) {
+        return this.put(`/companies/${id}`, data);
+    }
+
+    async deleteCompany(id) {
+        return this.delete(`/companies/${id}`);
+    }
+
+    async getAuditorOrgs() {
+        return this.get('/auditor-orgs');
+    }
+
+    async getAuditorOrg(id) {
+        return this.get(`/auditor-orgs/${id}`);
+    }
+
+    // ==========================================
     // CHECKLIST ENDPOINTS
     // ==========================================
 
