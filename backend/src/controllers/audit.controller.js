@@ -19,7 +19,9 @@ const logger = require('../utils/logger');
  */
 async function listAudits(req, res) {
     try {
-        const { organization_id } = req.user;
+        const { organization_id, auditor_org_id, role } = req.user;
+        const isSuperadmin = role === 'admin' && !auditor_org_id;
+
         const {
             status,
             year,
@@ -33,6 +35,12 @@ async function listAudits(req, res) {
         // Build WHERE clause dinamicamente
         let whereConditions = ['a.organization_id = @organization_id', 'a.is_deleted = 0'];
         let params = { organization_id, limit: parseInt(limit), offset };
+
+        // Filtro RBAC: auditor vede solo audit delle aziende del proprio studio
+        if (!isSuperadmin && auditor_org_id) {
+            whereConditions.push(`a.company_id IN (SELECT id FROM companies WHERE auditor_org_id = @auditor_org_id)`);
+            params.auditor_org_id = auditor_org_id;
+        }
 
         if (status) {
             whereConditions.push('a.status = @status');
@@ -131,7 +139,15 @@ async function listAudits(req, res) {
 async function getAuditById(req, res) {
     try {
         const { id } = req.params;
-        const { organization_id } = req.user;
+        const { organization_id, auditor_org_id, role } = req.user;
+        const isSuperadmin = role === 'admin' && !auditor_org_id;
+
+        let whereExtra = '';
+        const params = { id: parseInt(id), organization_id };
+        if (!isSuperadmin && auditor_org_id) {
+            whereExtra = ' AND (a.company_id IN (SELECT id FROM companies WHERE auditor_org_id = @auditor_org_id))';
+            params.auditor_org_id = auditor_org_id;
+        }
 
         const result = await query(`
       SELECT 
@@ -146,7 +162,8 @@ async function getAuditById(req, res) {
       WHERE a.audit_id = @id 
         AND a.organization_id = @organization_id
         AND a.is_deleted = 0
-    `, { id: parseInt(id), organization_id });
+        ${whereExtra}
+    `, params);
 
         if (result.recordset.length === 0) {
             return res.status(404).json({

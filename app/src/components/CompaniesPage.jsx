@@ -34,14 +34,25 @@ function CompaniesPage({ onBack }) {
 
   const loadCompanies = useCallback(async () => {
     const orgId = effectiveOrgId;
-    if (!orgId && isSuperadmin && auditorOrgs.length > 1) return; // superadmin deve selezionare
-    if (!orgId && !isSuperadmin) return;
+    if (!orgId) {
+      if (isSuperadmin && auditorOrgs.length === 0) {
+        setError("Nessun auditor org configurato. Verifica che la migration 020 sia stata eseguita.");
+      } else if (isSuperadmin && auditorOrgs.length > 1) {
+        setError("Seleziona uno studio dal menu sopra.");
+      } else if (!isSuperadmin) {
+        setError("Utente non associato a uno studio. Contatta l'amministratore.");
+      }
+      setCompanies([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const params = orgId ? { auditor_org_id: orgId } : {};
       const res = await apiService.getCompanies(params);
       setCompanies(res.data || []);
+      setError(null); // Pulisci eventuale errore da richiesta precedente
     } catch (err) {
       setError(err.message || "Errore caricamento aziende");
       setCompanies([]);

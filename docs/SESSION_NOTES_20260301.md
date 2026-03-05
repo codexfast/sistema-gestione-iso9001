@@ -1,6 +1,20 @@
-# Session Notes – 01 marzo 2026 (aggiornato 04/03)
+# Session Notes – 01 marzo 2026 (aggiornato 06/03)
 
 **Branch**: `main` | **Deploy**: Netlify auto da `main` | **Backend PID**: riavviato più volte, ultimo stabile
+
+---
+
+## 📌 PUNTO DI RIPRESA (06/03)
+
+**Da dove riprendere domani:**
+
+1. **Script SQL utenti**: `database/scripts/create_user.sql` — pronto per SSMS. Creare un utente auditor di test (es. `auditor@studio-rossi.it` con `auditor_org_id = 1`).
+
+2. **Verifiche da fare** (vedi `docs/MANUALE_OPERATIVO_FASE1.md`):
+   - Flusso Super Utente: passi 3.1 → 3.4 (Anagrafica Aziende, crea audit)
+   - Flusso Auditor: passi 4.1 → 4.3 (login come auditor, selettore azienda nel modal creazione audit)
+
+3. **Modifiche non ancora committate**: CompaniesPage (messaggi errore migliorati), MANUALE_OPERATIVO_FASE1.md, create_user.sql — verificare `git status` prima di procedere.
 
 ---
 
