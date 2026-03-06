@@ -6,6 +6,12 @@
 
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
+const path = require('path');
+const fs = require('fs').promises;
+const fsSync = require('fs');
+
+const LOGO_DIR = path.join(process.env.UPLOAD_DIR || './uploads', 'logos');
+if (!fsSync.existsSync(LOGO_DIR)) fsSync.mkdirSync(LOGO_DIR, { recursive: true });
 
 /**
  * Risolve auditor_org_id da usare per il filtro
@@ -53,7 +59,7 @@ async function listCompanies(req, res) {
         const whereClause = whereConditions.join(' AND ');
 
         const result = await query(`
-            SELECT id, auditor_org_id, name, vat_number, sector, address, is_active, created_at, updated_at
+            SELECT id, auditor_org_id, name, vat_number, sector, address, logo_url, is_active, created_at, updated_at
             FROM companies
             WHERE ${whereClause}
             ORDER BY name
@@ -92,7 +98,7 @@ async function getCompanyById(req, res) {
 
         const id = parseInt(req.params.id, 10);
         const result = await query(`
-            SELECT id, auditor_org_id, name, vat_number, sector, address, is_active, created_at, updated_at
+            SELECT id, auditor_org_id, name, vat_number, sector, address, logo_url, is_active, created_at, updated_at
             FROM companies
             WHERE id = @id AND auditor_org_id = @auditor_org_id
         `, { id, auditor_org_id: auditorOrgId });
@@ -189,7 +195,7 @@ async function updateCompany(req, res) {
         `, params);
 
         const updated = await query(`
-            SELECT id, auditor_org_id, name, vat_number, sector, address, is_active, created_at, updated_at
+            SELECT id, auditor_org_id, name, vat_number, sector, address, logo_url, is_active, created_at, updated_at
             FROM companies WHERE id = @id
         `, { id });
 
@@ -229,10 +235,137 @@ async function deleteCompany(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/companies/:id/logo
+ * Carica o aggiorna il logo aziendale
+ */
+async function uploadLogo(req, res) {
+    try {
+        const auditorOrgId = resolveAuditorOrgId(req);
+        if (!auditorOrgId) {
+            return res.status(403).json({ error: 'Auditor org richiesto', code: 'AUDITOR_ORG_REQUIRED' });
+        }
+
+        const id = parseInt(req.params.id, 10);
+
+        // Verifica ownership
+        const check = await query(
+            `SELECT id, logo_url FROM companies WHERE id = @id AND auditor_org_id = @auditor_org_id`,
+            { id, auditor_org_id: auditorOrgId }
+        );
+        if (check.recordset.length === 0) {
+            if (req.file) await fs.unlink(req.file.path).catch(() => {});
+            return res.status(404).json({ error: 'Azienda non trovata', code: 'NOT_FOUND' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'Nessun file ricevuto', code: 'NO_FILE' });
+        }
+
+        // Elimina vecchio logo se esiste
+        const oldLogoPath = check.recordset[0].logo_url;
+        if (oldLogoPath) {
+            const oldFile = path.join(process.env.UPLOAD_DIR || './uploads', oldLogoPath);
+            await fs.unlink(oldFile).catch(() => {});
+        }
+
+        // Sposta il file nella cartella logos con nome standard: logo_<id>.<ext>
+        const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
+        const logoFileName = `logo_${id}${ext}`;
+        const logoFilePath = path.join(LOGO_DIR, logoFileName);
+        await fs.rename(req.file.path, logoFilePath);
+
+        const logoUrl = `logos/${logoFileName}`;
+
+        await query(
+            `UPDATE companies SET logo_url = @logo_url, updated_at = GETDATE() WHERE id = @id`,
+            { id, logo_url: logoUrl }
+        );
+
+        logger.info(`[COMPANIES] Logo aggiornato per company ${id}: ${logoUrl}`);
+        res.json({ success: true, logo_url: logoUrl });
+    } catch (error) {
+        if (req.file) await fs.unlink(req.file.path).catch(() => {});
+        logger.error('[COMPANIES] uploadLogo error:', error);
+        res.status(500).json({ error: 'Errore upload logo', code: 'SERVER_ERROR' });
+    }
+}
+
+/**
+ * GET /api/v1/companies/:id/logo
+ * Serve il logo aziendale come immagine
+ */
+async function getLogo(req, res) {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const result = await query(
+            `SELECT logo_url FROM companies WHERE id = @id`,
+            { id }
+        );
+
+        if (result.recordset.length === 0 || !result.recordset[0].logo_url) {
+            return res.status(404).json({ error: 'Logo non trovato', code: 'NOT_FOUND' });
+        }
+
+        const logoPath = path.join(process.env.UPLOAD_DIR || './uploads', result.recordset[0].logo_url);
+        try {
+            await fs.access(logoPath);
+        } catch {
+            return res.status(404).json({ error: 'File logo non trovato sul server', code: 'FILE_NOT_FOUND' });
+        }
+
+        res.sendFile(path.resolve(logoPath));
+    } catch (error) {
+        logger.error('[COMPANIES] getLogo error:', error);
+        res.status(500).json({ error: 'Errore recupero logo', code: 'SERVER_ERROR' });
+    }
+}
+
+/**
+ * DELETE /api/v1/companies/:id/logo
+ * Rimuove il logo aziendale
+ */
+async function deleteLogo(req, res) {
+    try {
+        const auditorOrgId = resolveAuditorOrgId(req);
+        if (!auditorOrgId) {
+            return res.status(403).json({ error: 'Auditor org richiesto', code: 'AUDITOR_ORG_REQUIRED' });
+        }
+
+        const id = parseInt(req.params.id, 10);
+        const check = await query(
+            `SELECT id, logo_url FROM companies WHERE id = @id AND auditor_org_id = @auditor_org_id`,
+            { id, auditor_org_id: auditorOrgId }
+        );
+
+        if (check.recordset.length === 0) {
+            return res.status(404).json({ error: 'Azienda non trovata', code: 'NOT_FOUND' });
+        }
+
+        const logoPath = check.recordset[0].logo_url;
+        if (logoPath) {
+            const fullPath = path.join(process.env.UPLOAD_DIR || './uploads', logoPath);
+            await fs.unlink(fullPath).catch(() => {});
+            await query(
+                `UPDATE companies SET logo_url = NULL, updated_at = GETDATE() WHERE id = @id`,
+                { id }
+            );
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('[COMPANIES] deleteLogo error:', error);
+        res.status(500).json({ error: 'Errore eliminazione logo', code: 'SERVER_ERROR' });
+    }
+}
+
 module.exports = {
     listCompanies,
     getCompanyById,
     createCompany,
     updateCompany,
-    deleteCompany
+    deleteCompany,
+    uploadLogo,
+    getLogo,
+    deleteLogo
 };

@@ -38,10 +38,11 @@ import {
 
 // ─── Mappa standard → template ────────────────────────────────────────────────
 const TEMPLATE_MAP = {
-    'ISO_9001':  '/templates/ISO9001-audit-report.docx',
-    'ISO_14001': '/templates/ISO14001-audit-report.docx',
-    'ISO_45001': '/templates/ISO45001-audit-report.docx',
-    'default':   '/templates/ISO9001-audit-report.docx',
+    'ISO_9001':   '/templates/ISO9001-audit-report.docx',
+    'ISO_14001':  '/templates/ISO14001-audit-report.docx',
+    'ISO_45001':  '/templates/ISO45001-audit-report.docx',
+    'ISO_3834_2': '/templates/ISO3834-audit-report.docx',
+    'default':    '/templates/ISO9001-audit-report.docx',
 };
 
 function getTemplateUrl(audit) {
@@ -133,7 +134,8 @@ function replaceMarker(xml, marker, replacementXml) {
     return xml.slice(0, pStart) + replacementXml + xml.slice(pEnd + 6);
 }
 
-function injectOoxmlMarkers(zip, audit, getViewUrl) {
+function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
+    const imageRegistry = options.photoMode === 'preview' ? [] : null;
     let xml = zip.files['word/document.xml'].asText();
 
     xml = replaceMarker(
@@ -143,7 +145,9 @@ function injectOoxmlMarkers(zip, audit, getViewUrl) {
             audit.checklist,
             audit.attachments   || [],
             audit.pendingIssues || [],
-            getViewUrl
+            getViewUrl,
+            options,
+            imageRegistry
         )
     );
 
@@ -154,9 +158,41 @@ function injectOoxmlMarkers(zip, audit, getViewUrl) {
     );
 
     zip.file('word/document.xml', xml);
+
+    // Embedded images: aggiungi file media + relazioni nel zip
+    if (imageRegistry && imageRegistry.length > 0) {
+        embedImagesInZip(zip, imageRegistry);
+    }
 }
 
-async function generateDocxBlob(audit, getViewUrl) {
+/**
+ * Aggiunge le immagini al zip Word e aggiorna il file delle relazioni.
+ * @param {PizZip} zip
+ * @param {Array<{rId,imgId,base64,mimeType,ext}>} imageRegistry
+ */
+function embedImagesInZip(zip, imageRegistry) {
+    // Leggi relazioni esistenti
+    const relsPath = 'word/_rels/document.xml.rels';
+    let relsXml = zip.files[relsPath]?.asText() || '';
+
+    imageRegistry.forEach(({ rId, base64, mimeType, ext }) => {
+        // Strip il prefisso data URL: "data:image/jpeg;base64,..."
+        const b64Data = base64.includes(',') ? base64.split(',')[1] : base64;
+
+        // Scrivi nel zip come file binario
+        const mediaPath = `word/media/${rId}.${ext}`;
+        zip.file(mediaPath, b64Data, { base64: true });
+
+        // Aggiungi relazione
+        const relEntry = `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${rId}.${ext}"/>`;
+        relsXml = relsXml.replace('</Relationships>', relEntry + '</Relationships>');
+    });
+
+    zip.file(relsPath, relsXml);
+    console.log(`[wordExport] ${imageRegistry.length} immagini embedded nel documento.`);
+}
+
+async function generateDocxBlob(audit, getViewUrl, options = {}) {
     const templateUrl = getTemplateUrl(audit);
     let arrayBuffer;
     try {
@@ -180,11 +216,51 @@ async function generateDocxBlob(audit, getViewUrl) {
     doc.render(buildTemplateData(audit));
     const processedZip = doc.getZip();
 
-    injectOoxmlMarkers(processedZip, audit, getViewUrl);
+    // Se photoMode=preview, pre-carica le immagini come base64 prima di iniettare OOXML
+    if (options.photoMode === 'preview' && getViewUrl) {
+        await preloadImagesIntoAudit(audit, getViewUrl);
+    }
+
+    injectOoxmlMarkers(processedZip, audit, getViewUrl, options);
 
     return processedZip.generate({
         type:     'blob',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+}
+
+/**
+ * Pre-carica le immagini degli allegati come base64 per l'embedding nel Word.
+ * Modifica audit.attachments in-place aggiungendo imageBase64.
+ */
+async function preloadImagesIntoAudit(audit, getViewUrl) {
+    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const attachments = audit.attachments || [];
+    await Promise.allSettled(
+        attachments.map(async (att) => {
+            if (!imageTypes.includes(att.mimeType)) return;
+            const id = att.serverAttachmentId || att.id;
+            if (!id) return;
+            try {
+                const url = getViewUrl(id);
+                const resp = await fetch(url);
+                if (!resp.ok) return;
+                const blob = await resp.blob();
+                att.imageBase64 = await blobToBase64(blob);
+                att.imageMimeType = blob.type || att.mimeType;
+            } catch (e) {
+                console.warn('[wordExport] preload image failed for att', id, e.message);
+            }
+        })
+    );
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
     });
 }
 
@@ -196,9 +272,9 @@ function buildFileName(audit) {
 
 // ─── API pubblica (firma invariata rispetto alla versione precedente) ─────────
 
-export async function exportAuditToWord(audit, getViewUrl = null) {
+export async function exportAuditToWord(audit, getViewUrl = null, options = {}) {
     if (!audit?.metadata) throw new Error('Audit non valido: metadata mancante');
-    const blob     = await generateDocxBlob(audit, getViewUrl);
+    const blob     = await generateDocxBlob(audit, getViewUrl, options);
     const fileName = buildFileName(audit);
     saveAs(blob, fileName);
     return fileName;

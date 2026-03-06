@@ -254,15 +254,14 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
         let sanitizedValue = value;
 
         if (field === "notes" || field === "evidenceRef") {
-          // Trim whitespace per campi testo
-          sanitizedValue = typeof value === "string" ? value.trim() : value;
-
-          // Limita lunghezza (max 5000 caratteri per notes)
-          if (field === "notes" && sanitizedValue.length > 5000) {
+          // NON fare trim in tempo reale: causerebbe il bug della barra spaziatrice.
+          // Il trim avviene solo al momento del sync (syncService.js).
+          // Limita solo la lunghezza massima.
+          if (field === "notes" && typeof value === "string" && value.length > 5000) {
             console.warn(
-              `Note troppo lunghe (${sanitizedValue.length} caratteri), troncate a 5000`
+              `Note troppo lunghe (${value.length} caratteri), troncate a 5000`
             );
-            sanitizedValue = sanitizedValue.substring(0, 5000);
+            sanitizedValue = value.substring(0, 5000);
           }
         }
 

@@ -861,8 +861,8 @@ export function StorageProvider({ children, useMockData = false }) {
             title: q.questionText,
             text: q.questionText,
             questionId: q.questionId,
-            // clauseRef puntato: es. "4.1", "4.2", "5.1", "7.3", ecc.
-            clauseRef: `${section.sectionCode.replace('clause', '')}.${idx + 1}`,
+            // clauseRef: usa il valore esplicito dal template (norma ISO), altrimenti auto-generato
+            clauseRef: q.clauseRef || `${section.sectionCode.replace('clause', '')}.${idx + 1}`,
             // Inizializza risposta vuota
             status: "NOT_ANSWERED",
             score: null,
@@ -1115,6 +1115,7 @@ export function StorageProvider({ children, useMockData = false }) {
     // CRUD operations
     updateCurrentAudit,
     switchAudit,
+    deselectAudit: () => setCurrentAuditId(null),
     createAudit,
     duplicateAudit,
     deleteAudit,

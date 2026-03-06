@@ -18,6 +18,9 @@ function CompaniesPage({ onBack }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   const [formData, setFormData] = useState({ name: "", vat_number: "", sector: "", address: "" });
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [logoTimestamp, setLogoTimestamp] = useState(Date.now());
 
   const isSuperadmin = user?.role === "admin" && !user?.auditor_org_id;
 
@@ -81,6 +84,8 @@ function CompaniesPage({ onBack }) {
   const openCreate = () => {
     setEditingCompany(null);
     setFormData({ name: "", vat_number: "", sector: "", address: "" });
+    setLogoFile(null);
+    setLogoPreview(null);
     setModalOpen(true);
   };
 
@@ -92,26 +97,58 @@ function CompaniesPage({ onBack }) {
       sector: c.sector || "",
       address: c.address || "",
     });
+    setLogoFile(null);
+    setLogoPreview(c.logo_url ? apiService.getCompanyLogoUrl(c.id) + `?t=${logoTimestamp}` : null);
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setEditingCompany(null);
+    setLogoFile(null);
+    setLogoPreview(null);
+  };
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!editingCompany) { setLogoFile(null); setLogoPreview(null); return; }
+    if (!window.confirm("Rimuovere il logo?")) return;
+    try {
+      await apiService.deleteCompanyLogo(editingCompany.id);
+      setLogoFile(null);
+      setLogoPreview(null);
+      setLogoTimestamp(Date.now());
+      loadCompanies();
+    } catch (err) {
+      setError(err.message || "Errore rimozione logo");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name?.trim()) return;
     try {
+      let savedCompany;
       if (editingCompany) {
-        await apiService.updateCompany(editingCompany.id, formData);
+        const res = await apiService.updateCompany(editingCompany.id, formData);
+        savedCompany = res.data || res;
       } else {
-        if (!effectiveOrgId) {
-          setError("Seleziona un auditor org");
-          return;
-        }
-        await apiService.createCompany({ ...formData, auditor_org_id: effectiveOrgId });
+        if (!effectiveOrgId) { setError("Seleziona un auditor org"); return; }
+        const res = await apiService.createCompany({ ...formData, auditor_org_id: effectiveOrgId });
+        savedCompany = res.data || res;
+      }
+      // Upload logo se selezionato
+      if (logoFile && savedCompany?.id) {
+        await apiService.uploadCompanyLogo(savedCompany.id, logoFile);
+        setLogoTimestamp(Date.now());
       }
       closeModal();
       loadCompanies();
@@ -179,6 +216,7 @@ function CompaniesPage({ onBack }) {
             <table className="companies-table">
               <thead>
                 <tr>
+                  <th>Logo</th>
                   <th>Nome</th>
                   <th>P.IVA</th>
                   <th>Settore</th>
@@ -188,6 +226,18 @@ function CompaniesPage({ onBack }) {
               <tbody>
                 {companies.map((c) => (
                   <tr key={c.id}>
+                    <td className="company-logo-cell">
+                      {c.logo_url ? (
+                        <img
+                          src={apiService.getCompanyLogoUrl(c.id) + `?t=${logoTimestamp}`}
+                          alt={`Logo ${c.name}`}
+                          className="company-logo-thumb"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span className="company-logo-placeholder">—</span>
+                      )}
+                    </td>
                     <td>{c.name}</td>
                     <td>{c.vat_number || "—"}</td>
                     <td>{c.sector || "—"}</td>
@@ -240,6 +290,27 @@ function CompaniesPage({ onBack }) {
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   rows={2}
                 />
+              </div>
+              <div className="form-group">
+                <label>Logo aziendale</label>
+                <div className="logo-upload-area">
+                  {logoPreview && (
+                    <div className="logo-preview-container">
+                      <img src={logoPreview} alt="Anteprima logo" className="logo-preview" />
+                      <button type="button" className="btn-remove-logo" onClick={handleRemoveLogo} title="Rimuovi logo">✕</button>
+                    </div>
+                  )}
+                  <label className="btn-upload-logo">
+                    {logoPreview ? "Cambia logo" : "Carica logo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={handleLogoChange}
+                    />
+                  </label>
+                  <span className="logo-hint">JPG, PNG, SVG — max 2 MB</span>
+                </div>
               </div>
               <div className="form-actions">
                 <button type="button" onClick={closeModal}>Annulla</button>

@@ -386,6 +386,31 @@ class ApiService {
         return this.delete(`/companies/${id}`);
     }
 
+    async uploadCompanyLogo(id, file) {
+        const formData = new FormData();
+        formData.append('logo', file);
+        const token = this.getToken();
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${this.baseUrl}/companies/${id}/logo`, {
+            method: 'POST',
+            headers,
+            body: formData
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: 'Errore upload logo' }));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async deleteCompanyLogo(id) {
+        return this.delete(`/companies/${id}/logo`);
+    }
+
+    getCompanyLogoUrl(id) {
+        return `${this.baseUrl}/companies/${id}/logo`;
+    }
+
     async getAuditorOrgs() {
         return this.get('/auditor-orgs');
     }

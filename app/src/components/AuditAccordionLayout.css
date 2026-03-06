@@ -44,14 +44,48 @@
 
 .audit-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
+  flex-direction: column;
+  padding: 12px 20px 16px;
   background-color: #ffffff;
   border-bottom: 1px solid #d2d2d7;
   position: sticky;
   top: 0;
   z-index: 100;
+  gap: 8px;
+}
+
+.audit-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-back-to-list {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-weight: 500;
+}
+.btn-back-to-list:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.audit-save-status { font-size: 12px; }
+.save-indicator { padding: 3px 8px; border-radius: 10px; font-weight: 500; }
+.save-indicator.saving { color: #92400e; background: #fef3c7; }
+.save-indicator.saved   { color: #065f46; background: #d1fae5; }
+.save-indicator.pending { color: #6b7280; background: #f3f4f6; }
+
+.audit-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .audit-title {

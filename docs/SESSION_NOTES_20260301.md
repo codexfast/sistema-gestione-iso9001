@@ -4,17 +4,44 @@
 
 ---
 
-## 📌 PUNTO DI RIPRESA (06/03)
+## 📌 PUNTO DI RIPRESA
 
-**Da dove riprendere domani:**
+**Da dove riprendere: test + deploy**
 
-1. **Script SQL utenti**: `database/scripts/create_user.sql` — pronto per SSMS. Creare un utente auditor di test (es. `auditor@studio-rossi.it` con `auditor_org_id = 1`).
+1. **Test locale**: avviare backend + frontend, verificare:
+   - Upload logo azienda in Companies
+   - Dialog foto appare prima del report Word
+   - Export Word ISO 3834 funziona (richiede audit con standard ISO_3834_2)
+2. **Deploy backend**: copia `company.controller.js` + `company.routes.js` su server, riavvia backend
+3. **Deploy frontend**: `npm run build` → push → Netlify auto-deploy
+4. **Pagina Admin** (priorità bassa): UI gestione utenti
 
-2. **Verifiche da fare** (vedi `docs/MANUALE_OPERATIVO_FASE1.md`):
-   - Flusso Super Utente: passi 3.1 → 3.4 (Anagrafica Aziende, crea audit)
-   - Flusso Auditor: passi 4.1 → 4.3 (login come auditor, selettore azienda nel modal creazione audit)
+---
 
-3. **Modifiche non ancora committate**: CompaniesPage (messaggi errore migliorati), MANUALE_OPERATIVO_FASE1.md, create_user.sql — verificare `git status` prima di procedere.
+## ✅ Completato – sessione ISO 3834 (questa sessione)
+
+### ISO 3834-2 — Completato in due fasi
+
+**Sessione precedente (DB):**
+- Standard `ISO_3834_2` inserito (`standard_id = 6`)
+- 4 sezioni + 22 domande nel DB (migration 021)
+- `companies.logo_url NVARCHAR(500) NULL`
+
+**Questa sessione (Backend + Frontend + Template):**
+
+| Componente | File | Descrizione |
+|---|---|---|
+| Backend | `company.controller.js` | +`uploadLogo`, `getLogo`, `deleteLogo`; `logo_url` in tutte le SELECT |
+| Backend | `company.routes.js` | +`POST/GET/DELETE /companies/:id/logo` con multer immagini |
+| Frontend | `apiService.js` | +`uploadCompanyLogo`, `deleteCompanyLogo`, `getCompanyLogoUrl` |
+| Frontend | `CompaniesPage.jsx` | Logo thumbnail in lista + upload nel modal |
+| Frontend | `ExportPanel.jsx` | Dialog scelta foto (link / anteprima+link) prima del Word export |
+| Helpers | `wordExport.js` | `photoMode` option + `preloadImagesIntoAudit` + `embedImagesInZip` |
+| Helpers | `wordExportHelpers.js` | `buildClauseTableOoxml` con embedded OOXML per immagini |
+| Template | `ISO3834-audit-report.docx` | Generato da `generateTemplate3834.js` |
+| Mappa | `wordExport.js` `TEMPLATE_MAP` | `ISO_3834_2` → `ISO3834-audit-report.docx` |
+
+**Fonte del template:** File `RDP_MSN-260127-01_REV_0.docx` (Mason Srl) — analizzato, 22 domande estratte.
 
 ---
 

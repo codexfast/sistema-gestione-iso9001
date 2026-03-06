@@ -19,6 +19,9 @@ const ExportPanel = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [photoMode, setPhotoMode] = useState("link"); // "link" | "preview"
+  const [showPhotoDialog, setShowPhotoDialog] = useState(false);
+  const [pendingExportFn, setPendingExportFn] = useState(null);
 
   // Development mode - mostra formati avanzati JSON/CSV
   const isDev = process.env.NODE_ENV === "development";
@@ -51,9 +54,29 @@ const ExportPanel = () => {
     }
   };
 
+  // Avvia il dialog di scelta foto, poi esegue la funzione export
+  const askPhotoModeAndExport = (exportFn) => {
+    setPendingExportFn(() => exportFn);
+    setShowPhotoDialog(true);
+  };
+
+  const confirmPhotoDialog = async () => {
+    setShowPhotoDialog(false);
+    if (pendingExportFn) await pendingExportFn(photoMode);
+    setPendingExportFn(null);
+  };
+
+  const cancelPhotoDialog = () => {
+    setShowPhotoDialog(false);
+    setPendingExportFn(null);
+  };
+
   const handleExportWord = async () => {
     if (!currentAudit) return;
+    askPhotoModeAndExport((mode) => doExportWord(mode));
+  };
 
+  const doExportWord = async (mode) => {
     try {
       setIsExporting(true);
 
@@ -125,7 +148,7 @@ const ExportPanel = () => {
         ? (id) => `${apiService.baseUrl}/attachments/${id}/view?token=${encodeURIComponent(rawToken)}`
         : null;
 
-      const fileName = await exportAuditToWord(auditForExport, getViewUrl);
+      const fileName = await exportAuditToWord(auditForExport, getViewUrl, { photoMode: mode });
       showMessage(`✅ Report Word generato: ${fileName}`, "success");
     } catch (error) {
       console.error("Errore export Word:", error);
@@ -137,6 +160,10 @@ const ExportPanel = () => {
 
   const handleExportToFileSystem = async () => {
     if (!currentAudit) return;
+    askPhotoModeAndExport((mode) => doExportToFileSystem(mode));
+  };
+
+  const doExportToFileSystem = async (mode) => {
 
     // Se fsProvider è pronto, usa exportAuditToWorkspace (struttura ISO 9001)
     if (fsProvider?.ready()) {
@@ -237,7 +264,53 @@ const ExportPanel = () => {
 
   return (
     <div className="export-panel">
-      {/* Rimosso export-header duplicato - titolo già nell'accordion */}
+      {/* Dialog scelta modalità foto */}
+      {showPhotoDialog && (
+        <div className="photo-dialog-overlay">
+          <div className="photo-dialog">
+            <h4>Modalità foto nel report</h4>
+            <p className="photo-dialog-desc">Come vuoi includere le foto degli allegati nel documento Word?</p>
+            <div className="photo-options">
+              <label className={`photo-option ${photoMode === "link" ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="photoMode"
+                  value="link"
+                  checked={photoMode === "link"}
+                  onChange={() => setPhotoMode("link")}
+                />
+                <div className="photo-option-content">
+                  <span className="photo-option-icon">🔗</span>
+                  <div>
+                    <strong>Solo link</strong>
+                    <p>Testo cliccabile al file originale. Documento più leggero.</p>
+                  </div>
+                </div>
+              </label>
+              <label className={`photo-option ${photoMode === "preview" ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="photoMode"
+                  value="preview"
+                  checked={photoMode === "preview"}
+                  onChange={() => setPhotoMode("preview")}
+                />
+                <div className="photo-option-content">
+                  <span className="photo-option-icon">🖼️</span>
+                  <div>
+                    <strong>Anteprima + link</strong>
+                    <p>Miniatura incorporata (200px) + link al file originale.</p>
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div className="photo-dialog-actions">
+              <button type="button" className="btn btn-secondary" onClick={cancelPhotoDialog}>Annulla</button>
+              <button type="button" className="btn btn-word" onClick={confirmPhotoDialog}>Genera Report</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Export Message Notification */}
       {exportMessage && (

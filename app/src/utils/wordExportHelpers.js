@@ -16,9 +16,10 @@
 
 // Nomi leggibili dei standard — aggiungere qui nuovi standard
 const STANDARD_LABELS = {
-    ISO_9001:  'ISO 9001:2015 — Sistema di Gestione per la Qualità',
-    ISO_14001: 'ISO 14001:2015 — Sistema di Gestione Ambientale',
-    ISO_45001: 'ISO 45001:2018 — Sistema di Gestione per la Salute e Sicurezza sul Lavoro',
+    ISO_9001:   'ISO 9001:2015 — Sistema di Gestione per la Qualità',
+    ISO_14001:  'ISO 14001:2015 — Sistema di Gestione Ambientale',
+    ISO_45001:  'ISO 45001:2018 — Sistema di Gestione per la Salute e Sicurezza sul Lavoro',
+    ISO_3834_2: 'ISO 3834-2:2021 — Requisiti di qualità per la saldatura per fusione',
 };
 
 /**
@@ -92,12 +93,13 @@ function xmlRun(text, opts = {}) {
 }
 
 function xmlPara(content, opts = {}) {
-    const jc  = opts.align     ? `<w:jc w:val="${opts.align}"/>` : '';
-    const sp  = (opts.sb != null || opts.sa != null)
+    const style = opts.style    ? `<w:pStyle w:val="${opts.style}"/>` : '';
+    const jc    = opts.align    ? `<w:jc w:val="${opts.align}"/>` : '';
+    const sp    = (opts.sb != null || opts.sa != null)
         ? `<w:spacing w:before="${opts.sb ?? 0}" w:after="${opts.sa ?? 160}"/>` : '';
-    const pb  = opts.pageBreak ? '<w:pageBreakBefore/>' : '';
-    const pPr = (jc||sp||pb)   ? `<w:pPr>${jc}${sp}${pb}</w:pPr>` : '';
-    const body = Array.isArray(content)
+    const pb    = opts.pageBreak ? '<w:pageBreakBefore/>' : '';
+    const pPr   = (style||jc||sp||pb) ? `<w:pPr>${style}${jc}${sp}${pb}</w:pPr>` : '';
+    const body  = Array.isArray(content)
         ? content.join('')
         : (typeof content === 'string' && content.startsWith('<w:'))
             ? content
@@ -182,8 +184,18 @@ function buildPendingIssuesOoxml(pendingIssues = []) {
     return xmlTable([headerRow, ...dataRows], PCT);
 }
 
+// ─── Helpers immagini embedded ────────────────────────────────────────────────
+const IMAGE_EXTS = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
+const IMAGE_MIME_TYPES = new Set(Object.keys(IMAGE_EXTS));
+
+/** Genera OOXML per un'immagine embedded (200x150px → 1905000x1428750 EMU) */
+function xmlImageOoxml(rId, imgId, widthEmu = 1905000, heightEmu = 1428750) {
+    const name = `img${imgId}`;
+    return `<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${widthEmu}" cy="${heightEmu}"/><wp:docPr id="${imgId}" name="${name}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm><a:prstGeom xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+}
+
 // ─── Tabella singola clausola ──────────────────────────────────────────────────
-function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl = null) {
+function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl = null, options = {}, imageRegistry = null) {
     const COL = [45, 18, 37];
 
     const headerRow = xmlRow([
@@ -199,7 +211,9 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
         ], COL);
     }
 
+    const usePreview = options.photoMode === 'preview' && Array.isArray(imageRegistry);
     const allRows = [headerRow];
+
     questions.forEach(q => {
         const cfg   = STATUS_CFG[q.status] || STATUS_CFG.NOT_ANSWERED;
         const qRef  = q.clauseRef || '';
@@ -218,17 +232,41 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
         const qAtts = qId != null
             ? (auditAttachments || []).filter(a => Number(a.questionId) === Number(qId))
             : [];
+
         if (qAtts.length) {
-            const attText = '\uD83D\uDCCE Allegati: ' + qAtts.map(a => {
+            qAtts.forEach(a => {
                 const name = escXml(a.fileName || a.name || 'File');
-                const aId  = a.id || a.attachment_id;
-                const url  = (getViewUrl && aId) ? '  [' + getViewUrl(aId) + ']' : '';
-                return name + url;
-            }).join('  |  ');
-            allRows.push(xmlRow([
-                xmlCell(xmlPara(xmlRun(attText, { color: '1E40AF', size: 18 }), { sa: 0 }),
-                    { span: 3, fill: 'EFF6FF', ml: 150 }),
-            ]));
+                const aId  = a.id || a.attachment_id || a.serverAttachmentId;
+                const url  = (getViewUrl && aId) ? getViewUrl(aId) : null;
+                const isImage = IMAGE_MIME_TYPES.has(a.mimeType);
+
+                if (usePreview && isImage && a.imageBase64) {
+                    // Registra immagine e usa rId dedicato (base: 100 + indice per evitare collisioni)
+                    const imgIdx = imageRegistry.length;
+                    const rId = `rId${100 + imgIdx}`;
+                    const imgId = 100 + imgIdx;
+                    const ext = IMAGE_EXTS[a.mimeType] || 'jpg';
+                    imageRegistry.push({ rId, imgId, base64: a.imageBase64, mimeType: a.mimeType, ext });
+
+                    const imgXml = xmlImageOoxml(rId, imgId);
+                    const linkText = url ? `  \uD83D\uDD17 ${name}  [${url}]` : `  ${name}`;
+                    allRows.push(xmlRow([
+                        xmlCell(
+                            `<w:p><w:pPr><w:jc w:val="left"/></w:pPr>${imgXml}</w:p>` +
+                            xmlPara(xmlRun(escXml(linkText), { color: '1E40AF', size: 18 }), { sa: 0 }),
+                            { span: 3, fill: 'EFF6FF', ml: 150 }
+                        ),
+                    ]));
+                } else {
+                    // Modalità link (default)
+                    const linkPart = url ? `  [${url}]` : '';
+                    const attText = '\uD83D\uDCCE ' + name + linkPart;
+                    allRows.push(xmlRow([
+                        xmlCell(xmlPara(xmlRun(attText, { color: '1E40AF', size: 18 }), { sa: 0 }),
+                            { span: 3, fill: 'EFF6FF', ml: 150 }),
+                    ]));
+                }
+            });
         }
     });
 
@@ -236,7 +274,7 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
 }
 
 // ─── Sezione checklist completa (iniettata in CHECKLIST_MARKER) ───────────────
-export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null) {
+export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null) {
     let xml = '';
 
     xml += xmlPara('3 - RILIEVI PENDENTI', { sb: 0, sa: 300 });
@@ -247,7 +285,6 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
     Object.entries(checklist).forEach(([stdKey, normData]) => {
         if (!normData || typeof normData !== 'object') return;
 
-        // Intestazione di standard (es. "CHECKLIST — ISO 14001:2015 …")
         const stdLabel = STANDARD_LABELS[stdKey] || stdKey;
         xml += xmlPara('', { pageBreak: true, sa: 0 });
         xml += xmlPara(
@@ -264,8 +301,13 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
                 if (!clause || typeof clause !== 'object') return;
                 const num   = extractSectionNum(clauseKey);
                 const title = (clause.title || '').replace(/^\d+\.?\s*[-–]\s*/, '');
-                xml += xmlPara(escXml(num + ' — ' + title.toUpperCase()), { sb: 400, sa: 200 });
-                xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl);
+                const headingText = num + ' \u2014 ' + title.toUpperCase();
+                // Usa Heading2: appare nel sommario (TOC) del documento Word
+                xml += xmlPara(
+                    xmlRun(headingText, { bold: true, size: 24, color: '1D4ED8' }),
+                    { style: 'Heading2', pageBreak: true, sb: 0, sa: 200 }
+                );
+                xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl, options, imageRegistry);
                 xml += xmlPara('', { sa: 300 });
             });
     });

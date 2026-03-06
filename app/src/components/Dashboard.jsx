@@ -9,7 +9,7 @@ import "./Dashboard.css";
  * Tab legacy e debug rimossi per evitare confusione
  */
 const Dashboard = () => {
-  const { currentAudit, updateCurrentAudit } = useStorage();
+  const { currentAudit, updateCurrentAudit, deselectAudit, isSaving, allSaved } = useStorage();
 
   const handleMetadataUpdate = (field, value) => {
     updateCurrentAudit((audit) => ({
@@ -28,6 +28,9 @@ const Dashboard = () => {
       <AuditAccordionLayout
         currentAudit={currentAudit}
         onUpdate={handleMetadataUpdate}
+        onBack={deselectAudit}
+        isSaving={isSaving}
+        allSaved={allSaved}
       />
     </div>
   );

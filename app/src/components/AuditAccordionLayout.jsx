@@ -23,7 +23,7 @@ const STANDARD_INIT_MAP = {
   ISO_45001: ["ISO_45001", "ISO_45001_2018"],
 };
 
-function AuditAccordionLayout({ currentAudit, onUpdate }) {
+function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSaved }) {
   const { initializeChecklist, fetchAndApplyServerResponses } = useStorage();
 
   // Stato per gestire quali sezioni sono aperte
@@ -157,23 +157,45 @@ function AuditAccordionLayout({ currentAudit, onUpdate }) {
     <div className="audit-accordion-layout">
       {/* Header con info audit */}
       <div className="audit-header">
-        <div className="audit-title">
-          <h1>{currentAudit.metadata.clientName}</h1>
-          <span className="audit-number">
-            Audit N. {currentAudit.metadata.auditNumber}
-          </span>
+        <div className="audit-header-top">
+          {onBack && (
+            <button
+              type="button"
+              className="btn-back-to-list"
+              onClick={onBack}
+              title="Torna alla lista audit"
+            >
+              ← Lista Audit
+            </button>
+          )}
+          <div className="audit-save-status">
+            {isSaving
+              ? <span className="save-indicator saving">⏳ Salvataggio...</span>
+              : allSaved
+                ? <span className="save-indicator saved">✓ Salvato</span>
+                : <span className="save-indicator pending">● In attesa</span>
+            }
+          </div>
         </div>
-        <div className="audit-meta">
-          <span
-            className={`audit-status status-${currentAudit.metadata.status.toLowerCase()}`}
-          >
-            {currentAudit.metadata.status}
-          </span>
-          <span className="audit-date">
-            {new Date(currentAudit.metadata.lastModified).toLocaleDateString(
-              "it-IT"
-            )}
-          </span>
+        <div className="audit-header-main">
+          <div className="audit-title">
+            <h1>{currentAudit.metadata.clientName}</h1>
+            <span className="audit-number">
+              Audit N. {currentAudit.metadata.auditNumber}
+            </span>
+          </div>
+          <div className="audit-meta">
+            <span
+              className={`audit-status status-${currentAudit.metadata.status.toLowerCase()}`}
+            >
+              {currentAudit.metadata.status}
+            </span>
+            <span className="audit-date">
+              {new Date(currentAudit.metadata.lastModified).toLocaleDateString(
+                "it-IT"
+              )}
+            </span>
+          </div>
         </div>
       </div>
 
