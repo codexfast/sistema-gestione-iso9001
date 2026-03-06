@@ -1,9 +1,9 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 04 marzo 2026
-> **Prossimo Step**: ~~Chiusura bug Fase 0~~ ✅ → **Inizio Fase 1: DB multi-tenant**
-> **Riferimenti**: `CURSOR_HANDOFF.md` (stato sessione) | `docs/DATABASE_SCHEMA.md` (schema DB)
+> **Ultimo Aggiornamento**: 06 marzo 2026
+> **Prossimo Step**: Test end-to-end con auditor su produzione → poi Pagina Admin utenti
+> **Riferimenti**: `docs/SESSION_NOTES_20260301.md` (stato aggiornato) | `docs/DATABASE_SCHEMA.md` (schema DB)
 
 ---
 
@@ -29,32 +29,34 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 
 ---
 
-## Stato Avanzamento al 03/03/2026
+## Stato Avanzamento al 06/03/2026
 
 | Area | Descrizione | Status |
 |---|---|---|
-| DB migrations 001-018 | Schema base, checklist, allegati, pending_issues | Completato |
-| Auth / JWT | Cookie httpOnly, CORS, authenticateDownload | Completato |
-| Checklist ISO 9001 | 35 domande da DB, 6 stati C/NC/OSS/OM/NA/NV | Completato |
-| Checklist ISO 14001 | 46 domande da DB, sezioni 14001_s4/14001_s5 | Completato |
-| Audit CRUD | Crea, modifica, elimina, lista, statistiche | Completato |
-| Sync offline-first | IndexedDB + server-wins + retry/backoff | Completato |
-| Allegati | Upload, preview blob, replace desktop, delete | Completato |
-| Rilievi pendenti | PendingIssuesCascade + pending_issues table | Completato |
-| Re-audit | checkReaudit endpoint + AuditSelector | Completato |
-| Export Word ISO 9001 | Template-based con docxtemplater + pizzip | Completato |
-| Multi-standard UI | Tab ISO 9001 + ISO 14001, fix 4 bug 9894ed5 | Completato |
-| Fix sync multi-standard | standard_ids array, auditConverter, checkbox | Completato (6317215) |
-| Export Word ISO 14001 | Intestazioni per standard + numerazione corretta | Completato (c4da815) |
-| Rilievi pendenti in Word | ExportPanel usa checkReaudit + getNcResponses | Completato (già presente) |
-| Fix Auth Mobile ADR-004 | localStorage JWT già implementato in apiService.js | Completato (già presente) |
-| Bug: rilievi caricamento | Pulsante Riprova aggiunto, issue probabile rate-limiter | Completato (531dc1a) |
-| Bug: checklist vuota reload | STANDARD_INIT_MAP in AuditAccordionLayout | Completato (531dc1a) |
-| **Fase 1: DB multi-tenant** | companies, auditor_orgs, user_org_roles, subscriptions | Completato |
-| **Server come fonte di verità** | Cache IndexedDB sostituita ad ogni download server | Completato (04/03) |
-| **Dev locale robusto** | Proxy Vite, SW disabilitato su localhost | Completato (04/03) |
+| DB migrations 001-018 | Schema base, checklist, allegati, pending_issues | ✅ Completato |
+| Auth / JWT | Cookie httpOnly, CORS, authenticateDownload | ✅ Completato |
+| Checklist ISO 9001 | 35 domande, clauseRef esatti da documento originale | ✅ Completato (06/03) |
+| Checklist ISO 14001 | 46 domande da DB, sezioni 14001_s4/14001_s5 | ✅ Completato |
+| Audit CRUD | Crea, modifica, elimina, lista, statistiche | ✅ Completato |
+| Sync offline-first | IndexedDB + server-wins + retry/backoff | ✅ Completato |
+| Allegati | Upload, preview blob, replace desktop, delete | ✅ Completato |
+| Rilievi pendenti | PendingIssuesCascade + pending_issues table | ✅ Completato |
+| Re-audit | checkReaudit endpoint + AuditSelector | ✅ Completato |
+| Export Word ISO 9001 | Template + Heading2 per TOC + clauseRef corretti | ✅ Completato (06/03) |
+| Export Word ISO 14001 | Intestazioni per standard + numerazione corretta | ✅ Completato |
+| Multi-standard UI | Tab ISO 9001 + ISO 14001, fix 4 bug 9894ed5 | ✅ Completato |
+| Fix sync multi-standard | standard_ids array, auditConverter, checkbox | ✅ Completato |
+| **Fase 1: DB multi-tenant** | companies, auditor_orgs, user_org_roles, subscriptions | ✅ Completato |
+| **Server come fonte di verità** | Cache IndexedDB sostituita ad ogni download server | ✅ Completato |
+| **Dev locale robusto** | Proxy Vite, SW disabilitato su localhost | ✅ Completato |
+| **Logo azienda** | Upload/preview/delete logo in CompaniesPage; logo_url nel DB | ✅ Completato (06/03) |
+| **ISO 3834-2** | Standard, sezioni DB, template Word generato | ✅ Completato (06/03) |
+| **UX audit** | Pulsante "← Lista Audit" + indicatore salvataggio | ✅ Completato (06/03) |
+| **Fix campo Note** | Barra spaziatrice funzionante (rimosso trim live) | ✅ Completato (06/03) |
+| Export Word ISO 3834 | Da testare su produzione | 🔲 Da testare |
+| Pagina Admin utenti | UI gestione utenti e abbonamenti | 🔲 Backlog |
 
-**Progress Overall**: ~75% funzionalità core
+**Progress Overall**: ~80% funzionalità core
 
 ---
 
@@ -247,5 +249,5 @@ custom_questions  (id, checklist_id FK, question_text, expected_answer, weight, 
 
 ---
 
-**Ultimo Aggiornamento**: 04 marzo 2026
-**Prossimo Review**: dopo completamento migration Fase 1 (DB multi-tenant)
+**Ultimo Aggiornamento**: 06 marzo 2026
+**Prossimo Review**: dopo test end-to-end con auditor su produzione

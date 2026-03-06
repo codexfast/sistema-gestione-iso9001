@@ -1,20 +1,72 @@
-# Session Notes – 01 marzo 2026 (aggiornato 06/03)
+# Session Notes – 01 marzo 2026 (aggiornato 06/03/2026)
 
-**Branch**: `main` | **Deploy**: Netlify auto da `main` | **Backend PID**: riavviato più volte, ultimo stabile
+**Branch**: `main` | **Deploy**: Netlify live `https://systemgest.netlify.app` | **Commit**: `29fd421`
 
 ---
 
-## 📌 PUNTO DI RIPRESA
+## 📌 PUNTO DI RIPRESA — 07/03/2026
 
-**Da dove riprendere: test + deploy**
+**Stato**: ✅ Deploy completato e stabile. Pronto per test con auditor.
 
-1. **Test locale**: avviare backend + frontend, verificare:
-   - Upload logo azienda in Companies
-   - Dialog foto appare prima del report Word
-   - Export Word ISO 3834 funziona (richiede audit con standard ISO_3834_2)
-2. **Deploy backend**: copia `company.controller.js` + `company.routes.js` su server, riavvia backend
-3. **Deploy frontend**: `npm run build` → push → Netlify auto-deploy
+**Prossime priorità:**
+
+1. **Test funzionale con l'auditor** su `https://systemgest.netlify.app`:
+   - Verificare che clauseRef (5.2.1, 7.1.2, 8.4.1, 9.1.1 ecc.) siano visibili nella checklist
+   - Verificare che il pulsante "← Lista Audit" funzioni
+   - Verificare che la barra spaziatrice nelle note funzioni
+   - Generare un export Word ISO 9001 e controllare il sommario (deve mostrare clausole 4→10)
+
+2. **Test export ISO 3834** (nuovo standard — non ancora testato su produzione):
+   - Creare un audit con standard `ISO_3834_2`
+   - Verificare che il template Word si generi correttamente
+
+3. **Logo azienda** (dalla sessione precedente — non ancora testato su produzione):
+   - Aprire Anagrafica Aziende → caricare logo → verificare thumbnail
+   - Verificare che logo sia visibile nel report Word
+
 4. **Pagina Admin** (priorità bassa): UI gestione utenti
+
+---
+
+## ✅ Completato – sessione 06/03/2026 (fix auditor + deploy)
+
+### Fix segnalati dall'auditor dopo test — tutti risolti e deployati
+
+**Commit**: `29fd421` — deploy Netlify + backend riavviato
+
+#### B1 — Barra spaziatrice non funzionante nel campo Note
+- **Causa**: `value.trim()` applicato ad ogni keystroke in `ChecklistModule.jsx` → spazi rimossi in tempo reale
+- **Fix**: rimosso `trim()` dall'aggiornamento live; limite lunghezza 5000 char mantenuto
+- **File**: `app/src/components/ChecklistModule.jsx`
+
+#### B2+B3 — Nessun modo di uscire dall'audit / salvataggio non visibile
+- **Fix B2**: pulsante **"← Lista Audit"** nell'header di ogni audit → torna alla selezione
+- **Fix B3**: indicatore stato salvataggio: `⏳ Salvataggio...` / `✓ Salvato` / `● In attesa`
+- **File**: `AuditAccordionLayout.jsx` + `AuditAccordionLayout.css` + `Dashboard.jsx` + `StorageContext.jsx`
+- **Dettaglio**: aggiunto `deselectAudit: () => setCurrentAuditId(null)` nel context; passato come `onBack` all'accordion
+
+#### C1-C4 — Struttura checklist ISO 9001 non corrispondente al documento originale
+Verificato contro il file originale: `Check List Audit/Report Audit Sistema Gestione ISO 9001_Quesiti.docx`
+
+| Problema | Soluzione |
+|---|---|
+| Numerazione auto 5.1→5.4 invece di 5.1, 5.2.1, 5.2.2, 5.3 | Aggiunti clauseRef espliciti nel template |
+| Numerazione auto 7.1→7.9 invece di 7.1.2→7.1.5.2, 7.2→7.5 | Aggiunti clauseRef espliciti nel template |
+| 8.2.2 invece di 8.2 / 8.4 invece di 8.4.1 / 8.7 invece di 8.7.2 | Corretti clauseRef |
+| 9.1 invece di 9.1.1 / 9.2 invece di 9.2.2 / 9.3 invece di 9.3.3 | Corretti clauseRef |
+| 3 domande aggiunte in eccesso (6.3, 7.1.1, 7.1.6) non nel documento originale | `is_active=0` nel DB (IDs 191, 192, 193) |
+
+**Totale domande ISO 9001 attive nel DB: 35** ✅ (stesso numero del documento originale)
+
+- **File DB**: migration scripts in `backend/scripts/run-migration-022.js`, `fix-display-orders.js`
+- **File frontend**: `app/src/data/checklistTemplates.js` — tutte le 35 domande con `clauseRef` esplicito
+- **File context**: `StorageContext.jsx` — usa `q.clauseRef` dal template invece di auto-generarlo
+
+#### W1 — Titoli sezioni nel Word saltavano da sezione 2 a sezione 11 nel sommario
+- **Causa**: i titoli delle clausole 4→10 iniettati come semplici paragrafi non appaiono nel TOC Word
+- **Fix**: i titoli usano ora lo stile `Heading2` (`<w:pStyle w:val="Heading2"/>`) → visibili nel sommario
+- **Effetto aggiuntivo**: ogni clausola inizia su una nuova pagina (page break before heading)
+- **File**: `app/src/utils/wordExportHelpers.js` — `xmlPara` supporta nuovo parametro `style`; `buildChecklistSectionOoxml` usa `{ style: 'Heading2' }`
 
 ---
 
