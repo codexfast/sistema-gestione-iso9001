@@ -19,7 +19,7 @@ export const ISO_9001_TEMPLATE = {
   sections: [
     {
       sectionCode: "clause4",
-      sectionTitle: "Contesto dell'Organizzazione",
+      sectionTitle: "4 – Contesto dell'Organizzazione",
       displayOrder: 1,
       questions: [
         { questionId: 87,  clauseRef: "4.1", questionText: "Comprendere l'Organizzazione e il suo contesto", questionType: "conformity", isMandatory: true, displayOrder: 1 },
@@ -30,7 +30,7 @@ export const ISO_9001_TEMPLATE = {
     },
     {
       sectionCode: "clause5",
-      sectionTitle: "Leadership",
+      sectionTitle: "5 – Leadership",
       displayOrder: 2,
       questions: [
         { questionId: 91,  clauseRef: "5.1",   questionText: "Leadership e Impegno", questionType: "conformity", isMandatory: true, displayOrder: 5 },
@@ -41,7 +41,7 @@ export const ISO_9001_TEMPLATE = {
     },
     {
       sectionCode: "clause6",
-      sectionTitle: "Pianificazione",
+      sectionTitle: "6 – Pianificazione",
       displayOrder: 3,
       questions: [
         { questionId: 95, clauseRef: "6.1", questionText: "Azioni per affrontare rischi e opportunità", questionType: "conformity", isMandatory: true, displayOrder: 9 },
@@ -50,7 +50,7 @@ export const ISO_9001_TEMPLATE = {
     },
     {
       sectionCode: "clause7",
-      sectionTitle: "Supporto",
+      sectionTitle: "7 – Supporto",
       displayOrder: 4,
       questions: [
         { questionId: 97,  clauseRef: "7.1.2",   questionText: "Persone", questionType: "conformity", isMandatory: true, displayOrder: 13 },
@@ -66,7 +66,7 @@ export const ISO_9001_TEMPLATE = {
     },
     {
       sectionCode: "clause8",
-      sectionTitle: "Attività Operative",
+      sectionTitle: "8 – Attività Operative",
       displayOrder: 5,
       questions: [
         { questionId: 106, clauseRef: "8.2",   questionText: "Requisiti per prodotti e servizi", questionType: "conformity", isMandatory: true, displayOrder: 23 },
@@ -83,7 +83,7 @@ export const ISO_9001_TEMPLATE = {
     },
     {
       sectionCode: "clause9",
-      sectionTitle: "Valutazione delle Prestazioni",
+      sectionTitle: "9 – Valutazione delle Prestazioni",
       displayOrder: 6,
       questions: [
         { questionId: 116, clauseRef: "9.1.1", questionText: "Valutazione delle prestazioni del SGQ (KPI)", questionType: "conformity", isMandatory: true, displayOrder: 33 },
@@ -94,7 +94,7 @@ export const ISO_9001_TEMPLATE = {
     },
     {
       sectionCode: "clause10",
-      sectionTitle: "Miglioramento",
+      sectionTitle: "10 – Miglioramento",
       displayOrder: 7,
       questions: [
         { questionId: 120, clauseRef: "10.2", questionText: "Non conformità e Azioni Correttive", questionType: "conformity", isMandatory: true, displayOrder: 37 },
