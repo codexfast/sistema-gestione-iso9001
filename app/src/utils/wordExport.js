@@ -81,7 +81,7 @@ function buildTemplateData(audit) {
             : (gd.referenceDocuments || 'UNI EN ISO 9001:2015'),
         processes:              gd.processes     || 'Tutti i processi aziendali',
         programCommunicatedDate: formatDate(gd.programCommunicatedDate),
-        auditor:                meta.auditor     || 'N/D',
+        auditor:                meta.auditorName || meta.auditors?.[0] || meta.auditor || 'N/D',
         objectiveDescription:   obj.description  ||
             'Verificare il grado di implementazione del Sistema di Gestione della Qualit\u00e0 ' +
             'secondo la norma UNI EN ISO 9001:2015.',

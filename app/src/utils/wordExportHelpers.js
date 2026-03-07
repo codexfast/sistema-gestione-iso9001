@@ -325,24 +325,24 @@ function buildCertFindingsOoxml(certFindings = []) {
 export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null, certFindings = []) {
     let xml = '';
 
-    xml += xmlPara('3 - RILIEVI PENDENTI', { sb: 0, sa: 300 });
+    // Capitolo 3 — Rilievi Pendenti (Titolo1 = stesso livello di cap. 1, 2, 11)
+    xml += xmlPara(
+        xmlRun('3 \u2014 RILIEVI PENDENTI', { bold: true, size: 24, color: '1D4ED8' }),
+        { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
+    );
     xml += buildPendingIssuesOoxml(pendingIssues);
 
-    xml += xmlPara('', { sa: 200 }); // spaziatura
-    xml += xmlPara('1.4 - RILIEVI DELL\'ENTE CERTIFICATORE', { sb: 0, sa: 300 });
+    // Capitolo 3.1 — Rilievi Ente Certificatore (Titolo2 = sottocapitolo di 3)
+    xml += xmlPara(
+        xmlRun('3.1 \u2014 RILIEVI DELL\'ENTE CERTIFICATORE', { bold: true, size: 22, color: '1D4ED8' }),
+        { style: 'Titolo2', sb: 200, sa: 200 }
+    );
     xml += buildCertFindingsOoxml(certFindings);
 
     if (!checklist || !Object.keys(checklist).length) return xml;
 
     Object.entries(checklist).forEach(([stdKey, normData]) => {
         if (!normData || typeof normData !== 'object') return;
-
-        const stdLabel = STANDARD_LABELS[stdKey] || stdKey;
-        xml += xmlPara('', { pageBreak: true, sa: 0 });
-        xml += xmlPara(
-            escXml('CHECKLIST — ' + stdLabel),
-            { sb: 0, sa: 300 }
-        );
 
         Object.entries(normData)
             .sort(([a], [b]) =>
@@ -354,10 +354,10 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
                 const num   = extractSectionNum(clauseKey);
                 const title = (clause.title || '').replace(/^\d+\.?\s*[-–]\s*/, '');
                 const headingText = num + ' \u2014 ' + title.toUpperCase();
-                // Usa Heading2: appare nel sommario (TOC) del documento Word
+                // Titolo1: appare nel sommario Word (stile italiano del template)
                 xml += xmlPara(
                     xmlRun(headingText, { bold: true, size: 24, color: '1D4ED8' }),
-                    { style: 'Heading2', pageBreak: true, sb: 0, sa: 200 }
+                    { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
                 );
                 xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl, options, imageRegistry);
                 xml += xmlPara('', { sa: 300 });
