@@ -109,7 +109,8 @@ function xmlPara(content, opts = {}) {
 
 function xmlCell(content, opts = {}) {
     const span = opts.span ? `<w:gridSpan w:val="${opts.span}"/>` : '';
-    const w    = opts.pct  ? `<w:tcW w:w="${opts.pct * 50}" w:type="pct"/>` : '';
+    const w    = opts.dxa  ? `<w:tcW w:w="${opts.dxa}" w:type="dxa"/>` :
+                 opts.pct  ? `<w:tcW w:w="${opts.pct * 50}" w:type="pct"/>` : '';
     const fill = opts.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${opts.fill}"/>` : '';
     const va   = `<w:vAlign w:val="${opts.va ?? 'center'}"/>`;
     const ml   = opts.ml ?? 100, mr = opts.mr ?? 100;
@@ -135,9 +136,16 @@ const STD_BORDERS = [
     '</w:tblBorders>',
 ].join('');
 
-function xmlTable(rows, colPcts = [], pct = 100) {
-    const grid = colPcts.length
-        ? `<w:tblGrid>${colPcts.map(p => `<w:gridCol w:w="${p * 50}"/>`).join('')}</w:tblGrid>`
+function xmlTable(rows, colWidths = [], pct = 100, useDxa = false) {
+    if (useDxa) {
+        const totalDxa = colWidths.reduce((s, w) => s + w, 0);
+        const grid = colWidths.length
+            ? `<w:tblGrid>${colWidths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`
+            : '<w:tblGrid/>';
+        return `<w:tbl><w:tblPr><w:tblW w:w="${totalDxa}" w:type="dxa"/>${STD_BORDERS}</w:tblPr>${grid}${rows.join('')}</w:tbl>`;
+    }
+    const grid = colWidths.length
+        ? `<w:tblGrid>${colWidths.map(p => `<w:gridCol w:w="${p * 50}"/>`).join('')}</w:tblGrid>`
         : '<w:tblGrid/>';
     return `<w:tbl><w:tblPr><w:tblW w:w="${pct * 50}" w:type="pct"/>${STD_BORDERS}</w:tblPr>${grid}${rows.join('')}</w:tbl>`;
 }
@@ -195,20 +203,24 @@ function xmlImageOoxml(rId, imgId, widthEmu = 1905000, heightEmu = 1428750) {
 }
 
 // ─── Tabella singola clausola ──────────────────────────────────────────────────
+// Larghezze colonne in DXA (1cm ≈ 567 DXA) con margini stretti 1.27cm:
+//   Col1: 3.70cm = 2098 DXA  |  Col2: 2.70cm = 1531 DXA  |  Col3: 12.07cm = 6844 DXA
+const CLAUSE_COL_DXA = [2098, 1531, 6844];
+
 function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl = null, options = {}, imageRegistry = null) {
-    const COL = [45, 18, 37];
+    const C = CLAUSE_COL_DXA;
 
     const headerRow = xmlRow([
-        xmlCell(xmlPara(xmlRun('Attivit\u00e0/processo',                     { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: COL[0] }),
-        xmlCell(xmlPara(xmlRun('Valutazione di efficacia',                    { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: COL[1] }),
-        xmlCell(xmlPara(xmlRun('Dettaglio attivit\u00e0 operative auditate', { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: COL[2] }),
+        xmlCell(xmlPara(xmlRun('Attivit\u00e0/processo',                     { bold: true }), { align: 'center' }), { fill: 'E5E7EB', dxa: C[0] }),
+        xmlCell(xmlPara(xmlRun('Valutazione di efficacia',                    { bold: true }), { align: 'center' }), { fill: 'E5E7EB', dxa: C[1] }),
+        xmlCell(xmlPara(xmlRun('Dettaglio attivit\u00e0 operative auditate', { bold: true }), { align: 'center' }), { fill: 'E5E7EB', dxa: C[2] }),
     ], { header: true });
 
     if (!questions.length) {
         return xmlTable([
             headerRow,
             xmlRow([xmlCell(xmlPara('Nessuna domanda presente.', { ital: true }), { span: 3 })]),
-        ], COL);
+        ], C, 100, true);
     }
 
     const usePreview = options.photoMode === 'preview' && Array.isArray(imageRegistry);
@@ -222,10 +234,10 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
         const notes = (q.notes && q.notes.trim()) ? escXml(q.notes.trim()) : '\u2014';
 
         allRows.push(xmlRow([
-            xmlCell(xmlPara(full,  { sa: 0 }), { pct: COL[0], va: 'top' }),
+            xmlCell(xmlPara(full,  { sa: 0 }), { dxa: C[0], va: 'top' }),
             xmlCell(xmlPara(xmlRun(cfg.label, { bold: true, color: cfg.text }), { align: 'center' }),
-                { fill: cfg.fill, pct: COL[1] }),
-            xmlCell(xmlPara(notes, { sa: 0 }), { pct: COL[2], va: 'top' }),
+                { fill: cfg.fill, dxa: C[1] }),
+            xmlCell(xmlPara(notes, { sa: 0 }), { dxa: C[2], va: 'top' }),
         ]));
 
         const qId   = q.questionId;
@@ -241,7 +253,6 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
                 const isImage = IMAGE_MIME_TYPES.has(a.mimeType);
 
                 if (usePreview && isImage && a.imageBase64) {
-                    // Registra immagine e usa rId dedicato (base: 100 + indice per evitare collisioni)
                     const imgIdx = imageRegistry.length;
                     const rId = `rId${100 + imgIdx}`;
                     const imgId = 100 + imgIdx;
@@ -258,7 +269,6 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
                         ),
                     ]));
                 } else {
-                    // Modalità link (default)
                     const linkPart = url ? `  [${url}]` : '';
                     const attText = '\uD83D\uDCCE ' + name + linkPart;
                     allRows.push(xmlRow([
@@ -270,7 +280,7 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
         }
     });
 
-    return xmlTable(allRows, COL);
+    return xmlTable(allRows, C, 100, true);
 }
 
 // ─── Rilievi ente certificatore (sezione 1.4) ─────────────────────────────────

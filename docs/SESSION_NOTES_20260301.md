@@ -1,30 +1,73 @@
-# Session Notes – 01 marzo 2026 (aggiornato 06/03/2026)
+# Session Notes – 01 marzo 2026 (aggiornato 07/03/2026)
 
-**Branch**: `main` | **Deploy**: Netlify live `https://systemgest.netlify.app` | **Commit**: `29fd421`
+**Branch**: `main` | **Deploy**: Netlify live `https://systemgest.netlify.app` | **Commit**: `vedi sotto`
 
 ---
 
-## 📌 PUNTO DI RIPRESA — 07/03/2026
+## 📌 PUNTO DI RIPRESA — PROSSIMA SESSIONE
 
-**Stato**: ✅ Deploy completato e stabile. Pronto per test con auditor.
+**Stato**: ✅ Deploy completato. Fix sommario Word e layout checklist applicati.
 
 **Prossime priorità:**
 
-1. **Test funzionale con l'auditor** su `https://systemgest.netlify.app`:
-   - Verificare che clauseRef (5.2.1, 7.1.2, 8.4.1, 9.1.1 ecc.) siano visibili nella checklist
-   - Verificare che il pulsante "← Lista Audit" funzioni
-   - Verificare che la barra spaziatrice nelle note funzioni
-   - Generare un export Word ISO 9001 e controllare il sommario (deve mostrare clausole 4→10)
+1. **Test export Word** su `https://systemgest.netlify.app` con audit ERAM:
+   - Verificare sommario completo (cap. 1, 2, 3, 3.1, 4→10, 11)
+   - Verificare margini stretti e larghezze colonne checklist
+   - Verificare campo VERIFICATORE valorizzato
 
-2. **Test export ISO 3834** (nuovo standard — non ancora testato su produzione):
-   - Creare un audit con standard `ISO_3834_2`
-   - Verificare che il template Word si generi correttamente
+2. **Decisione architetturale discussa** — prossimi sviluppi concordati:
+   - ISO 14001: duplicare struttura 9001 con checklist da norma PDF ✅ norma disponibile
+   - ISO 45001: stessa cosa ✅ norma disponibile
+   - Modulo SAL (Stato Avanzamento Lavori): nuovo tipo documento per Camellini
+   - Modulo RDP (Rapporto di Prova): nuovo tipo documento per Mason/ISO 3834
 
-3. **Logo azienda** (dalla sessione precedente — non ancora testato su produzione):
+3. **Logo azienda** (non ancora testato su produzione):
    - Aprire Anagrafica Aziende → caricare logo → verificare thumbnail
-   - Verificare che logo sia visibile nel report Word
 
 4. **Pagina Admin** (priorità bassa): UI gestione utenti
+
+---
+
+## ✅ Completato – sessione 07/03/2026 (fix Word: sommario, layout, auditor)
+
+### Fix report Word ISO 9001 — tutti completati e deployati
+
+**Commit**: `e2ad5b8` + successivo — deploy Netlify attivo
+
+#### W2 — Sommario Word incompleto (solo cap. 1, 2, 11)
+- **Causa**: Il template Word è in italiano → stili `Titolo1`/`Titolo2`, non `Heading1`/`Heading2`
+- **Fix**: Cambiate tutte le `style: 'Heading2'` in `style: 'Titolo1'` (capitoli 3–10) e `Titolo2` per sottocapitoli
+- **Risultato atteso**: Sommario mostra tutti i capitoli 1→11 più sottocapitoli
+- **File**: `app/src/utils/wordExportHelpers.js`
+
+#### W3 — Sezione 1.4 Rilievi Ente posizionata dopo cap. 3
+- **Fix**: Rinumerata come cap. **3.1** (sottocapitolo di 3 – Rilievi Pendenti), con stile `Titolo2`
+- **File**: `app/src/utils/wordExportHelpers.js`
+
+#### W4 — VERIFICATORE sempre "N/D"
+- **Causa**: `wordExport.js` leggeva `meta.auditor` ma il campo si chiama `meta.auditorName`
+- **Fix**: `auditor: meta.auditorName || meta.auditors?.[0] || meta.auditor || 'N/D'`
+- **File**: `app/src/utils/wordExport.js`
+
+#### W5 — Larghezze colonne checklist e margini pagina
+- **Fix colonne**: Passate da percentuale approssimativa a **DXA esatti**:
+  - Col 1 "Attività/processo": **3.70 cm** = 2098 DXA
+  - Col 2 "Valutazione": **2.70 cm** = 1531 DXA
+  - Col 3 "Dettaglio": **12.07 cm** = 6844 DXA
+- **Fix margini**: Impostati **margini stretti (1.27 cm = 720 DXA)** direttamente via JS
+  (regex su `sectPr` in `injectOoxmlMarkers` — evita manipolazione binaria del template)
+- **File**: `app/src/utils/wordExportHelpers.js`, `app/src/utils/wordExport.js`
+
+#### Fix backend — Endpoint rilievi certificatore non trovato
+- **Causa**: Due percorsi errati nei nuovi file: `../middleware/auth` → `../middleware/auth.middleware`
+  e `../db/connection` → `../config/database`
+- **Fix**: Corretti entrambi i `require()` e backend riavviato
+- **File**: `backend/src/routes/certificationFindings.routes.js`, `backend/src/controllers/certificationFindings.controller.js`
+
+### Discussione architetturale
+- Analizzati 4 scenari d'uso: audit sistema, audit terza parte, consulenza/SAL, rapporti di prova
+- Caricate normative PDF: ISO 14001, ISO 45001, ISO 3834-1/3/5 (leggibili dal tool)
+- Definita roadmap per prossime fasi (vedi PUNTO DI RIPRESA)
 
 ---
 

@@ -158,6 +158,13 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
         buildRileviSummaryOoxml(audit.checklist)
     );
 
+    // Margini stretti (1.27 cm = 720 DXA) — sostituisce i margini del template
+    // senza toccare il file .docx sorgente (evita manipolazione binaria)
+    xml = xml.replace(
+        /w:top="\d+" w:right="\d+" w:bottom="\d+" w:left="\d+"([^/]*w:header)/,
+        'w:top="720" w:right="720" w:bottom="720" w:left="720"$1'
+    );
+
     zip.file('word/document.xml', xml);
 
     // Embedded images: aggiungi file media + relazioni nel zip

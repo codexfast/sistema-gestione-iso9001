@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true }); // mergeParams per accedere a :companyId
-const { authenticate } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth.middleware');
 const {
   listFindings, createFinding, updateFinding, deleteFinding
 } = require('../controllers/certificationFindings.controller');

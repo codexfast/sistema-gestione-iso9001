@@ -3,7 +3,7 @@
  * Rilievi dell'ente certificatore (ACCREDIA, Bureau Veritas, TÜV, ecc.)
  * Legati all'azienda: persistono tra un audit e l'altro finché non chiusi.
  */
-const { query } = require('../db/connection');
+const { query } = require('../config/database');
 const logger = require('../utils/logger');
 
 /**
