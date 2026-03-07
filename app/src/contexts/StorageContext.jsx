@@ -302,16 +302,24 @@ export function StorageProvider({ children, useMockData = false }) {
               
               // Se il server non ha ancora generalData ma il locale sì, preserva il locale
               // e marca per upload immediato verso il server
-              const hasRichDataLocal = localAudit?.generalData || localAudit?.auditObjective || localAudit?.auditOutcome;
+              // Nota: i campi ricchi possono essere sia nel top-level che dentro metadata
+              const localGD = localAudit?.metadata?.generalData ?? localAudit?.generalData;
+              const localAO = localAudit?.metadata?.auditObjective ?? localAudit?.auditObjective;
+              const localAOut = localAudit?.metadata?.auditOutcome ?? localAudit?.auditOutcome;
+              const hasRichDataLocal = localGD || localAO || localAOut;
               const hasRichDataServer = serverAudit?.generalData || serverAudit?.auditObjective || serverAudit?.auditOutcome;
               
               let merged = { ...serverAudit };
               
               if (hasRichDataLocal && !hasRichDataServer) {
                 // Server non ha ancora i dati: usa locale e pianifica sync verso server
-                merged.generalData = localAudit.generalData;
-                merged.auditObjective = localAudit.auditObjective;
-                merged.auditOutcome = localAudit.auditOutcome;
+                // Ripristina dentro metadata (dove Dashboard si aspetta di trovarli)
+                merged.metadata = {
+                  ...merged.metadata,
+                  generalData: localGD,
+                  auditObjective: localAO,
+                  auditOutcome: localAOut,
+                };
                 auditsToUploadRichData.push(merged);
               }
               
@@ -339,9 +347,9 @@ export function StorageProvider({ children, useMockData = false }) {
               audit_type: a.metadata?.auditType,
               status: a.metadata?.status,
               updated_at: new Date().toISOString(),
-              generalData: a.generalData,
-              auditObjective: a.auditObjective,
-              auditOutcome: a.auditOutcome,
+              generalData: a.metadata?.generalData ?? a.generalData,
+              auditObjective: a.metadata?.auditObjective ?? a.auditObjective,
+              auditOutcome: a.metadata?.auditOutcome ?? a.auditOutcome,
             }).catch(() => {});
           }
         }
@@ -615,9 +623,10 @@ export function StorageProvider({ children, useMockData = false }) {
                   standard_id: 1, // ISO 9001
                   updated_at: syncUpdatedAt,
                   // Campi ricchi: persistenza multi-device
-                  generalData: updated.generalData,
-                  auditObjective: updated.auditObjective,
-                  auditOutcome: updated.auditOutcome,
+                  // Nota: Dashboard li salva dentro metadata (handleMetadataUpdate)
+                  generalData: updated.metadata?.generalData ?? updated.generalData,
+                  auditObjective: updated.metadata?.auditObjective ?? updated.auditObjective,
+                  auditOutcome: updated.metadata?.auditOutcome ?? updated.auditOutcome,
                 })
                 .catch((err) => {
                   console.error("❌ [SYNC] Errore enqueue update:", err);

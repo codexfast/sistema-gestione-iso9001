@@ -20,11 +20,7 @@ export function backendToFrontend(backendAudit) {
 
     return {
         id: backendAudit.audit_uuid || `audit-${backendAudit.audit_id}`,
-        // Campi ricchi: generalData, auditObjective, auditOutcome (ripristinati dal DB)
-        ...(extraData.generalData   ? { generalData:   extraData.generalData   } : {}),
-        ...(extraData.auditObjective ? { auditObjective: extraData.auditObjective } : {}),
-        ...(extraData.auditOutcome  ? { auditOutcome:  extraData.auditOutcome  } : {}),
-        metadata: {
+            metadata: {
             id: backendAudit.audit_uuid || `audit-${backendAudit.audit_id}`,
             auditId: backendAudit.audit_id, // Mantieni ID numerico server
             auditNumber: backendAudit.audit_number || '',
@@ -65,6 +61,10 @@ export function backendToFrontend(backendAudit) {
             })(),
             createdAt: backendAudit.created_at,
             updatedAt: backendAudit.updated_at,
+            // Campi ricchi: ripristinati da audit_extra_data dove Dashboard li aspetta
+            ...(extraData.generalData    ? { generalData:    extraData.generalData    } : {}),
+            ...(extraData.auditObjective ? { auditObjective: extraData.auditObjective } : {}),
+            ...(extraData.auditOutcome   ? { auditOutcome:   extraData.auditOutcome   } : {}),
         },
         checklist: {
             ISO_9001: {} // Vuoto, verrà popolato al primo accesso
