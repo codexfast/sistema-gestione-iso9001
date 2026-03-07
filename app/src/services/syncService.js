@@ -295,6 +295,12 @@ export class SyncService {
                 typeof c === 'number' ? c : (STANDARD_CODE_TO_ID[c] ?? 1)
             );
 
+            // Raccoglie i campi ricchi (dati generali, obiettivo, esito) in un unico JSON
+            const auditExtraData = {};
+            if (auditData.generalData) auditExtraData.generalData = auditData.generalData;
+            if (auditData.auditObjective) auditExtraData.auditObjective = auditData.auditObjective;
+            if (auditData.auditOutcome) auditExtraData.auditOutcome = auditData.auditOutcome;
+
             const mappedAudit = {
                 ...auditData,
                 // standard_id scalare (retrocompatibilità campo legacy audits.standard_id)
@@ -303,6 +309,8 @@ export class SyncService {
                 standard_ids: resolvedIds,
                 // company_id da metadata (Fase 1 multi-tenant)
                 company_id: auditData.metadata?.companyId ?? auditData.company_id ?? null,
+                // Persistenza campi ricchi (generalData, auditObjective, auditOutcome)
+                audit_extra_data: Object.keys(auditExtraData).length > 0 ? auditExtraData : null,
             };
 
             // Rimuovi campi legacy frontend per pulire payload

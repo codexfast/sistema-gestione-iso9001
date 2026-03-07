@@ -13,8 +13,17 @@
 export function backendToFrontend(backendAudit) {
     if (!backendAudit) return null;
 
+    // Estrae i campi ricchi da audit_extra_data (JSON serializzato dal server)
+    const extraData = backendAudit.audit_extra_data && typeof backendAudit.audit_extra_data === 'object'
+        ? backendAudit.audit_extra_data
+        : {};
+
     return {
         id: backendAudit.audit_uuid || `audit-${backendAudit.audit_id}`,
+        // Campi ricchi: generalData, auditObjective, auditOutcome (ripristinati dal DB)
+        ...(extraData.generalData   ? { generalData:   extraData.generalData   } : {}),
+        ...(extraData.auditObjective ? { auditObjective: extraData.auditObjective } : {}),
+        ...(extraData.auditOutcome  ? { auditOutcome:  extraData.auditOutcome  } : {}),
         metadata: {
             id: backendAudit.audit_uuid || `audit-${backendAudit.audit_id}`,
             auditId: backendAudit.audit_id, // Mantieni ID numerico server

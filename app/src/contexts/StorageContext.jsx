@@ -564,6 +564,7 @@ export function StorageProvider({ children, useMockData = false }) {
                   audit_uuid: auditUuid, // Backend richiede audit_uuid
                   audit_number: updated.metadata?.auditNumber,
                   client_name: updated.metadata?.clientName,
+                  company_id: updated.metadata?.companyId ?? null,
                   project_year: updated.metadata?.projectYear,
                   audit_date: updated.metadata?.auditDate,
                   auditor_name: updated.metadata?.auditorName,
@@ -573,6 +574,10 @@ export function StorageProvider({ children, useMockData = false }) {
                   ...calculatedMetrics, // Metriche calcolate da checklist
                   standard_id: 1, // ISO 9001
                   updated_at: syncUpdatedAt,
+                  // Campi ricchi: persistenza multi-device
+                  generalData: updated.generalData,
+                  auditObjective: updated.auditObjective,
+                  auditOutcome: updated.auditOutcome,
                 })
                 .catch((err) => {
                   console.error("❌ [SYNC] Errore enqueue update:", err);
