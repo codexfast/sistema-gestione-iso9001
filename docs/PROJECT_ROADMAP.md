@@ -7,6 +7,60 @@
 
 ---
 
+## Visione Strategica Aggiornata (07/03/2026) — 4 Scenari, 2 Clienti
+
+### I 4 Scenari d'uso emersi
+
+| # | Scenario | Chi lo usa | Standard | Output |
+|---|---|---|---|---|
+| 1 | **Audit di sistema** | Camellini | ISO 9001 / 14001 / 45001 | Report audit + checklist C/NC/NA |
+| 2 | **Audit di terza parte** | Camellini / Mason | Norme del committente | Report audit con ref. normative committente |
+| 3 | **Consulenza / SAL** | Camellini | ISO 9001 / 14001 / 45001 | Tabella avanzamento requisiti (Discusso/In corso/Completato) |
+| 4 | **Rapporto di Prova** | Mason | ISO 3834 | Report con misure, prove, foto obbligatorie |
+
+### I 2 clienti attuali
+
+**Marco Camellini** — Auditor sistemi di gestione
+- Scenario 1: audit ISO 9001 ✅ (in produzione), ISO 14001 e 45001 (da completare)
+- Scenario 3: SAL documentale per aziende in fase di implementazione SGQ
+
+**Mason** — Coordinatore di saldatura
+- Scenario 4: Rapporti di Prova ISO 3834-2 con evidenze fotografiche
+- Template di riferimento: `Check List Audit/RDP_MSN-260127-01_REV_0.docx`
+
+### Risorse normative disponibili (leggibili dal tool)
+| File | Norma | Uso previsto |
+|---|---|---|
+| `Normative/UNI EN ISO 9001_2015 Rev. 0.txt` | ISO 9001:2015 | Checklist ✅ |
+| `Normative/...UNI EN ISO 14001_2015 Rev. 0.pdf` | ISO 14001:2015 | Checklist da costruire |
+| `Normative/...UNI ISO 45001_2018 Rev. 0.pdf` | ISO 45001:2018 | Checklist da costruire |
+| `Normative/...UNI EN ISO 3834-1_2021 Rev. 0.pdf` | ISO 3834-1 | Criteri scelta livello |
+| `Normative/...UNI EN ISO 3834-3_2021 Rev. 0.pdf` | ISO 3834-3 | Requisiti livello intermedio |
+| `Normative/...UNI EN ISO 3834-5_2021 Rev. 0.pdf` | ISO 3834-5 | Documenti e record |
+
+### Cosa differenzia i 4 scenari tecnicamente
+
+| Elemento | Scenario 1 | Scenario 2 | Scenario 3 | Scenario 4 |
+|---|---|---|---|---|
+| Tipo risposta | C/NC/NA/OSS/OM | C/NC/NA | Discusso/In corso/Completato | Conforme/NC + misure |
+| Riferimento norma | Standard ISO | **Norme committente** | Standard ISO | ISO 3834 + spec. committente |
+| Foto/allegati | Opzionale | Opzionale | No | **Obbligatorio** |
+| Struttura UI | Accordion sezioni | Accordion sezioni | Tabella tracker | Form + gallery foto |
+| Template Word | Report audit | Report audit terza parte | SAL avanzamento | Rapporto di prova |
+
+### Scenario 2 — soluzione per ref. normative committente
+Il campo `clauseRef` (già presente nella checklist) serve come ancoraggio normativo.
+Per audit di terza parte, l'auditor aggiunge nelle note o in un campo "Riferimento committente"
+la procedura specifica richiesta dal cliente — non serve una checklist per ogni committente.
+
+### Campo `norm_excerpt` — feature trasversale (tutti gli scenari)
+Nel report ISO 14001 del cliente, sotto ogni punto auditato appare lo stralcio della norma.
+**Piano**: aggiungere colonna `norm_excerpt NVARCHAR(MAX)` in `checklist_questions`.
+Il testo può essere pre-caricato dalle normative PDF (già disponibili e leggibili).
+Impatto: report Word molto più professionali, nessuna modifica alla UI.
+
+---
+
 ## Visione Strategica (decisione 03/03/2026)
 
 Il progetto evolve da **MVP mono-tenant** a **piattaforma SaaS multi-tenant** per studi di consulenza ISO.
@@ -29,7 +83,7 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 
 ---
 
-## Stato Avanzamento al 06/03/2026
+## Stato Avanzamento al 07/03/2026
 
 | Area | Descrizione | Status |
 |---|---|---|
@@ -54,23 +108,32 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 | **UX audit** | Pulsante "← Lista Audit" + indicatore salvataggio | ✅ Completato (06/03) |
 | **Fix campo Note** | Barra spaziatrice funzionante (rimosso trim live) | ✅ Completato (06/03) |
 | Export Word ISO 3834 | Da testare su produzione | 🔲 Da testare |
+| **Fix sommario Word** | Stili Titolo1/2, colonne DXA, margini stretti | ✅ Completato (07/03) |
+| **Fix VERIFICATORE** | Campo meta.auditorName corretto | ✅ Completato (07/03) |
+| **Fix backend paths** | require() corretti in certificationFindings | ✅ Completato (07/03) |
 | Pagina Admin utenti | UI gestione utenti e abbonamenti | 🔲 Backlog |
+| ISO 14001 checklist completa | Da norma PDF disponibile | 🔲 Prossima priorità |
+| ISO 45001 checklist | Da norma PDF disponibile | 🔲 Backlog |
+| Modulo SAL (Scenario 3) | Nuovo tipo documento per Camellini | 🔲 Backlog |
+| Modulo RDP (Scenario 4) | Nuovo tipo documento per Mason | 🔲 Backlog |
+| Campo norm_excerpt | Stralcio norma nel report Word | 🔲 Backlog |
 
-**Progress Overall**: ~80% funzionalità core
+**Progress Overall**: ~82% funzionalità core Scenario 1
 
 ---
 
 ## Roadmap per Fasi
 
-### Fase 0 — Chiusura bug minori (1-2 settimane) — PROSSIMA
+### Fase 0 — Chiusura bug minori e completamento Scenario 1 — PROSSIMA
 
 | # | Task | File | Note |
 |---|---|---|---|
-| 0.1 | Bug rilievi pendenti errore caricamento | `PendingIssuesCascade.jsx` | Timing o auth token non disponibile al mount |
-| 0.2 | Bug checklist vuota dopo reload | `StorageContext.jsx`, `fetchAndApplyServerResponses` | Verificare dopo primo sync con nuovo backend |
-| 0.3 | Fix Auth Mobile (ADR-004) | `auth.controller.js`, `apiService.js`, `AuthContext.jsx` | localStorage JWT — prerequisito per mobile |
-| 0.4 | Export Word ISO 14001 | `wordExport.js`, `wordExportHelpers.js` | 46 domande sezione ISO 14001 |
+| 0.1 | Test export Word ISO 9001 sommario | produzione | Verificare cap. 1→11, colonne, margini |
+| 0.2 | ISO 14001 checklist da norma PDF | DB migration + `checklistTemplates.js` | Norma già disponibile e leggibile |
+| 0.3 | ISO 45001 checklist da norma PDF | DB migration + `checklistTemplates.js` | Norma già disponibile e leggibile |
+| 0.4 | Campo norm_excerpt in checklist_questions | DB + wordExportHelpers.js | Alto impatto, bassa complessità |
 | 0.5 | Rilievi pendenti reali in Word | `wordExport.js` | RILIEVI_MARKER → GET /audits/:id/pending-issues |
+| 0.6 | Fix Auth Mobile (ADR-004) | `auth.controller.js`, `apiService.js` | localStorage JWT — prerequisito per mobile |
 
 ---
 
@@ -120,6 +183,42 @@ Fase 0.3 (Auth Mobile ADR-004) — prerequisito
 Fase 2 — SyncService v3: store attachments_offline in IndexedDB v3
           StorageQuotaService: monitor spazio ogni 5 min, warning a 60%, cleanup a 80%
           ConnectionStatusBanner: indicatore permanente online/offline
+```
+
+---
+
+### Fase 0.B — Nuovi Moduli Documento (Scenario 3 e 4)
+
+Questi moduli hanno struttura dati e UI completamente diversi dall'audit checklist.
+Vanno costruiti come **tipi documento separati** identificati da `document_type` in `audits`.
+
+#### Modulo SAL — Stato Avanzamento Lavori (Scenario 3 — Camellini)
+**Riferimento**: `Check List Audit/CLIENTE - SAL documentale iso 14001 - 9001 - 45001.docx`
+**Struttura**: tabella requisiti × stati (Discusso / In corso / Da validare / Completato)
+**Colori**: ogni standard ha un colore (nero=tutti, rosso=45001, verde=14001, blu=9001)
+
+```
+DB: aggiungere document_type IN ('audit', 'sal', 'rdp') in tabella audits
+UI: nuovo componente SALModule.jsx con tabella tracker
+Word: template SAL separato con legenda colori
+```
+
+#### Modulo RDP — Rapporto di Prova (Scenario 4 — Mason)
+**Riferimento**: `Check List Audit/RDP_MSN-260127-01_REV_0.docx`
+**Struttura**: sezioni con prove tecniche, misure, fotografie obbligatorie, valutazione risultato
+**Differenza chiave**: foto NON opzionali, struttura per prova (non per clausola ISO)
+
+```
+DB: tabella rdp_sections, rdp_tests (test_name, expected_value, measured_value, result)
+UI: nuovo componente RDPModule.jsx con form prove + EvidenceManager obbligatorio
+Word: template RDP con tabelle prove e galleria foto embedded
+```
+
+#### Struttura `document_type` in `audits`
+```sql
+ALTER TABLE audits ADD document_type NVARCHAR(20) NOT NULL DEFAULT 'audit'
+  CONSTRAINT CK_audits_doc_type CHECK (document_type IN ('audit', 'sal', 'rdp'));
+-- Migration graduale: tutti gli audit esistenti rimangono 'audit'
 ```
 
 ---
@@ -246,8 +345,13 @@ custom_questions  (id, checklist_id FK, question_text, expected_answer, weight, 
 | Dark launch per nuove feature | Auditor ricevono feature solo quando collaudate — zero interruzioni |
 | client_name → company_id FK (Fase 1) | Retrocompatibilita: campo nullable, migrazione graduale |
 | SQL Server sufficiente per gap analysis | JSON columns + full-text search — no cambio tecnologia DB |
+| **Stili Word in italiano** | Template usa Titolo1/Titolo2 — NON Heading1/Heading2 (Word italiano) |
+| **Margini Word via JS** | Regex su sectPr in injectOoxmlMarkers — evita manipolazione binaria .docx |
+| **document_type in audits** | Campo per distinguere audit/SAL/RDP — retrocompatibile (default='audit') |
+| **Audit Scenario 2 (terza parte)** | Gestito con clauseRef + campo note — no checklist per ogni committente |
+| **norm_excerpt in checklist_questions** | Stralcio norma per ogni clausola — appare nel report Word sotto la valutazione |
 
 ---
 
-**Ultimo Aggiornamento**: 06 marzo 2026
-**Prossimo Review**: dopo test end-to-end con auditor su produzione
+**Ultimo Aggiornamento**: 07 marzo 2026
+**Prossimo Review**: dopo test export Word con sommario completo
