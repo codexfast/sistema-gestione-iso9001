@@ -112,6 +112,23 @@ const ExportPanel = () => {
         console.warn('[EXPORT] pending issues non disp., uso locali:', err.message);
       }
 
+      // Fetch rilievi ente certificatore
+      try {
+        const companyId = currentAudit?.metadata?.companyId;
+        const standardId = currentAudit?.metadata?.selectedStandards?.includes("ISO_14001") ? 2
+          : currentAudit?.metadata?.selectedStandards?.includes("ISO_45001") ? 3 : 1;
+        if (companyId) {
+          const cfRes = await apiService.get(
+            `/companies/${companyId}/certification-findings?standard_id=${standardId}`
+          );
+          auditForExport.certificationFindings = cfRes.data || [];
+          console.log(`📋 [EXPORT] ${auditForExport.certificationFindings.length} rilievi ente certificatore`);
+        }
+      } catch (err) {
+        console.warn('[EXPORT] rilievi ente non disp.:', err.message);
+        auditForExport.certificationFindings = [];
+      }
+
       // Fetch allegati dal server e normalizza in formato wordExport (camelCase)
       try {
         const rawAtts = await apiService.getAttachments(auditId);

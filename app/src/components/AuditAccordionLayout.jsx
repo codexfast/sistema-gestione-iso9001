@@ -11,6 +11,7 @@ import "./AuditAccordionLayout.css";
 import GeneralDataSection from "./GeneralDataSection";
 import AuditObjectiveSection from "./AuditObjectiveSection";
 import PendingIssuesCascade from "./PendingIssuesCascade";
+import CertificationFindingsSection from "./CertificationFindingsSection";
 import ChecklistModule from "./ChecklistModule";
 import AuditOutcomeSection from "./AuditOutcomeSection";
 import ExportPanel from "./ExportPanel";
@@ -289,6 +290,29 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
                 {openSubSections["pending-issues"] && (
                   <div className="subsection-content">
                     <PendingIssuesCascade />
+                  </div>
+                )}
+              </div>
+
+              {/* Sub-Section: 1.4 Rilievi dell'Ente Certificatore */}
+              <div className="accordion-subsection">
+                <button
+                  className={`accordion-subheader ${openSubSections["cert-findings"] ? "open" : ""}`}
+                  onClick={() => toggleSubSection("cert-findings")}
+                >
+                  <span className="subsection-number">1.4</span>
+                  <span className="subsection-title">Rilievi dell'Ente Certificatore</span>
+                  <span className="subsection-arrow">
+                    {openSubSections["cert-findings"] ? "▼" : "▶"}
+                  </span>
+                </button>
+                {openSubSections["cert-findings"] && (
+                  <div className="subsection-content">
+                    <CertificationFindingsSection
+                      companyId={currentAudit?.metadata?.companyId}
+                      standardId={currentAudit?.metadata?.selectedStandards?.includes("ISO_14001") ? 2
+                        : currentAudit?.metadata?.selectedStandards?.includes("ISO_45001") ? 3 : 1}
+                    />
                   </div>
                 )}
               </div>

@@ -25,6 +25,7 @@ const syncRoutes = require('./routes/sync.routes');
 const standardRoutes = require('./routes/standard.routes');
 const companyRoutes = require('./routes/company.routes');
 const auditorOrgRoutes = require('./routes/auditorOrg.routes');
+const certFindingsRoutes = require('./routes/certificationFindings.routes');
 
 const app = express();
 const PORT = process.env.PORT || 10443;
@@ -123,6 +124,7 @@ app.use(API_BASE, syncRoutes);
 app.use(API_BASE, standardRoutes);
 app.use(API_BASE, companyRoutes);
 app.use(API_BASE, auditorOrgRoutes);
+app.use(`${API_BASE}/companies/:companyId/certification-findings`, certFindingsRoutes);
 
 // Static files (uploads)
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));

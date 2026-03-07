@@ -273,12 +273,64 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
     return xmlTable(allRows, COL);
 }
 
+// ─── Rilievi ente certificatore (sezione 1.4) ─────────────────────────────────
+function buildCertFindingsOoxml(certFindings = []) {
+    if (!certFindings || !certFindings.length)
+        return xmlPara('Nessun rilievo dell\'ente certificatore registrato.', { ital: true, sa: 400 });
+
+    const TYPE_COLOR = { NC: 'DC2626', OBS: 'D97706', RIM: '7C3AED' };
+    const STATUS_CFG = {
+        open:        { label: 'Aperto',   fill: 'FEE2E2', text: '991B1B' },
+        in_progress: { label: 'In Corso', fill: 'FEF3C7', text: '92400E' },
+        closed:      { label: 'Chiuso',   fill: 'DCFCE7', text: '166534' },
+    };
+    const PCT = [8, 8, 10, 32, 14, 12, 16];
+
+    const headerRow = xmlRow([
+        xmlCell(xmlPara(xmlRun('N°',       { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[0] }),
+        xmlCell(xmlPara(xmlRun('Tipo',     { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[1] }),
+        xmlCell(xmlPara(xmlRun('Punto',    { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[2] }),
+        xmlCell(xmlPara(xmlRun('Descrizione / Azione Correttiva', { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[3] }),
+        xmlCell(xmlPara(xmlRun('Ente',     { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[4] }),
+        xmlCell(xmlPara(xmlRun('Scadenza', { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[5] }),
+        xmlCell(xmlPara(xmlRun('Stato',    { bold: true }), { align: 'center' }), { fill: 'E5E7EB', pct: PCT[6] }),
+    ], { header: true });
+
+    const dataRows = certFindings.map(f => {
+        const sCfg = STATUS_CFG[f.status] || STATUS_CFG.open;
+        const tColor = TYPE_COLOR[f.finding_type] || 'DC2626';
+        const descBody = xmlPara(escXml(f.description || '—'))
+            + (f.corrective_action
+                ? xmlPara(xmlRun('↳ AC: ' + f.corrective_action, { ital: true, color: '1D4ED8' }), { sb: 60, sa: 0 })
+                : '');
+        const dueDate = f.due_date
+            ? new Date(f.due_date).toLocaleDateString('it-IT')
+            : '—';
+        return xmlRow([
+            xmlCell(xmlPara(escXml(f.finding_number || '—'), { align: 'center' }), { pct: PCT[0] }),
+            xmlCell(xmlPara(xmlRun(f.finding_type || 'NC', { bold: true, color: tColor }), { align: 'center' }), { pct: PCT[1] }),
+            xmlCell(xmlPara(escXml(f.clause_ref || '—'), { align: 'center' }), { pct: PCT[2] }),
+            xmlCell(descBody, { pct: PCT[3] }),
+            xmlCell(xmlPara(escXml(f.certifying_body || '—'), { align: 'center' }), { pct: PCT[4] }),
+            xmlCell(xmlPara(escXml(dueDate), { align: 'center' }), { pct: PCT[5] }),
+            xmlCell(xmlPara(xmlRun(sCfg.label, { bold: true, color: sCfg.text }), { align: 'center' }),
+                { fill: sCfg.fill, pct: PCT[6] }),
+        ]);
+    });
+
+    return xmlTable([headerRow, ...dataRows], PCT);
+}
+
 // ─── Sezione checklist completa (iniettata in CHECKLIST_MARKER) ───────────────
-export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null) {
+export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null, certFindings = []) {
     let xml = '';
 
     xml += xmlPara('3 - RILIEVI PENDENTI', { sb: 0, sa: 300 });
     xml += buildPendingIssuesOoxml(pendingIssues);
+
+    xml += xmlPara('', { sa: 200 }); // spaziatura
+    xml += xmlPara('1.4 - RILIEVI DELL\'ENTE CERTIFICATORE', { sb: 0, sa: 300 });
+    xml += buildCertFindingsOoxml(certFindings);
 
     if (!checklist || !Object.keys(checklist).length) return xml;
 
