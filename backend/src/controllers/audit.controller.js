@@ -78,6 +78,7 @@ async function listAudits(req, res) {
         a.non_conformities_count,
         a.completion_percentage,
         a.notes,
+        a.audit_extra_data,
         a.created_at,
         a.updated_at,
         u.full_name AS created_by_name,
@@ -106,15 +107,23 @@ async function listAudits(req, res) {
 
         const total = countResult.recordset[0].total;
 
+        // Parsa audit_extra_data JSON per ogni audit
+        const audits = result.recordset.map(a => {
+            if (a.audit_extra_data && typeof a.audit_extra_data === 'string') {
+                try { a.audit_extra_data = JSON.parse(a.audit_extra_data); } catch (_) { a.audit_extra_data = null; }
+            }
+            return a;
+        });
+
         logger.info('Audit list retrieved', {
             organization_id,
-            count: result.recordset.length,
+            count: audits.length,
             filters: { status, year, standard_id }
         });
 
         res.json({
             success: true,
-            data: result.recordset,
+            data: audits,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -183,6 +192,11 @@ async function getAuditById(req, res) {
     `, { id: parseInt(id) });
 
         audit.standards = standardsResult.recordset;
+
+        // Parsa audit_extra_data JSON
+        if (audit.audit_extra_data && typeof audit.audit_extra_data === 'string') {
+            try { audit.audit_extra_data = JSON.parse(audit.audit_extra_data); } catch (_) { audit.audit_extra_data = null; }
+        }
 
         logger.info('Audit retrieved', { audit_id: id, organization_id });
 
@@ -642,7 +656,8 @@ async function upsertAudit(req, res) {
             completion_percentage,
             standard_id,
             standard_ids,   // array [1, 2] da syncService — aggiorna audit_standards completo
-            updated_at
+            updated_at,
+            audit_extra_data // JSON con generalData, auditObjective, auditOutcome
         } = req.body;
 
         // Risolve la lista di standard_id da registrare in audit_standards
@@ -727,6 +742,7 @@ async function upsertAudit(req, res) {
           non_conformities_count = @non_conformities_count,
           completion_percentage = @completion_percentage,
           standard_id = @standard_id,
+          audit_extra_data = COALESCE(@audit_extra_data, audit_extra_data),
           updated_at = GETDATE()
         OUTPUT INSERTED.updated_at INTO @out
         WHERE audit_id = @audit_id AND organization_id = @organization_id;
@@ -747,7 +763,8 @@ async function upsertAudit(req, res) {
                 conformities_count: conformities_count || 0,
                 non_conformities_count: non_conformities_count || 0,
                 completion_percentage: completion_percentage || 0,
-                standard_id: standard_id || 1, // Default ISO 9001
+                standard_id: standard_id || 1,
+                audit_extra_data: audit_extra_data ? JSON.stringify(audit_extra_data) : null,
                 organization_id
             });
 
@@ -800,6 +817,7 @@ async function upsertAudit(req, res) {
           non_conformities_count,
           completion_percentage,
           standard_id,
+          audit_extra_data,
           organization_id,
           created_by,
           created_at,
@@ -824,6 +842,7 @@ async function upsertAudit(req, res) {
           @non_conformities_count,
           @completion_percentage,
           @standard_id,
+          @audit_extra_data,
           @organization_id,
           @user_id,
           GETDATE(),
@@ -847,7 +866,8 @@ async function upsertAudit(req, res) {
                 conformities_count: conformities_count || 0,
                 non_conformities_count: non_conformities_count || 0,
                 completion_percentage: completion_percentage || 0,
-                standard_id: standard_id || 1, // Default ISO 9001
+                standard_id: standard_id || 1,
+                audit_extra_data: audit_extra_data ? JSON.stringify(audit_extra_data) : null,
                 organization_id,
                 user_id
             });

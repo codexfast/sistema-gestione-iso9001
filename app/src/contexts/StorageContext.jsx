@@ -293,18 +293,58 @@ export function StorageProvider({ children, useMockData = false }) {
           }
         }
 
-        // MERGE: Server-wins per metadata/checklist, preserva attachments locali non ancora sul server
+        // MERGE: Server-wins per metadata/checklist, preserva attachments e campi ricchi locali
+        const auditsToUploadRichData = []; // audit locali con dati ricchi che il server non ha ancora
         const mergedAudits = serverAudits.length > 0
           ? serverAudits.map(serverAudit => {
               const sid = serverAudit.metadata?.id || serverAudit.id;
               const localAudit = localAudits.find(la => (la.metadata?.id || la.id) === sid);
-              // Preserver local attachments[] se il dato server non li include
-              if (localAudit?.attachments?.length > 0) {
-                return { ...serverAudit, attachments: localAudit.attachments };
+              
+              // Se il server non ha ancora generalData ma il locale sì, preserva il locale
+              // e marca per upload immediato verso il server
+              const hasRichDataLocal = localAudit?.generalData || localAudit?.auditObjective || localAudit?.auditOutcome;
+              const hasRichDataServer = serverAudit?.generalData || serverAudit?.auditObjective || serverAudit?.auditOutcome;
+              
+              let merged = { ...serverAudit };
+              
+              if (hasRichDataLocal && !hasRichDataServer) {
+                // Server non ha ancora i dati: usa locale e pianifica sync verso server
+                merged.generalData = localAudit.generalData;
+                merged.auditObjective = localAudit.auditObjective;
+                merged.auditOutcome = localAudit.auditOutcome;
+                auditsToUploadRichData.push(merged);
               }
-              return serverAudit;
+              
+              // Preserva allegati locali se il server non li include
+              if (localAudit?.attachments?.length > 0 && !(serverAudit?.attachments?.length > 0)) {
+                merged.attachments = localAudit.attachments;
+              }
+              
+              return merged;
             })
           : localAudits;
+        
+        // Carica i campi ricchi sul server per gli audit che lo richiedono (migrazione dati)
+        if (auditsToUploadRichData.length > 0) {
+          console.log(`📤 [MIGRATE] Sincronizzazione campi ricchi verso server per ${auditsToUploadRichData.length} audit...`);
+          for (const a of auditsToUploadRichData) {
+            syncService.enqueue("update_audit", {
+              audit_uuid: a.metadata?.id || a.id,
+              audit_number: a.metadata?.auditNumber,
+              client_name: a.metadata?.clientName,
+              company_id: a.metadata?.companyId ?? null,
+              project_year: a.metadata?.projectYear,
+              audit_date: a.metadata?.auditDate,
+              auditor_name: a.metadata?.auditorName,
+              audit_type: a.metadata?.auditType,
+              status: a.metadata?.status,
+              updated_at: new Date().toISOString(),
+              generalData: a.generalData,
+              auditObjective: a.auditObjective,
+              auditOutcome: a.auditOutcome,
+            }).catch(() => {});
+          }
+        }
 
         if (mergedAudits && mergedAudits.length > 0) {
           // Server come fonte di verità: sostituisci completamente la cache locale
