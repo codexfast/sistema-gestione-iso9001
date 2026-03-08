@@ -224,10 +224,10 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     doc.render(buildTemplateData(audit));
     const processedZip = doc.getZip();
 
-    // Se photoMode=preview, pre-carica le immagini come base64 prima di iniettare OOXML
-    if (options.photoMode === 'preview' && getViewUrl) {
-        await preloadImagesIntoAudit(audit, getViewUrl);
-    }
+    // Image preview disabilitata (bug OOXML con pic:cNvPr id duplicati — da reimplementare)
+    // if (options.photoMode === 'preview' && getViewUrl) {
+    //     await preloadImagesIntoAudit(audit, getViewUrl);
+    // }
 
     injectOoxmlMarkers(processedZip, audit, getViewUrl, options);
 

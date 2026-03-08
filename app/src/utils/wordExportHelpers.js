@@ -238,7 +238,8 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
         ], C, 100, true);
     }
 
-    const usePreview = options.photoMode === 'preview' && Array.isArray(imageRegistry);
+    // Image preview disabilitata — sempre link (bug OOXML da correggere in futuro)
+    const usePreview = false;
     const allRows = [headerRow];
 
     questions.forEach(q => {
