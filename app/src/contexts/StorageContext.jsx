@@ -1024,6 +1024,26 @@ export function StorageProvider({ children, useMockData = false }) {
     };
   }, [initializeChecklist]);
 
+  // Ascolta evento di assegnazione auditId numerico DB post-sync
+  // Emesso da syncService.js dopo il primo upsert riuscito
+  useEffect(() => {
+    const handleAuditIdAssigned = (e) => {
+      const { uuid, auditId } = e.detail || {};
+      if (!uuid || !auditId) return;
+      setAudits((prev) =>
+        prev.map((a) => {
+          const id = a.metadata?.id || a.id;
+          if (id !== uuid) return a;
+          if (a.metadata?.auditId === auditId) return a; // già aggiornato
+          console.log(`[StorageContext] auditId numerico assegnato: ${uuid} → ${auditId}`);
+          return { ...a, metadata: { ...a.metadata, auditId } };
+        })
+      );
+    };
+    window.addEventListener('sgq:auditIdAssigned', handleAuditIdAssigned);
+    return () => window.removeEventListener('sgq:auditIdAssigned', handleAuditIdAssigned);
+  }, []);
+
   /**
    * Reset a mock data (per testing)
    */

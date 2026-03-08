@@ -327,6 +327,12 @@ export class SyncService {
             // Aggiorna sync_metadata
             if (responseData.action === 'created') {
                 await this.updateSyncMetadataLocal('audit', auditUuid, responseData.audit_id);
+                // Notifica StorageContext del nuovo auditId numerico DB
+                if (responseData.audit_id) {
+                    window.dispatchEvent(new CustomEvent('sgq:auditIdAssigned', {
+                        detail: { uuid: auditUuid, auditId: responseData.audit_id }
+                    }));
+                }
             }
 
             // Memorizza server updated_at → i sync futuri useranno questo valore

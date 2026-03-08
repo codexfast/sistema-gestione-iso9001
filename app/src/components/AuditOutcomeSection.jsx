@@ -105,12 +105,14 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
           Rilievi Emergenti
         </h3>
 
-        {/* Metriche findings - COMPATTE SU UNA RIGA */}
+        {/* Metriche findings - COMPATTE SU UNA RIGA — somma TUTTI gli standard */}
         <div className="findings-metrics-compact">
           <span className="metric-compact nc">
             <strong>C:</strong>{" "}
             {currentAudit?.checklist
-              ? Object.values(currentAudit.checklist.ISO_9001 || {}).reduce(
+              ? Object.values(currentAudit.checklist).flatMap(cl =>
+                  Object.values(cl || {})
+                ).reduce(
                   (total, clause) =>
                     total +
                     (clause.questions || []).filter((q) => q.status === "C")
@@ -131,7 +133,9 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
           <span className="metric-compact na">
             <strong>NA:</strong>{" "}
             {currentAudit?.checklist
-              ? Object.values(currentAudit.checklist.ISO_9001 || {}).reduce(
+              ? Object.values(currentAudit.checklist).flatMap(cl =>
+                  Object.values(cl || {})
+                ).reduce(
                   (total, clause) =>
                     total +
                     (clause.questions || []).filter((q) => q.status === "NA")

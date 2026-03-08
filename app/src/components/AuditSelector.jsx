@@ -197,7 +197,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     companyId: initialCompanyId,
     auditDate: new Date().toISOString().split("T")[0],
     auditorName: "",
-    norms: ["ISO_9001"],
+    norms: [],
   });
 
   // Carica aziende dall'anagrafica (Fase 1)

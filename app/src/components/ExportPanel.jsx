@@ -88,8 +88,10 @@ const ExportPanel = () => {
     // Fetch rilievi ente certificatore
     try {
       const companyId  = currentAudit?.metadata?.companyId;
-      const standardId = currentAudit?.metadata?.selectedStandards?.includes("ISO_14001") ? 2
-        : currentAudit?.metadata?.selectedStandards?.includes("ISO_45001") ? 3 : 1;
+      const _stds = currentAudit?.metadata?.selectedStandards || [];
+      const _ckKeys = Object.keys(currentAudit?.checklist || {});
+      const _has = (code) => _stds.some(s => String(s).includes(code)) || _ckKeys.some(k => k.includes(code));
+      const standardId = _has('14001') ? 2 : _has('45001') ? 3 : 1;
       if (companyId) {
         const cfRes = await apiService.get(
           `/companies/${companyId}/certification-findings?standard_id=${standardId}`
