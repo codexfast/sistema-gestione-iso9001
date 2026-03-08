@@ -192,6 +192,21 @@ function buildPendingIssuesOoxml(pendingIssues = []) {
     return xmlTable([headerRow, ...dataRows], PCT);
 }
 
+// ─── Hyperlink cliccabile in Word (fldSimple — non richiede modifica rels) ────
+// Produce: <w:p>...<w:fldSimple w:instr=" HYPERLINK "url" ">..link testo..</w:fldSimple></w:p>
+function xmlHyperlinkPara(url, displayText, opts = {}) {
+    const color = opts.color || '1E40AF';
+    const sz = opts.size ? `<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>` : '';
+    const escapedUrl = escXml(url);
+    return (
+        `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr>` +
+        `<w:fldSimple w:instr=" HYPERLINK &quot;${escapedUrl}&quot; ">` +
+        `<w:r><w:rPr><w:color w:val="${color}"/><w:u w:val="single"/>${sz}</w:rPr>` +
+        `<w:t xml:space="preserve">${escXml(displayText)}</w:t></w:r>` +
+        `</w:fldSimple></w:p>`
+    );
+}
+
 // ─── Helpers immagini embedded ────────────────────────────────────────────────
 const IMAGE_EXTS = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
 const IMAGE_MIME_TYPES = new Set(Object.keys(IMAGE_EXTS));
@@ -247,33 +262,36 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
 
         if (qAtts.length) {
             qAtts.forEach(a => {
-                const name = escXml(a.fileName || a.name || 'File');
-                const aId  = a.id || a.attachment_id || a.serverAttachmentId;
-                const url  = (getViewUrl && aId) ? getViewUrl(aId) : null;
+                const name    = a.fileName || a.name || 'File';
+                const aId     = a.id || a.attachment_id || a.serverAttachmentId;
+                const url     = (getViewUrl && aId) ? getViewUrl(aId) : null;
                 const isImage = IMAGE_MIME_TYPES.has(a.mimeType);
 
                 if (usePreview && isImage && a.imageBase64) {
+                    // Modalità anteprima: immagine embedded + link cliccabile sotto
                     const imgIdx = imageRegistry.length;
-                    const rId = `rId${100 + imgIdx}`;
+                    const rId   = `rId${100 + imgIdx}`;
                     const imgId = 100 + imgIdx;
-                    const ext = IMAGE_EXTS[a.mimeType] || 'jpg';
+                    const ext   = IMAGE_EXTS[a.mimeType] || 'jpg';
                     imageRegistry.push({ rId, imgId, base64: a.imageBase64, mimeType: a.mimeType, ext });
 
-                    const imgXml = xmlImageOoxml(rId, imgId);
-                    const linkText = url ? `  \uD83D\uDD17 ${name}  [${url}]` : `  ${name}`;
+                    const imgXml  = xmlImageOoxml(rId, imgId);
+                    const linkRow = url
+                        ? xmlHyperlinkPara(url, '\uD83D\uDD17 ' + name, { color: '1E40AF', size: 18 })
+                        : xmlPara(xmlRun(escXml('\uD83D\uDD17 ' + name), { color: '1E40AF', size: 18 }), { sa: 0 });
                     allRows.push(xmlRow([
                         xmlCell(
-                            `<w:p><w:pPr><w:jc w:val="left"/></w:pPr>${imgXml}</w:p>` +
-                            xmlPara(xmlRun(escXml(linkText), { color: '1E40AF', size: 18 }), { sa: 0 }),
+                            `<w:p><w:pPr><w:jc w:val="left"/></w:pPr>${imgXml}</w:p>` + linkRow,
                             { span: 3, fill: 'EFF6FF', ml: 150 }
                         ),
                     ]));
                 } else {
-                    const linkPart = url ? `  [${url}]` : '';
-                    const attText = '\uD83D\uDCCE ' + name + linkPart;
+                    // Modalità solo link (o allegato non-immagine): hyperlink cliccabile
+                    const attContent = url
+                        ? xmlHyperlinkPara(url, '\uD83D\uDCCE ' + name, { color: '1E40AF', size: 18 })
+                        : xmlPara(xmlRun(escXml('\uD83D\uDCCE ' + name), { color: '1E40AF', size: 18 }), { sa: 0 });
                     allRows.push(xmlRow([
-                        xmlCell(xmlPara(xmlRun(attText, { color: '1E40AF', size: 18 }), { sa: 0 }),
-                            { span: 3, fill: 'EFF6FF', ml: 150 }),
+                        xmlCell(attContent, { span: 3, fill: 'EFF6FF', ml: 150 }),
                     ]));
                 }
             });
