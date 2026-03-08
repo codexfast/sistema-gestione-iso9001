@@ -1,4 +1,4 @@
-/**
+﻿/**
  * generateTemplate.js
  * Script Node.js da eseguire UNA VOLTA per creare il template Word ISO 9001.
  *
@@ -9,15 +9,15 @@
  *   app/public/templates/ISO9001-audit-report.docx
  *
  * Il file .docx generato contiene:
- *   - Segnaposto {varName}  → riempiti da docxtemplater a runtime
- *   - Marker CHECKLIST_MARKER → sostituito con tabelle colorate via OOXML
- *   - Marker RILIEVI_MARKER   → sostituito con tabella rilievi via OOXML
+ *   - Segnaposto {varName}  â†’ riempiti da docxtemplater a runtime
+ *   - Marker CHECKLIST_MARKER â†’ sostituito con tabelle colorate via OOXML
+ *   - Marker RILIEVI_MARKER   â†’ sostituito con tabella rilievi via OOXML
  *
  * PER UN NUOVO STANDARD (es. ISO 14001):
- *   1. Copia e adatta questo script → generateTemplate14001.js
- *   2. Eseguilo → genera ISO14001-audit-report.docx
+ *   1. Copia e adatta questo script â†’ generateTemplate14001.js
+ *   2. Eseguilo â†’ genera ISO14001-audit-report.docx
  *   3. Apri il .docx in Word, modifica layout/titoli a piacere
- *   4. Aggiungi 'ISO_14001' → '/templates/ISO14001-audit-report.docx' in TEMPLATE_MAP (wordExport.js)
+ *   4. Aggiungi 'ISO_14001' â†’ '/templates/ISO14001-audit-report.docx' in TEMPLATE_MAP (wordExport.js)
  *   Zero modifiche al codice per il layout!
  */
 
@@ -31,7 +31,7 @@ const {
 const fs = require('fs');
 const path = require('path');
 
-// ─── Palette ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const C = {
     primary: '2C3E50',
     secondary: '34495E',
@@ -40,7 +40,7 @@ const C = {
     white: 'FFFFFF'
 };
 
-// ─── Micro-helpers docx ───────────────────────────────────────────────────────
+// â”€â”€â”€ Micro-helpers docx â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function run(text, opts = {}) {
     return new TextRun({
         text,
@@ -97,12 +97,12 @@ function valueCell(text, span = 3) {
     });
 }
 
-// ─── HEADER (ripetuto su ogni pagina) ─────────────────────────────────────────
+// â”€â”€â”€ HEADER (ripetuto su ogni pagina) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createPageHeader() {
     const headerTable = new Table({
         rows: [new TableRow({
             children: [
-                // Col 1 – Logo placeholder
+                // Col 1 â€“ Logo placeholder
                 new TableCell({
                     children: [para([run('[LOGO]', { bold: true, size: 18, color: '9CA3AF' })],
                         { align: AlignmentType.CENTER, before: 60, after: 60 })],
@@ -111,7 +111,7 @@ function createPageHeader() {
                     margins: { top: 60, bottom: 60, left: 120, right: 80 },
                     borders: hdrBorders('left')
                 }),
-                // Col 2 – Cliente + tipo documento
+                // Col 2 â€“ Cliente + tipo documento
                 new TableCell({
                     children: [
                         para([run('{clientName}', { bold: true, size: 22, color: C.primary })],
@@ -124,7 +124,7 @@ function createPageHeader() {
                     margins: { top: 60, bottom: 60, left: 160, right: 80 },
                     borders: hdrBorders('center')
                 }),
-                // Col 3 – Riferimento documento
+                // Col 3 â€“ Riferimento documento
                 new TableCell({
                     children: [
                         para([run('AUDIT REPORT {auditNumber}', { bold: true, size: 18, color: C.primary })],
@@ -145,7 +145,7 @@ function createPageHeader() {
     return new Header({ children: [headerTable] });
 }
 
-// ─── FOOTER ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createFooter() {
     return {
         default: new Footer({
@@ -162,16 +162,16 @@ function createFooter() {
     };
 }
 
-// ─── Sommario ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sommario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createCoverPage() {
     return [
-        new Paragraph({ text: 'Sommario', heading: 'Heading1', spacing: { before: 200, after: 200 } }),
+        new Paragraph({ text: 'Sommario', style: 'Titolo1', spacing: { before: 200, after: 200 } }),
         new TableOfContents('Sommario', { hyperlink: true, headingStyleRange: '1-3' }),
         new Paragraph({ text: '', pageBreakBefore: true })
     ];
 }
 
-// ─── Sezione 1 – Dati Generali ────────────────────────────────────────────────
+// â”€â”€â”€ Sezione 1 â€“ Dati Generali â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createSection1() {
     const rows = [
         ['OGGETTO:', '{auditObject}'],
@@ -185,8 +185,8 @@ function createSection1() {
 
     return [
         new Paragraph({
-            text: '1 – DATI GENERALI',
-            heading: 'Heading1',
+            text: '1 â€“ DATI GENERALI',
+            style: 'Titolo1',
             spacing: { before: 0, after: 300 }
         }),
         new Table({
@@ -199,15 +199,15 @@ function createSection1() {
     ];
 }
 
-// ─── Sezione 2 – Obiettivo ────────────────────────────────────────────────────
+// â”€â”€â”€ Sezione 2 â€“ Obiettivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createSection2() {
     return [
-        new Paragraph({ text: "2 - OBIETTIVO DELL'AUDIT", heading: 'Heading1', spacing: { before: 0, after: 300 } }),
+        new Paragraph({ text: "2 - OBIETTIVO DELL'AUDIT", style: 'Titolo1', spacing: { before: 0, after: 300 } }),
         // Descrizione obiettivo (testo lungo)
         new Paragraph({ text: '{objectiveDescription}', spacing: { after: 300 } }),
 
-        // Tabella partecipanti — loop riga docxtemplater:
-        // prima riga header (statica), seconda riga con {#participants}{role}…{/participants}
+        // Tabella partecipanti â€” loop riga docxtemplater:
+        // prima riga header (statica), seconda riga con {#participants}{role}â€¦{/participants}
         new Paragraph({
             children: [run('Presenti per l\'organizzazione:', { bold: true })],
             spacing: { before: 300, after: 150 }
@@ -256,7 +256,7 @@ function createSection2() {
     ];
 }
 
-// ─── Marker Checklist (sarà sostituito con OOXML a runtime) ───────────────────
+// â”€â”€â”€ Marker Checklist (sarÃ  sostituito con OOXML a runtime) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createChecklistMarker() {
     // Il testo "CHECKLIST_MARKER" viene trovato da wordExport.js che lo sostituisce
     // con l'intera sezione checklist colorata generata da buildChecklistSectionOoxml()
@@ -268,13 +268,13 @@ function createChecklistMarker() {
     ];
 }
 
-// ─── Sezione 11 – Esito ───────────────────────────────────────────────────────
+// â”€â”€â”€ Sezione 11 â€“ Esito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createSection11() {
     // Tabella metriche con segnaposto
     const metricsRows = [
-        ['Non Conformità (NC)', '{ncCount}'],
+        ['Non ConformitÃ  (NC)', '{ncCount}'],
         ['Osservazioni (OSS)', '{ossCount}'],
-        ['Opportunità di Miglioramento (OM)', '{omCount}'],
+        ['OpportunitÃ  di Miglioramento (OM)', '{omCount}'],
         ['Non Valutato (NV)', '{nvCount}']
     ].map(([label, count]) => new TableRow({
         children: [
@@ -293,25 +293,24 @@ function createSection11() {
     return [
         new Paragraph({
             text: "11 - ESITO DELL'AUDIT",
-            heading: 'Heading1',
+            style: 'Titolo1',
             spacing: { before: 0, after: 300 },
             pageBreakBefore: true
         }),
 
         // Conclusioni
-        new Paragraph({ text: 'Conclusioni', heading: 'Heading2', spacing: { before: 200, after: 150 } }),
+        new Paragraph({ text: 'Conclusioni', style: 'Titolo2', spacing: { before: 200, after: 150 } }),
         new Paragraph({ text: '{conclusions}', spacing: { after: 300 } }),
 
-        // RILIEVI – tabella iniettata a runtime
-        new Paragraph({ text: 'RILIEVI', heading: 'Heading2', spacing: { before: 300, after: 150 }, alignment: AlignmentType.CENTER }),
-        // Marker: sostituito con buildRileviSummaryOoxml() da wordExport.js
+        // RILIEVI â€“ tabella iniettata a runtime
+        new Paragraph({ text: 'RILIEVI', style: 'Titolo2', spacing: { before: 300, after: 150 }, alignment: AlignmentType.CENTER }),
         new Paragraph({
             children: [new TextRun({ text: 'RILIEVI_MARKER', bold: true, color: 'AAAAAA', size: 18 })],
             spacing: { before: 0, after: 300 }
         }),
 
-        // Rilievi Emersi – contatori
-        new Paragraph({ text: 'Rilievi Emersi', heading: 'Heading2', spacing: { before: 300, after: 150 } }),
+        // Rilievi Emersi â€“ contatori
+        new Paragraph({ text: 'Rilievi Emersi', style: 'Titolo2', spacing: { before: 300, after: 150 } }),
         new Table({
             rows: metricsRows,
             width: { size: 60, type: WidthType.PERCENTAGE },
@@ -322,7 +321,7 @@ function createSection11() {
     ];
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function main() {
     const doc = new Document({
         styles: {
@@ -334,19 +333,20 @@ async function main() {
             },
             paragraphStyles: [
                 {
-                    id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal',
+                    // Word IT: "Titolo 1" â€” nome canonico 'heading 1' per TOC
+                    id: 'Titolo1', name: 'heading 1', basedOn: 'Normal', next: 'Normal',
                     run: { size: 28, bold: true, color: C.primary, font: 'Arial' },
-                    paragraph: { spacing: { before: 400, after: 200 } }
+                    paragraph: { spacing: { before: 400, after: 200 }, outlineLevel: 0 }
                 },
                 {
-                    id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal',
+                    id: 'Titolo2', name: 'heading 2', basedOn: 'Normal', next: 'Normal',
                     run: { size: 24, bold: true, color: C.secondary, font: 'Arial' },
-                    paragraph: { spacing: { before: 300, after: 150 } }
+                    paragraph: { spacing: { before: 300, after: 150 }, outlineLevel: 1 }
                 },
                 {
-                    id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal',
+                    id: 'Titolo3', name: 'heading 3', basedOn: 'Normal', next: 'Normal',
                     run: { size: 22, bold: true, color: '4B5563', font: 'Arial' },
-                    paragraph: { spacing: { before: 200, after: 100 } }
+                    paragraph: { spacing: { before: 200, after: 100 }, outlineLevel: 2 }
                 }
             ]
         },
@@ -375,7 +375,7 @@ async function main() {
     const buffer = await Packer.toBuffer(doc);
     fs.writeFileSync(outPath, buffer);
 
-    console.log('✅ Template ISO 9001 generato:', outPath);
+    console.log('âœ… Template ISO 9001 generato:', outPath);
     console.log('');
     console.log('Segnaposto nel template:');
     console.log('  Testo (docxtemplater): {clientName} {auditNumber} {procedureCode} {auditDate}');
@@ -385,11 +385,11 @@ async function main() {
     console.log('                         {conclusions} {ncCount} {ossCount} {omCount} {nvCount} {summaryText}');
     console.log('  OOXML inject:          CHECKLIST_MARKER  RILIEVI_MARKER');
     console.log('');
-    console.log('Per ISO 14001: copia questo script → generateTemplate14001.js');
+    console.log('Per ISO 14001: copia questo script â†’ generateTemplate14001.js');
     console.log('  modificalo a piacere (titoli, campi, sezioni), poi esegui.');
 }
 
 main().catch(err => {
-    console.error('❌ Errore generazione template:', err);
+    console.error('âŒ Errore generazione template:', err);
     process.exit(1);
 });

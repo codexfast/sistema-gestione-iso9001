@@ -1,6 +1,6 @@
-/**
+﻿/**
  * generateTemplate14001.js
- * Genera il template Word per Report Audit Conformità Legislativa ISO 14001.
+ * Genera il template Word per Report Audit ConformitÃ  Legislativa ISO 14001.
  *
  * USO:
  *   node scripts/generateTemplate14001.js
@@ -20,7 +20,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const C = {
-    primary:   '1A5276', // blu scuro (ISO 14001 → verde/blu ambiente)
+    primary:   '1A5276', // blu scuro (ISO 14001 â†’ verde/blu ambiente)
     secondary: '1F618D',
     accent:    '1E8449', // verde scuro per accenti ISO 14001
     lightGray: 'E5E7EB',
@@ -77,7 +77,7 @@ function valueCell(text) {
     });
 }
 
-// ─── HEADER ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createPageHeader() {
     const headerTable = new Table({
         rows: [new TableRow({
@@ -94,7 +94,7 @@ function createPageHeader() {
                     children: [
                         para([run('{clientName}', { bold: true, size: 22, color: C.primary })],
                             { before: 40, after: 20 }),
-                        para([run('Audit Conformità Legislativa ISO 14001', { size: 18, color: C.secondary })],
+                        para([run('Audit ConformitÃ  Legislativa ISO 14001', { size: 18, color: C.secondary })],
                             { after: 40 })
                     ],
                     width: { size: 55, type: WidthType.PERCENTAGE },
@@ -140,36 +140,36 @@ function createFooter() {
 
 function createCoverPage() {
     return [
-        new Paragraph({ text: 'Sommario', heading: 'Heading1', spacing: { before: 200, after: 200 } }),
+        new Paragraph({ text: 'Sommario', style: 'Titolo1', spacing: { before: 200, after: 200 } }),
         new TableOfContents('Sommario', { hyperlink: true, headingStyleRange: '1-3' }),
         new Paragraph({ text: '', pageBreakBefore: true })
     ];
 }
 
-// ─── Sezione 1 – Dati Generali ────────────────────────────────────────────────
+// â”€â”€â”€ Sezione 1 â€“ Dati Generali â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createSection1() {
     const rows = [
         ['OGGETTO:',                  '{auditObject}'],
         ['CAMPO APPLICAZIONE:',       '{scope}'],
         ['DOCUMENTI DI RIFERIMENTO:', '{referenceDocuments}'],
         ['DATA AUDIT:',               '{auditDate}'],
-        ['ATTIVITÀ/PROCESSI:',        '{processes}'],
+        ['ATTIVITÃ€/PROCESSI:',        '{processes}'],
         ['PROGRAMMA COMUNICATO IL:',  '{programCommunicatedDate}'],
         ['VERIFICATORE:',             '{auditor}']
     ].map(([label, value]) => new TableRow({ children: [labelCell(label), valueCell(value)] }));
 
     return [
-        new Paragraph({ text: '1 – DATI GENERALI', heading: 'Heading1', spacing: { before: 0, after: 300 } }),
+        new Paragraph({ text: '1 â€“ DATI GENERALI', style: 'Titolo1', spacing: { before: 0, after: 300 } }),
         new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: stdBorders(),
             margins: { top: 80, bottom: 80, left: 100, right: 100 } }),
         new Paragraph({ text: '', spacing: { after: 400 }, pageBreakBefore: true })
     ];
 }
 
-// ─── Sezione 2 – Obiettivo ────────────────────────────────────────────────────
+// â”€â”€â”€ Sezione 2 â€“ Obiettivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createSection2() {
     return [
-        new Paragraph({ text: "2 – OBIETTIVO DELL'AUDIT", heading: 'Heading1', spacing: { before: 0, after: 300 } }),
+        new Paragraph({ text: "2 â€“ OBIETTIVO DELL'AUDIT", style: 'Titolo1', spacing: { before: 0, after: 300 } }),
         new Paragraph({ text: '{objectiveDescription}', spacing: { after: 300 } }),
         new Paragraph({ children: [run('Presenti per l\'organizzazione:', { bold: true })],
             spacing: { before: 300, after: 150 } }),
@@ -196,7 +196,7 @@ function createSection2() {
     ];
 }
 
-// ─── Marker Checklist ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Marker Checklist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createChecklistMarker() {
     return [
         new Paragraph({
@@ -206,12 +206,12 @@ function createChecklistMarker() {
     ];
 }
 
-// ─── Sezione 11 – Esito ───────────────────────────────────────────────────────
+// â”€â”€â”€ Sezione 11 â€“ Esito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function createSection11() {
     const metricsRows = [
-        ['Non Conformità (NC)',              '{ncCount}'],
+        ['Non ConformitÃ  (NC)',              '{ncCount}'],
         ['Osservazioni (OSS)',               '{ossCount}'],
-        ['Opportunità di Miglioramento (OM)','{omCount}'],
+        ['OpportunitÃ  di Miglioramento (OM)','{omCount}'],
         ['Non Valutato (NV)',                '{nvCount}']
     ].map(([label, count]) => new TableRow({ children: [
         new TableCell({ children: [para([run(label, { bold: true })], {})],
@@ -221,24 +221,24 @@ function createSection11() {
     ]}));
 
     return [
-        new Paragraph({ text: "11 – ESITO DELL'AUDIT", heading: 'Heading1',
+        new Paragraph({ text: "11 â€“ ESITO DELL'AUDIT", style: 'Titolo1',
             spacing: { before: 0, after: 300 }, pageBreakBefore: true }),
-        new Paragraph({ text: 'Conclusioni', heading: 'Heading2', spacing: { before: 200, after: 150 } }),
+        new Paragraph({ text: 'Conclusioni', style: 'Titolo2', spacing: { before: 200, after: 150 } }),
         new Paragraph({ text: '{conclusions}', spacing: { after: 300 } }),
-        new Paragraph({ text: 'RILIEVI', heading: 'Heading2',
+        new Paragraph({ text: 'RILIEVI', style: 'Titolo2',
             spacing: { before: 300, after: 150 }, alignment: AlignmentType.CENTER }),
         new Paragraph({
             children: [new TextRun({ text: 'RILIEVI_MARKER', bold: true, color: 'AAAAAA', size: 18 })],
             spacing: { before: 0, after: 300 }
         }),
-        new Paragraph({ text: 'Rilievi Emersi', heading: 'Heading2', spacing: { before: 300, after: 150 } }),
+        new Paragraph({ text: 'Rilievi Emersi', style: 'Titolo2', spacing: { before: 300, after: 150 } }),
         new Table({ rows: metricsRows, width: { size: 60, type: WidthType.PERCENTAGE }, borders: stdBorders() }),
         new Paragraph({ text: '', spacing: { after: 200 } }),
         new Paragraph({ text: '{summaryText}', spacing: { after: 300 } })
     ];
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function main() {
     const doc = new Document({
         styles: {
@@ -246,15 +246,15 @@ async function main() {
                 document: { run: { font: 'Arial', size: 22 }, paragraph: { spacing: { line: 276, before: 0, after: 160 } } }
             },
             paragraphStyles: [
-                { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal',
+                { id: 'Titolo1', name: 'heading 1', basedOn: 'Normal', next: 'Normal',
                   run: { size: 28, bold: true, color: C.primary, font: 'Arial' },
-                  paragraph: { spacing: { before: 400, after: 200 } } },
-                { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal',
+                  paragraph: { spacing: { before: 400, after: 200 }, outlineLevel: 0 } },
+                { id: 'Titolo2', name: 'heading 2', basedOn: 'Normal', next: 'Normal',
                   run: { size: 24, bold: true, color: C.secondary, font: 'Arial' },
-                  paragraph: { spacing: { before: 300, after: 150 } } },
-                { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal',
+                  paragraph: { spacing: { before: 300, after: 150 }, outlineLevel: 1 } },
+                { id: 'Titolo3', name: 'heading 3', basedOn: 'Normal', next: 'Normal',
                   run: { size: 22, bold: true, color: '4B5563', font: 'Arial' },
-                  paragraph: { spacing: { before: 200, after: 100 } } }
+                  paragraph: { spacing: { before: 200, after: 100 }, outlineLevel: 2 } }
             ]
         },
         sections: [{
@@ -277,7 +277,7 @@ async function main() {
     const buffer  = await Packer.toBuffer(doc);
     fs.writeFileSync(outPath, buffer);
 
-    console.log('✅ Template ISO 14001 generato:', outPath);
+    console.log('âœ… Template ISO 14001 generato:', outPath);
 }
 
-main().catch(err => { console.error('❌ Errore:', err); process.exit(1); });
+main().catch(err => { console.error('âŒ Errore:', err); process.exit(1); });

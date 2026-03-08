@@ -504,11 +504,11 @@ function buildCertFindingsOoxml(certFindings = []) {
     return xmlTable([headerRow, ...dataRows], PCT);
 }
 
-// ─── Sezione checklist ISO 14001 (una Heading2 per domanda + tabella singola) ─
+// ─── Sezione checklist ISO 14001 (Titolo2 per domanda + tabella singola) ─────
 /**
- * Rendering specifico ISO 14001:
- *  - Heading1 per ogni sezione legislativa (numerazione sequenziale a partire da 4)
- *  - Heading2 per ogni singola domanda (numerazione globale a partire da 2, con 1=AP rilievi)
+ * Rendering specifico ISO 14001 (stili Word italiano: Titolo1/Titolo2):
+ *  - Titolo1 per ogni sezione legislativa (numerazione sequenziale a partire da 4)
+ *  - Titolo2 per ogni singola domanda (numerazione globale a partire da 2, con 1=AP rilievi)
  *  - Tabella a riga singola + stralcio normativo sotto ogni domanda
  */
 function buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUrl, options, imageRegistry, certFindings, normExcerpts) {
@@ -519,7 +519,7 @@ function buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUr
         xmlRun('3 \u2014 RILIEVI PRECEDENTI', { bold: true, size: 24, color: '1D4ED8' }),
         { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
     );
-    // Heading2 per il sotto-punto "AP"
+    // Titolo2 per il sotto-punto "AP"
     xml += xmlPara(
         xmlRun('1.\u2002AP \u2014 Rilievi emersi dai precedenti Audit Interni-Esterni', { bold: true, size: 22, color: '1D4ED8' }),
         { style: 'Titolo2', sb: 100, sa: 100 }
@@ -549,7 +549,7 @@ function buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUr
         if (!clause || typeof clause !== 'object') return;
         const sectionTitle = (clause.title || '').replace(/^\d+\.?\s*[-–]\s*/, '').toUpperCase();
 
-        // Heading1 per la sezione (con interruzione di pagina)
+        // Titolo1 per la sezione (con interruzione di pagina)
         xml += xmlPara(
             xmlRun(`${sectionNum} \u2014 ${sectionTitle}`, { bold: true, size: 24, color: '1D4ED8' }),
             { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
@@ -559,7 +559,7 @@ function buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUr
         (clause.questions || []).forEach((q) => {
             const qTitle = escXml((q.title || q.text || q.question || 'Domanda').toUpperCase());
 
-            // Heading2 per la singola domanda (compare nel sommario Word)
+            // Titolo2 per la singola domanda (compare nel sommario Word)
             xml += xmlPara(
                 xmlRun(`${questionNum}.\u2002${qTitle}`, { bold: true, size: 22, color: '1D4ED8' }),
                 { style: 'Titolo2', sb: 200, sa: 80 }
@@ -592,7 +592,7 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
     Object.entries(checklist).forEach(([stdKey, normData]) => {
         if (!normData || typeof normData !== 'object') return;
 
-        // ── Rendering ISO 14001: una Heading2 per ogni domanda ───────────────
+        // ── Rendering ISO 14001: Titolo2 per ogni domanda ────────────────────
         if (stdKey.includes('14001')) {
             xml += buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUrl, options, imageRegistry, certFindings, normExcerpts);
             return; // già gestito dentro buildISO14001Ooxml
