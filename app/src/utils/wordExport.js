@@ -216,7 +216,13 @@ function embedImagesInZip(zip, imageRegistry) {
 }
 
 async function generateDocxBlob(audit, getViewUrl, options = {}) {
-    const templateUrl = getTemplateUrl(audit);
+    // Se è specificato un singolo standard, filtra la checklist solo a quella norma
+    const stdKey = options.standardKey || null;
+    const auditForGen = stdKey
+        ? { ...audit, checklist: { [stdKey]: audit.checklist?.[stdKey] } }
+        : audit;
+
+    const templateUrl = getTemplateUrl(auditForGen);
     let arrayBuffer;
     try {
         const resp = await fetch(templateUrl);
@@ -236,15 +242,10 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
         nullGetter()   { return ''; },
     });
 
-    doc.render(buildTemplateData(audit));
+    doc.render(buildTemplateData(auditForGen));
     const processedZip = doc.getZip();
 
-    // Image preview disabilitata (bug OOXML con pic:cNvPr id duplicati — da reimplementare)
-    // if (options.photoMode === 'preview' && getViewUrl) {
-    //     await preloadImagesIntoAudit(audit, getViewUrl);
-    // }
-
-    injectOoxmlMarkers(processedZip, audit, getViewUrl, options);
+    injectOoxmlMarkers(processedZip, auditForGen, getViewUrl, options);
 
     return processedZip.generate({
         type:     'blob',
@@ -295,10 +296,11 @@ function blobToBase64(blob) {
     });
 }
 
-function buildFileName(audit) {
+function buildFileName(audit, standardKey = null) {
     const client = (audit.metadata?.clientName  || 'Cliente').replace(/[^a-z0-9]/gi, '_');
     const number = (audit.metadata?.auditNumber || 'N-A').replace(/[^a-z0-9]/gi, '_');
-    return 'Audit_' + number + '_' + client + '.docx';
+    const stdSuffix = standardKey ? '_' + standardKey.replace(/^ISO_/, 'ISO').replace(/_/g, '') : '';
+    return 'Audit_' + number + '_' + client + stdSuffix + '.docx';
 }
 
 // ─── API pubblica (firma invariata rispetto alla versione precedente) ─────────
@@ -306,7 +308,7 @@ function buildFileName(audit) {
 export async function exportAuditToWord(audit, getViewUrl = null, options = {}) {
     if (!audit?.metadata) throw new Error('Audit non valido: metadata mancante');
     const blob     = await generateDocxBlob(audit, getViewUrl, options);
-    const fileName = buildFileName(audit);
+    const fileName = buildFileName(audit, options.standardKey || null);
     saveAs(blob, fileName);
     return fileName;
 }

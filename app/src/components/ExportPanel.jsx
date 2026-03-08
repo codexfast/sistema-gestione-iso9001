@@ -168,8 +168,31 @@ const ExportPanel = () => {
     try {
       setIsExporting(true);
       const { auditForExport, getViewUrl } = await prepareAuditForExport();
-      const fileName = await exportAuditToWord(auditForExport, getViewUrl, {});
-      showMessage(`✅ Report Word generato: ${fileName}`, "success");
+
+      // Rileva tutte le checklist compilate (con almeno una clausola)
+      const compiledStandards = Object.keys(auditForExport.checklist || {})
+        .filter(k => Object.keys(auditForExport.checklist[k] || {}).length > 0);
+
+      if (compiledStandards.length <= 1) {
+        // Un solo standard → comportamento precedente (file singolo)
+        const fileName = await exportAuditToWord(auditForExport, getViewUrl, {});
+        showMessage(`✅ Report Word generato: ${fileName}`, "success");
+      } else {
+        // Multi-standard → un file Word per ogni norma
+        showMessage(`⏳ Generazione ${compiledStandards.length} report in corso...`, "info");
+        const fileNames = [];
+        for (const stdKey of compiledStandards) {
+          // Pausa breve tra download successivi per evitare che il browser li blocchi
+          if (fileNames.length > 0) await new Promise(r => setTimeout(r, 900));
+          const fileName = await exportAuditToWord(auditForExport, getViewUrl, { standardKey: stdKey });
+          fileNames.push(fileName);
+          console.log(`✅ [EXPORT] Generato: ${fileName}`);
+        }
+        showMessage(
+          `✅ ${compiledStandards.length} report generati: ${fileNames.join(' + ')}`,
+          "success"
+        );
+      }
     } catch (error) {
       console.error("Errore export Word:", error);
       showMessage(`❌ Errore: ${error.message}`, "error");
@@ -268,9 +291,15 @@ const ExportPanel = () => {
       <div className="export-sections">
         {/* Export Audit Corrente - WORD */}
         <div className="export-section export-word-section">
-          <h4>📄 Report Word{currentAudit?.metadata?.selectedStandards?.length > 0
-            ? ` (${currentAudit.metadata.selectedStandards.join(' + ')})`
-            : ''}</h4>
+          <h4>📄 Report Word{(() => {
+            const compiled = Object.keys(currentAudit?.checklist || {})
+              .filter(k => Object.keys(currentAudit.checklist[k] || {}).length > 0);
+            if (compiled.length === 0) return '';
+            const label = compiled.map(k => k.replace('ISO_', 'ISO ').replace(/_\d{4}$/, '')).join(' + ');
+            return compiled.length > 1
+              ? ` — ${compiled.length} file (${label})`
+              : ` (${label})`;
+          })()}</h4>
           {!currentAudit ? (
             <p className="export-info">
               Seleziona un audit per abilitare export
