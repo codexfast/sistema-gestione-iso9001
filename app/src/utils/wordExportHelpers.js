@@ -142,7 +142,7 @@ function xmlTable(rows, colWidths = [], pct = 100, useDxa = false) {
         const grid = colWidths.length
             ? `<w:tblGrid>${colWidths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`
             : '<w:tblGrid/>';
-        return `<w:tbl><w:tblPr><w:tblW w:w="${totalDxa}" w:type="dxa"/>${STD_BORDERS}</w:tblPr>${grid}${rows.join('')}</w:tbl>`;
+        return `<w:tbl><w:tblPr><w:tblW w:w="${totalDxa}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${STD_BORDERS}</w:tblPr>${grid}${rows.join('')}</w:tbl>`;
     }
     const grid = colWidths.length
         ? `<w:tblGrid>${colWidths.map(p => `<w:gridCol w:w="${p * 50}"/>`).join('')}</w:tblGrid>`
