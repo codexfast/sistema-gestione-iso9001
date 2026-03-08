@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from "react";
+import React, { useEffect } from "react";
 import { StorageProvider, useStorage } from "./contexts/StorageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/SharedComponents";
@@ -42,17 +42,17 @@ function AppContent() {
     return <Login />;
   }
 
-  // Vista Admin â€” Gestione Stralci Normativi Checklist
+  // Vista Admin — Gestione Stralci Normativi Checklist
   if (viewMode === "checklist-admin") {
     return (
       <div className="app">
         <header className="app-header">
           <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
+            <h1>SGQ ? Sistema di Gestione</h1>
             <div className="user-info">
-              <span className="user-name">ðŸ‘¤ {user.full_name || user.name}</span>
+              <span className="user-name">👤 {user.full_name || user.name}</span>
               <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">ðŸšª Esci</button>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
             </div>
           </div>
         </header>
@@ -61,7 +61,7 @@ function AppContent() {
         </main>
         <footer className="app-footer">
           <div className="container">
-            <p>Â© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
           </div>
         </footer>
       </div>
@@ -74,11 +74,11 @@ function AppContent() {
       <div className="app">
         <header className="app-header">
           <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
+            <h1>SGQ ? Sistema di Gestione</h1>
             <div className="user-info">
-              <span className="user-name">ðŸ‘¤ {user.full_name || user.name}</span>
+              <span className="user-name">👤 {user.full_name || user.name}</span>
               <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">ðŸšª Esci</button>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
             </div>
           </div>
         </header>
@@ -87,38 +87,38 @@ function AppContent() {
         </main>
         <footer className="app-footer">
           <div className="container">
-            <p>Â© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
           </div>
         </footer>
       </div>
     );
   }
 
-  // Se nessun audit selezionato E ci sono audit disponibili â†’ mostra selector full-screen
+  // Se nessun audit selezionato E ci sono audit disponibili → mostra selector full-screen
   if (!currentAudit && audits.length > 0) {
     return (
       <div className="app app-selector-mode">
         <header className="app-header">
           <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
+            <h1>SGQ ? Sistema di Gestione</h1>
             <div className="header-right">
               <nav className="app-nav">
                 <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
-                  ðŸ¢ Anagrafica Aziende
+                  🏢 Anagrafica Aziende
                 </button>
                 {isAdmin && (
                   <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("checklist-admin")}>
-                    ðŸ“‹ Gestione Checklist
+                    📋 Gestione Checklist
                   </button>
                 )}
               </nav>
               <div className="user-info">
               <span className="user-name">
-                ðŸ‘¤ {user.full_name || user.name}
+                👤 {user.full_name || user.name}
               </span>
               <span className={`user-role role-${user.role}`}>{user.role}</span>
               <button onClick={logout} className="btn-logout" title="Logout">
-                ðŸšª Esci
+                🚪 Esci
               </button>
             </div>
             </div>
@@ -130,7 +130,7 @@ function AppContent() {
         <footer className="app-footer">
           <div className="container">
             <p>
-              Â© {new Date().getFullYear()} - Sistema Gestione ISO
+              © {new Date().getFullYear()} - Sistema Gestione ISO
               9001/14001/45001 - Tutti i diritti riservati
             </p>
           </div>
@@ -146,16 +146,16 @@ function AppContent() {
 
       <header className="app-header">
         <div className="container header-flex">
-          <h1>SGQ — Sistema di Gestione</h1>
+          <h1>SGQ ? Sistema di Gestione</h1>
 
           <div className="header-right">
             <nav className="app-nav">
               <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
-                ðŸ¢ Aziende
+                🏢 Aziende
               </button>
               {isAdmin && (
                 <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("checklist-admin")}>
-                  ðŸ“‹ Checklist
+                  📋 Checklist
                 </button>
               )}
             </nav>
@@ -167,7 +167,7 @@ function AppContent() {
             {/* Checkpoint indicator */}
             {checkpoint.lastCheckpointTime && (
               <div className="checkpoint-indicator">
-                âœ… Auto-salvato alle{" "}
+                ✅ Auto-salvato alle{" "}
                 {checkpoint.lastCheckpointTime.toLocaleTimeString("it-IT")}
               </div>
             )}
@@ -175,11 +175,11 @@ function AppContent() {
             {/* User info */}
             <div className="user-info">
               <span className="user-name">
-                ðŸ‘¤ {user.full_name || user.name}
+                👤 {user.full_name || user.name}
               </span>
               <span className={`user-role role-${user.role}`}>{user.role}</span>
               <button onClick={logout} className="btn-logout" title="Logout">
-                ðŸšª
+                🚪
               </button>
             </div>
           </div>
@@ -193,7 +193,7 @@ function AppContent() {
       <footer className="app-footer">
         <div className="container">
           <p>
-            Â© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001
+            © {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001
             - Tutti i diritti riservati
           </p>
         </div>
