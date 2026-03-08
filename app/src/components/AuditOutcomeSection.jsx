@@ -15,13 +15,7 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
   const [conclusions, setConclusions] = useState(
     auditOutcome?.conclusions || ""
   );
-  // RIMOSSO: emergingSummary (Descrizione sintetica rilievi)
-  // RIMOSSO: attachments (allegati ora gestiti per domanda)
-  const [distribution, setDistribution] = useState(
-    auditOutcome?.distribution || []
-  );
-  // RIMOSSO: newAttachment
-  const [newDistribution, setNewDistribution] = useState("");
+  // RIMOSSO: emergingSummary, attachments, distribution (funzionalità future)
 
   // Calcola metriche real-time dalla checklist
   const [metrics, setMetrics] = useState({
@@ -68,31 +62,6 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
     onUpdate({
       ...auditOutcome,
       conclusions: value,
-    });
-  };
-
-  // RIMOSSO: handleEmergingSummaryChange
-  // RIMOSSO: handleAddAttachment, handleRemoveAttachment
-
-  // Handler aggiungi destinatario
-  const handleAddDistribution = () => {
-    if (!newDistribution.trim()) return;
-    const updatedDistribution = [...distribution, newDistribution.trim()];
-    setDistribution(updatedDistribution);
-    setNewDistribution("");
-    onUpdate({
-      ...auditOutcome,
-      distribution: updatedDistribution,
-    });
-  };
-
-  // Handler rimuovi destinatario
-  const handleRemoveDistribution = (index) => {
-    const updatedDistribution = distribution.filter((_, i) => i !== index);
-    setDistribution(updatedDistribution);
-    onUpdate({
-      ...auditOutcome,
-      distribution: updatedDistribution,
     });
   };
 
@@ -209,63 +178,7 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
 
       {/* RIMOSSO: Sezione Allegati (ora gestiti per domanda nella checklist) */}
 
-      {/* ==================== DISTRIBUZIONE ==================== */}
-      {/* NASCOSTO: Funzionalità futura per invio email automatico */}
-      {false && (
-        <div className="outcome-block">
-          <h3 className="outcome-block-title">
-            <span className="block-icon">📧</span>
-            Distribuzione Report
-          </h3>
-
-          {/* Lista destinatari */}
-          <div className="items-list">
-            {distribution.length === 0 ? (
-              <p className="empty-message">Nessun destinatario inserito</p>
-            ) : (
-              <ul className="items-list-ul">
-                {distribution.map((recipient, index) => (
-                  <li key={index} className="list-item">
-                    <span className="item-text">{recipient}</span>
-                    <button
-                      className="btn-remove-item"
-                      onClick={() => handleRemoveDistribution(index)}
-                      title="Rimuovi destinatario"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Aggiungi destinatario */}
-          <div className="add-item-form">
-            <input
-              type="text"
-              className="add-item-input"
-              placeholder="Es: Direzione Generale, Responsabile Qualità..."
-              value={newDistribution}
-              onChange={(e) => setNewDistribution(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddDistribution();
-                }
-              }}
-            />
-            <button
-              className="btn btn-primary btn-add-item"
-              onClick={handleAddDistribution}
-            >
-              + Aggiungi Destinatario
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* RIMOSSO: Riepilogo Esito Audit (dati già visibili nelle metriche compatte sopra) */}
+      {/* Distribuzione Report: rimossa — funzionalità futura (invio email automatico) */}
     </div>
   );
 }
