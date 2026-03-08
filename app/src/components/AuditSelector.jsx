@@ -94,8 +94,6 @@ function AuditSelector() {
   return (
     <div className="audit-selector">
       <div className="audit-selector-header">
-        <label htmlFor="audit-select">Audit Corrente:</label>
-
         <div className="audit-selector-controls">
           <select
             id="audit-select"

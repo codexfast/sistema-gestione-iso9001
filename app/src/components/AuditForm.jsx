@@ -37,24 +37,10 @@ const AuditForm = () => {
       console.error("Errore caricamento standard:", error);
       // Fallback a standard predefiniti se API non disponibile
       setStandards([
-        {
-          standard_id: 1,
-          standard_code: "ISO_9001_2015",
-          standard_name: "ISO 9001:2015",
-          category: "quality",
-        },
-        {
-          standard_id: 2,
-          standard_code: "ISO_14001_2015",
-          standard_name: "ISO 14001:2015",
-          category: "environment",
-        },
-        {
-          standard_id: 3,
-          standard_code: "ISO_45001_2018",
-          standard_name: "ISO 45001:2018",
-          category: "safety",
-        },
+        { standard_id: 1, standard_code: "ISO_9001_2015",  standard_name: "ISO 9001:2015",  category: "quality" },
+        { standard_id: 2, standard_code: "ISO_14001_2015", standard_name: "ISO 14001:2015", category: "environment" },
+        { standard_id: 3, standard_code: "ISO_3834_2",     standard_name: "ISO 3834-2:2021", category: "welding" },
+        { standard_id: 4, standard_code: "ISO_45001_2018", standard_name: "ISO 45001:2018", category: "safety" },
       ]);
     } finally {
       setLoadingStandards(false);

@@ -864,12 +864,15 @@ export function StorageProvider({ children, useMockData = false }) {
 
       // Mappa standard code → standard_id
       const standardIdMap = {
-        ISO_9001: 1,
+        ISO_9001:      1,
         ISO_9001_2015: 1,
-        ISO_14001: 2,
+        ISO_14001:     2,
         ISO_14001_2015: 2,
-        ISO_45001: 3,
-        ISO_45001_2018: 3
+        ISO_3834:      3,
+        ISO_3834_2:    3,
+        ISO_3834_2_2021: 3,
+        ISO_45001:     4,
+        ISO_45001_2018: 4,
       };
 
       const standardId = standardIdMap[standard];
@@ -916,7 +919,7 @@ export function StorageProvider({ children, useMockData = false }) {
             text: q.questionText,
             questionId: q.questionId,
             // clauseRef: usa il valore esplicito dal template (norma ISO), altrimenti auto-generato
-            clauseRef: q.clauseRef || `${section.sectionCode.replace('clause', '')}.${idx + 1}`,
+            clauseRef: q.clauseRef || (q.displayOrder ? String(q.displayOrder) : `${section.sectionCode}.${idx + 1}`),
             // Inizializza risposta vuota
             status: "NOT_ANSWERED",
             score: null,

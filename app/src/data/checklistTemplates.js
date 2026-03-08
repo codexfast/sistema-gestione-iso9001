@@ -120,19 +120,19 @@ export const ISO_14001_TEMPLATE = {
       sectionTitle: "4 – AMBIENTE E SICUREZZA",
       displayOrder: 1,
       questions: [
-        { questionId: 122, questionText: "EDILIZIA/AGIBILITA'", questionType: "conformity", isMandatory: true, displayOrder: 2 },
-        { questionId: 123, questionText: "INDUSTRIE INSALUBRI", questionType: "conformity", isMandatory: true, displayOrder: 3 },
-        { questionId: 124, questionText: "IMPIANTI TERMICI", questionType: "conformity", isMandatory: true, displayOrder: 4 },
-        { questionId: 125, questionText: "INCIDENTI RILEVANTI", questionType: "conformity", isMandatory: true, displayOrder: 5 },
-        { questionId: 126, questionText: "PREVENZIONE INCENDI / RISCHIO INCENDI", questionType: "conformity", isMandatory: true, displayOrder: 6 },
-        { questionId: 127, questionText: "PIANO DI EMERGENZA", questionType: "conformity", isMandatory: true, displayOrder: 7 },
-        { questionId: 128, questionText: "ADDETTI ALLE EMERGENZE", questionType: "conformity", isMandatory: true, displayOrder: 8 },
-        { questionId: 129, questionText: "GAS TOSSICI", questionType: "conformity", isMandatory: true, displayOrder: 9 },
-        { questionId: 130, questionText: "AMIANTO E RELATIVI RISCHI", questionType: "conformity", isMandatory: true, displayOrder: 10 },
-        { questionId: 131, questionText: "TRASPORTO MATERIALI PERICOLOSI (ADR / RID)", questionType: "conformity", isMandatory: true, displayOrder: 11 },
-        { questionId: 132, questionText: "SOSTANZE E PREPARATI PERICOLOSI / RISCHIO CHIMICO PER LA SALUTE E LA SICUREZZA", questionType: "conformity", isMandatory: true, displayOrder: 12 },
-        { questionId: 133, questionText: "PCB / PCT", questionType: "conformity", isMandatory: true, displayOrder: 13 },
-        { questionId: 134, questionText: "RADIAZIONI IONIZZANTI E RELATIVI RISCHI", questionType: "conformity", isMandatory: true, displayOrder: 14 }
+        { questionId: 122, clauseRef: "2",  questionText: "EDILIZIA/AGIBILITA'", questionType: "conformity", isMandatory: true, displayOrder: 2 },
+        { questionId: 123, clauseRef: "3",  questionText: "INDUSTRIE INSALUBRI", questionType: "conformity", isMandatory: true, displayOrder: 3 },
+        { questionId: 124, clauseRef: "4",  questionText: "IMPIANTI TERMICI", questionType: "conformity", isMandatory: true, displayOrder: 4 },
+        { questionId: 125, clauseRef: "5",  questionText: "INCIDENTI RILEVANTI", questionType: "conformity", isMandatory: true, displayOrder: 5 },
+        { questionId: 126, clauseRef: "6",  questionText: "PREVENZIONE INCENDI / RISCHIO INCENDI", questionType: "conformity", isMandatory: true, displayOrder: 6 },
+        { questionId: 127, clauseRef: "7",  questionText: "PIANO DI EMERGENZA", questionType: "conformity", isMandatory: true, displayOrder: 7 },
+        { questionId: 128, clauseRef: "8",  questionText: "ADDETTI ALLE EMERGENZE", questionType: "conformity", isMandatory: true, displayOrder: 8 },
+        { questionId: 129, clauseRef: "9",  questionText: "GAS TOSSICI", questionType: "conformity", isMandatory: true, displayOrder: 9 },
+        { questionId: 130, clauseRef: "10", questionText: "AMIANTO E RELATIVI RISCHI", questionType: "conformity", isMandatory: true, displayOrder: 10 },
+        { questionId: 131, clauseRef: "11", questionText: "TRASPORTO MATERIALI PERICOLOSI (ADR / RID)", questionType: "conformity", isMandatory: true, displayOrder: 11 },
+        { questionId: 132, clauseRef: "12", questionText: "SOSTANZE E PREPARATI PERICOLOSI / RISCHIO CHIMICO PER LA SALUTE E LA SICUREZZA", questionType: "conformity", isMandatory: true, displayOrder: 12 },
+        { questionId: 133, clauseRef: "13", questionText: "PCB / PCT", questionType: "conformity", isMandatory: true, displayOrder: 13 },
+        { questionId: 134, clauseRef: "14", questionText: "RADIAZIONI IONIZZANTI E RELATIVI RISCHI", questionType: "conformity", isMandatory: true, displayOrder: 14 }
       ]
     },
     {
@@ -140,39 +140,151 @@ export const ISO_14001_TEMPLATE = {
       sectionTitle: "5. AMBIENTE",
       displayOrder: 2,
       questions: [
-        { questionId: 135, questionText: "VALUTAZIONE IMPATTO AMBIENTALE (VIA) e VALUTAZIONE AMBIENTALE STRATEGICA (VAS)", questionType: "conformity", isMandatory: true, displayOrder: 15 },
-        { questionId: 136, questionText: "AUTORIZZAZIONE INTEGRATA AMBIENTALE (AIA) e IPPC", questionType: "conformity", isMandatory: true, displayOrder: 16 },
-        { questionId: 137, questionText: "AUTORIZZAZIONE UNICA AMBIENTALE (AUA)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
-        { questionId: 138, questionText: "APPROVVIGIONAMENTO IDRICO", questionType: "conformity", isMandatory: true, displayOrder: 18 },
-        { questionId: 139, questionText: "SCARICHI IDRICI", questionType: "conformity", isMandatory: true, displayOrder: 19 },
-        { questionId: 140, questionText: "QUALITA' DELL'ARIA", questionType: "conformity", isMandatory: true, displayOrder: 20 },
-        { questionId: 141, questionText: "EMISSIONI IN ATMOSFERA", questionType: "conformity", isMandatory: true, displayOrder: 21 },
-        { questionId: 142, questionText: "EMISSIONI ODORIGENE", questionType: "conformity", isMandatory: true, displayOrder: 22 },
-        { questionId: 143, questionText: "RIFIUTI", questionType: "conformity", isMandatory: true, displayOrder: 23 },
-        { questionId: 144, questionText: "GESTIONE IMBALLAGGI (CONAI E CONSORZI DI FILIERA)", questionType: "conformity", isMandatory: true, displayOrder: 24 },
-        { questionId: 145, questionText: "DISCARICHE E IMPIANTI DI INCENERIMENTO", questionType: "conformity", isMandatory: true, displayOrder: 25 },
-        { questionId: 146, questionText: "TERRE E ROCCE DA SCAVO", questionType: "conformity", isMandatory: true, displayOrder: 26 },
-        { questionId: 147, questionText: "BONIFICA SITI CONTAMINATI", questionType: "conformity", isMandatory: true, displayOrder: 27 },
-        { questionId: 148, questionText: "CONTAMINAZIONE SUOLO E SOTTOSUOLO (Serbatoi Interrati)", questionType: "conformity", isMandatory: true, displayOrder: 28 },
-        { questionId: 149, questionText: "GAS AD EFFETTO SERRA E LESIVI DELL'OZONO", questionType: "conformity", isMandatory: true, displayOrder: 29 },
-        { questionId: 150, questionText: "INQUINAMENTO ACUSTICO", questionType: "conformity", isMandatory: true, displayOrder: 30 },
-        { questionId: 151, questionText: "GESTIONE ENERGETICA ED ENERGY MANAGER", questionType: "conformity", isMandatory: true, displayOrder: 31 },
-        { questionId: 152, questionText: "MOBILITY MANAGER", questionType: "conformity", isMandatory: true, displayOrder: 32 },
-        { questionId: 153, questionText: "INQUINAMENTO ELETTROMAGNETICO", questionType: "conformity", isMandatory: true, displayOrder: 33 },
-        { questionId: 154, questionText: "INQUINAMENTO LUMINOSO", questionType: "conformity", isMandatory: true, displayOrder: 34 },
-        { questionId: 155, questionText: "SOSTENIBILITA' / CORPORATE SUSTAINABILITY REPORTING DIRECTIVE (CSRD)", questionType: "conformity", isMandatory: true, displayOrder: 35 },
-        { questionId: 156, questionText: "MEDI IMPIANTI DI COMBUSTIONE", questionType: "conformity", isMandatory: true, displayOrder: 36 },
-        { questionId: 157, questionText: "GRANDI IMPIANTI DI COMBUSTIONE", questionType: "conformity", isMandatory: true, displayOrder: 37 },
-        { questionId: 158, questionText: "ATTIVITA' DI GESTIONE DEI RIFIUTI ED IMPIANTI DI RECUPERO (art. 208 e segg. D.Lgs. 152/06)", questionType: "conformity", isMandatory: true, displayOrder: 38 },
-        { questionId: 159, questionText: "OLI USATI", questionType: "conformity", isMandatory: true, displayOrder: 39 },
-        { questionId: 160, questionText: "RIFIUTI SANITARI/ORIGINE ANIMALE, SOTTOPRODOTTI DI ORIGINE ANIMALE", questionType: "conformity", isMandatory: true, displayOrder: 40 },
-        { questionId: 161, questionText: "UTILIZZO FANGHI IN AGRICOLTURA", questionType: "conformity", isMandatory: true, displayOrder: 41 },
-        { questionId: 162, questionText: "SOTTOPRODOTTI", questionType: "conformity", isMandatory: true, displayOrder: 42 },
-        { questionId: 163, questionText: "ATTIVITA' DI AUTOSMALTIMENTO DI RIFIUTI PERICOLOSI", questionType: "conformity", isMandatory: true, displayOrder: 43 },
-        { questionId: 164, questionText: "RISPARMIO ED EFFICIENZA ENERGETICA", questionType: "conformity", isMandatory: true, displayOrder: 44 },
-        { questionId: 165, questionText: "EUDR, European Union Deforestation Regulation", questionType: "conformity", isMandatory: true, displayOrder: 45 },
-        { questionId: 166, questionText: "PPWR (Packaging and Packaging Waste Regulation)", questionType: "conformity", isMandatory: true, displayOrder: 46 },
-        { questionId: 167, questionText: "Prescrizioni AIA, AUA", questionType: "conformity", isMandatory: true, displayOrder: 47 }
+        { questionId: 135, clauseRef: "15", questionText: "VALUTAZIONE IMPATTO AMBIENTALE (VIA) e VALUTAZIONE AMBIENTALE STRATEGICA (VAS)", questionType: "conformity", isMandatory: true, displayOrder: 15 },
+        { questionId: 136, clauseRef: "16", questionText: "AUTORIZZAZIONE INTEGRATA AMBIENTALE (AIA) e IPPC", questionType: "conformity", isMandatory: true, displayOrder: 16 },
+        { questionId: 137, clauseRef: "17", questionText: "AUTORIZZAZIONE UNICA AMBIENTALE (AUA)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
+        { questionId: 138, clauseRef: "18", questionText: "APPROVVIGIONAMENTO IDRICO", questionType: "conformity", isMandatory: true, displayOrder: 18 },
+        { questionId: 139, clauseRef: "19", questionText: "SCARICHI IDRICI", questionType: "conformity", isMandatory: true, displayOrder: 19 },
+        { questionId: 140, clauseRef: "20", questionText: "QUALITA' DELL'ARIA", questionType: "conformity", isMandatory: true, displayOrder: 20 },
+        { questionId: 141, clauseRef: "21", questionText: "EMISSIONI IN ATMOSFERA", questionType: "conformity", isMandatory: true, displayOrder: 21 },
+        { questionId: 142, clauseRef: "22", questionText: "EMISSIONI ODORIGENE", questionType: "conformity", isMandatory: true, displayOrder: 22 },
+        { questionId: 143, clauseRef: "23", questionText: "RIFIUTI", questionType: "conformity", isMandatory: true, displayOrder: 23 },
+        { questionId: 144, clauseRef: "24", questionText: "GESTIONE IMBALLAGGI (CONAI E CONSORZI DI FILIERA)", questionType: "conformity", isMandatory: true, displayOrder: 24 },
+        { questionId: 145, clauseRef: "25", questionText: "DISCARICHE E IMPIANTI DI INCENERIMENTO", questionType: "conformity", isMandatory: true, displayOrder: 25 },
+        { questionId: 146, clauseRef: "26", questionText: "TERRE E ROCCE DA SCAVO", questionType: "conformity", isMandatory: true, displayOrder: 26 },
+        { questionId: 147, clauseRef: "27", questionText: "BONIFICA SITI CONTAMINATI", questionType: "conformity", isMandatory: true, displayOrder: 27 },
+        { questionId: 148, clauseRef: "28", questionText: "CONTAMINAZIONE SUOLO E SOTTOSUOLO (Serbatoi Interrati)", questionType: "conformity", isMandatory: true, displayOrder: 28 },
+        { questionId: 149, clauseRef: "29", questionText: "GAS AD EFFETTO SERRA E LESIVI DELL'OZONO", questionType: "conformity", isMandatory: true, displayOrder: 29 },
+        { questionId: 150, clauseRef: "30", questionText: "INQUINAMENTO ACUSTICO", questionType: "conformity", isMandatory: true, displayOrder: 30 },
+        { questionId: 151, clauseRef: "31", questionText: "GESTIONE ENERGETICA ED ENERGY MANAGER", questionType: "conformity", isMandatory: true, displayOrder: 31 },
+        { questionId: 152, clauseRef: "32", questionText: "MOBILITY MANAGER", questionType: "conformity", isMandatory: true, displayOrder: 32 },
+        { questionId: 153, clauseRef: "33", questionText: "INQUINAMENTO ELETTROMAGNETICO", questionType: "conformity", isMandatory: true, displayOrder: 33 },
+        { questionId: 154, clauseRef: "34", questionText: "INQUINAMENTO LUMINOSO", questionType: "conformity", isMandatory: true, displayOrder: 34 },
+        { questionId: 155, clauseRef: "35", questionText: "SOSTENIBILITA' / CORPORATE SUSTAINABILITY REPORTING DIRECTIVE (CSRD)", questionType: "conformity", isMandatory: true, displayOrder: 35 },
+        { questionId: 156, clauseRef: "36", questionText: "MEDI IMPIANTI DI COMBUSTIONE", questionType: "conformity", isMandatory: true, displayOrder: 36 },
+        { questionId: 157, clauseRef: "37", questionText: "GRANDI IMPIANTI DI COMBUSTIONE", questionType: "conformity", isMandatory: true, displayOrder: 37 },
+        { questionId: 158, clauseRef: "38", questionText: "ATTIVITA' DI GESTIONE DEI RIFIUTI ED IMPIANTI DI RECUPERO (art. 208 e segg. D.Lgs. 152/06)", questionType: "conformity", isMandatory: true, displayOrder: 38 },
+        { questionId: 159, clauseRef: "39", questionText: "OLI USATI", questionType: "conformity", isMandatory: true, displayOrder: 39 },
+        { questionId: 160, clauseRef: "40", questionText: "RIFIUTI SANITARI/ORIGINE ANIMALE, SOTTOPRODOTTI DI ORIGINE ANIMALE", questionType: "conformity", isMandatory: true, displayOrder: 40 },
+        { questionId: 161, clauseRef: "41", questionText: "UTILIZZO FANGHI IN AGRICOLTURA", questionType: "conformity", isMandatory: true, displayOrder: 41 },
+        { questionId: 162, clauseRef: "42", questionText: "SOTTOPRODOTTI", questionType: "conformity", isMandatory: true, displayOrder: 42 },
+        { questionId: 163, clauseRef: "43", questionText: "ATTIVITA' DI AUTOSMALTIMENTO DI RIFIUTI PERICOLOSI", questionType: "conformity", isMandatory: true, displayOrder: 43 },
+        { questionId: 164, clauseRef: "44", questionText: "RISPARMIO ED EFFICIENZA ENERGETICA", questionType: "conformity", isMandatory: true, displayOrder: 44 },
+        { questionId: 165, clauseRef: "45", questionText: "EUDR, European Union Deforestation Regulation", questionType: "conformity", isMandatory: true, displayOrder: 45 },
+        { questionId: 166, clauseRef: "46", questionText: "PPWR (Packaging and Packaging Waste Regulation)", questionType: "conformity", isMandatory: true, displayOrder: 46 },
+        { questionId: 167, clauseRef: "47", questionText: "Prescrizioni AIA, AUA", questionType: "conformity", isMandatory: true, displayOrder: 47 }
+      ]
+    }
+  ]
+};
+
+/**
+ * Template ISO 3834-2:2021 (Requisiti di qualità per la saldatura per fusione dei materiali metallici)
+ * Requisiti completi — 36 domande di audit
+ * questionId: null = domande non ancora nel DB (sync silenzioso)
+ */
+export const ISO_3834_TEMPLATE = {
+  standardId: 3,
+  standardCode: "ISO_3834_2",
+  standardName: "ISO 3834-2:2021",
+  sections: [
+    {
+      sectionCode: "3834_s4",
+      sectionTitle: "4 – Riesame dei requisiti e riesame tecnico",
+      displayOrder: 1,
+      questions: [
+        { questionId: null, clauseRef: "1",  questionText: "Riesame dei requisiti contrattuali prima dell'offerta/ordine (4.2)", questionType: "conformity", isMandatory: true, displayOrder: 1 },
+        { questionId: null, clauseRef: "2",  questionText: "Riesame tecnico della fattibilità della saldatura (4.3)", questionType: "conformity", isMandatory: true, displayOrder: 2 },
+        { questionId: null, clauseRef: "3",  questionText: "Eventuali subappalti di saldatura documentati e comunicati al cliente (6)", questionType: "conformity", isMandatory: true, displayOrder: 3 }
+      ]
+    },
+    {
+      sectionCode: "3834_s7",
+      sectionTitle: "7 – Personale di saldatura",
+      displayOrder: 2,
+      questions: [
+        { questionId: null, clauseRef: "4",  questionText: "Saldatori e operatori qualificati secondo norme applicabili (ISO 9606, ISO 14732) (7.1)", questionType: "conformity", isMandatory: true, displayOrder: 4 },
+        { questionId: null, clauseRef: "5",  questionText: "Coordinatori di saldatura con competenze tecniche adeguate (IWE/IWT/IWS) (7.2)", questionType: "conformity", isMandatory: true, displayOrder: 5 },
+        { questionId: null, clauseRef: "6",  questionText: "Addetti al controllo di saldatura qualificati (NDT, ispezione) (8)", questionType: "conformity", isMandatory: true, displayOrder: 6 }
+      ]
+    },
+    {
+      sectionCode: "3834_s10",
+      sectionTitle: "10 – Attrezzature di saldatura e accessorie",
+      displayOrder: 3,
+      questions: [
+        { questionId: null, clauseRef: "7",  questionText: "Attrezzature di saldatura idonee, disponibili e manutenute (10.1)", questionType: "conformity", isMandatory: true, displayOrder: 7 },
+        { questionId: null, clauseRef: "8",  questionText: "Attrezzature di taglio, fissaggio e movimentazione adeguate (10.1)", questionType: "conformity", isMandatory: true, displayOrder: 8 },
+        { questionId: null, clauseRef: "9",  questionText: "Strumenti di misura tarati e idonei (calibrazione documentata) (10.2)", questionType: "conformity", isMandatory: true, displayOrder: 9 }
+      ]
+    },
+    {
+      sectionCode: "3834_s11",
+      sectionTitle: "11 – Attività di saldatura (pianificazione e WPS)",
+      displayOrder: 4,
+      questions: [
+        { questionId: null, clauseRef: "10", questionText: "Specifiche di procedura di saldatura (WPS) disponibili e approvate (11.1)", questionType: "conformity", isMandatory: true, displayOrder: 10 },
+        { questionId: null, clauseRef: "11", questionText: "Procedure qualificate (WPQR/PQR) secondo norme applicabili (ISO 15614) (11.2)", questionType: "conformity", isMandatory: true, displayOrder: 11 },
+        { questionId: null, clauseRef: "12", questionText: "Pianificazione della produzione include sequenza e condizioni di saldatura (11.3)", questionType: "conformity", isMandatory: true, displayOrder: 12 },
+        { questionId: null, clauseRef: "13", questionText: "Materiali di apporto conformi alle specifiche e correttamente conservati (11.4)", questionType: "conformity", isMandatory: true, displayOrder: 13 },
+        { questionId: null, clauseRef: "14", questionText: "Materiali base conformi alle specifiche contrattuali (11.4)", questionType: "conformity", isMandatory: true, displayOrder: 14 },
+        { questionId: null, clauseRef: "15", questionText: "Trattamento termico post-saldatura (PWHT) pianificato e documentato se richiesto (11.5)", questionType: "conformity", isMandatory: true, displayOrder: 15 }
+      ]
+    },
+    {
+      sectionCode: "3834_s12",
+      sectionTitle: "12 – Controllo e prove (prima, durante e dopo la saldatura)",
+      displayOrder: 5,
+      questions: [
+        { questionId: null, clauseRef: "16", questionText: "Controlli pre-saldatura: pulizia, geometria, posizionamento, puntatura (12.1)", questionType: "conformity", isMandatory: true, displayOrder: 16 },
+        { questionId: null, clauseRef: "17", questionText: "Controlli in corso d'opera: parametri saldatura, sequenza, interpass (12.2)", questionType: "conformity", isMandatory: true, displayOrder: 17 },
+        { questionId: null, clauseRef: "18", questionText: "Controlli post-saldatura: esame visivo (VT) su tutti i giunti (12.3)", questionType: "conformity", isMandatory: true, displayOrder: 18 },
+        { questionId: null, clauseRef: "19", questionText: "Controlli non distruttivi (NDT) secondo norma e contratto (PT, MT, RT, UT) (12.3)", questionType: "conformity", isMandatory: true, displayOrder: 19 },
+        { questionId: null, clauseRef: "20", questionText: "Prove distruttive (DT) e prove di accettazione eseguite e documentate (12.3)", questionType: "conformity", isMandatory: true, displayOrder: 20 }
+      ]
+    },
+    {
+      sectionCode: "3834_s14",
+      sectionTitle: "14 – Non conformità e azioni correttive",
+      displayOrder: 6,
+      questions: [
+        { questionId: null, clauseRef: "21", questionText: "Difetti rilevati riparati secondo procedura qualificata o rilavorati (14.1)", questionType: "conformity", isMandatory: true, displayOrder: 21 },
+        { questionId: null, clauseRef: "22", questionText: "Non conformità registrate con analisi causa e azione correttiva (14.2)", questionType: "conformity", isMandatory: true, displayOrder: 22 },
+        { questionId: null, clauseRef: "23", questionText: "Prodotti non conformi identificati e segregati per evitare uso involontario (14.3)", questionType: "conformity", isMandatory: true, displayOrder: 23 }
+      ]
+    },
+    {
+      sectionCode: "3834_s15",
+      sectionTitle: "15 – Identificazione e rintracciabilità",
+      displayOrder: 7,
+      questions: [
+        { questionId: null, clauseRef: "24", questionText: "Materiali base identificati e rintracciabili durante tutto il processo (15.1)", questionType: "conformity", isMandatory: true, displayOrder: 24 },
+        { questionId: null, clauseRef: "25", questionText: "Materiali di apporto identificati e rintracciabili durante tutto il processo (15.1)", questionType: "conformity", isMandatory: true, displayOrder: 25 },
+        { questionId: null, clauseRef: "26", questionText: "Giunti saldati identificati e rintracciabili rispetto a WPS e saldatore (15.2)", questionType: "conformity", isMandatory: true, displayOrder: 26 }
+      ]
+    },
+    {
+      sectionCode: "3834_s16",
+      sectionTitle: "16 – Registrazioni della qualità",
+      displayOrder: 8,
+      questions: [
+        { questionId: null, clauseRef: "27", questionText: "Registrazioni delle qualifiche di saldatori e operatori disponibili e aggiornate (16)", questionType: "conformity", isMandatory: true, displayOrder: 27 },
+        { questionId: null, clauseRef: "28", questionText: "Qualifiche delle procedure di saldatura (WPQR) documentate e aggiornate (16)", questionType: "conformity", isMandatory: true, displayOrder: 28 },
+        { questionId: null, clauseRef: "29", questionText: "Certificati dei materiali base e di apporto conservati e rintracciabili (16)", questionType: "conformity", isMandatory: true, displayOrder: 29 },
+        { questionId: null, clauseRef: "30", questionText: "Rapporti di controllo e prove (VT, NDT, DT) conservati e accessibili (16)", questionType: "conformity", isMandatory: true, displayOrder: 30 },
+        { questionId: null, clauseRef: "31", questionText: "Registrazioni del trattamento termico (PWHT) disponibili se applicabile (16)", questionType: "conformity", isMandatory: true, displayOrder: 31 },
+        { questionId: null, clauseRef: "32", questionText: "Dossier di saldatura completo per ogni commessa/struttura prodotta (16)", questionType: "conformity", isMandatory: true, displayOrder: 32 }
+      ]
+    },
+    {
+      sectionCode: "3834_s17",
+      sectionTitle: "17 – Dichiarazione di conformità",
+      displayOrder: 9,
+      questions: [
+        { questionId: null, clauseRef: "33", questionText: "Dichiarazione di conformità alla norma ISO 3834-2 disponibile e aggiornata (17)", questionType: "conformity", isMandatory: true, displayOrder: 33 },
+        { questionId: null, clauseRef: "34", questionText: "Marcatura CE / dichiarazioni di prestazione per prodotti saldati (se applicabile) (17)", questionType: "conformity", isMandatory: true, displayOrder: 34 },
+        { questionId: null, clauseRef: "35", questionText: "Certificazione di terza parte o attestazione di conformità ISO 3834-2 (se richiesta) (17)", questionType: "conformity", isMandatory: true, displayOrder: 35 },
+        { questionId: null, clauseRef: "36", questionText: "Piano di gestione qualità di saldatura (WQMP) redatto e applicato (generale)", questionType: "conformity", isMandatory: true, displayOrder: 36 }
       ]
     }
   ]
@@ -184,7 +296,7 @@ export const ISO_14001_TEMPLATE = {
  * questionId: null = domande non ancora nel DB (sync silenzioso)
  */
 export const ISO_45001_TEMPLATE = {
-  standardId: 3,
+  standardId: 4,
   standardCode: "ISO_45001_2018",
   standardName: "ISO 45001:2018",
   sections: [
@@ -274,7 +386,8 @@ export const ISO_45001_TEMPLATE = {
 export const CHECKLIST_TEMPLATES = {
   1: ISO_9001_TEMPLATE,
   2: ISO_14001_TEMPLATE,
-  3: ISO_45001_TEMPLATE
+  3: ISO_3834_TEMPLATE,
+  4: ISO_45001_TEMPLATE,
 };
 
 /**

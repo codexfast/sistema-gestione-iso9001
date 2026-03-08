@@ -57,8 +57,10 @@ function normalizeStdKey(key) {
     const k = String(key).toUpperCase().trim();
     if (TEMPLATE_MAP[k]) return k;
     // Rimuovi suffisso anno: ISO_9001_2015 → ISO_9001, ISO_3834_2_2021 → ISO_3834_2
-    const withoutYear = k.replace(/_\d{4}(_\d+)?$/, '');
+    const withoutYear = k.replace(/_\d{4}$/, '');
     if (TEMPLATE_MAP[withoutYear]) return withoutYear;
+    // Gestione ISO 3834 con varianti (ISO_3834, ISO_3834_2, ISO_3834_2_2021)
+    if (k.includes('3834')) return 'ISO_3834_2';
     return 'default';
 }
 
