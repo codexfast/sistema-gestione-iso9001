@@ -141,6 +141,36 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 
 Questi due aspetti impattano su più fasi e vanno considerati in ogni decisione architetturale.
 
+#### Sicurezza link allegati nel Word — download token monouso (Fase 0 / bassa priorità)
+**Problema**: i link agli allegati embedded nel report Word contengono il JWT di sessione completo dell'auditor.
+Chiunque riceva il file Word può aprire i link e scaricare gli allegati senza fare login.
+Il token ha permessi ampi (intera API) e potenzialmente lunga scadenza.
+
+**Soluzione**: sostituire il JWT con **token monouso a scadenza breve** (48h), dedicati al singolo allegato.
+
+```
+Tabella DB:
+  download_tokens (
+    token_hash    VARCHAR(64) PK,   -- SHA-256 del token, mai il token grezzo
+    attachment_id INT FK,
+    created_by    INT FK users,
+    expires_at    DATETIME,         -- ora generazione + 48h
+    used_at       DATETIME NULL     -- NULL = non ancora usato
+  )
+
+Backend:
+  POST /attachments/download-token  → genera token per lista attachment_id
+  GET  /attachments/download?dt=TOKEN → valida (esiste? non scaduto?) e serve il file
+
+Frontend (wordExport.js):
+  Prima di costruire il Word, chiama l'API per ottenere i token temporanei
+  Sostituisce getViewUrl → URL con ?dt=TOKEN invece di ?token=JWT
+```
+
+**Stima**: ~4-5 ore (DB 2h + Backend 1h + Frontend 2h)
+**Priorità**: bassa — da fare dopo stabilizzazione core (Fase 0 completata)
+**Riferimento**: discussione 08/03/2026
+
 #### Audit Locking — accesso concorrente (Fase 1)
 **Problema**: se due auditor aprono lo stesso audit contemporaneamente si sovrascrivono le risposte.
 **Soluzione**: pessimistic lock con TTL (time-to-live).
@@ -353,5 +383,5 @@ custom_questions  (id, checklist_id FK, question_text, expected_answer, weight, 
 
 ---
 
-**Ultimo Aggiornamento**: 07 marzo 2026
+**Ultimo Aggiornamento**: 08 marzo 2026
 **Prossimo Review**: dopo test export Word con sommario completo
