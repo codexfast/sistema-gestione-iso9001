@@ -262,18 +262,24 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
 
         if (qAtts.length) {
             qAtts.forEach(a => {
-                const name    = a.fileName || a.name || 'File';
-                const aId     = a.id || a.attachment_id || a.serverAttachmentId;
-                const url     = (getViewUrl && aId) ? getViewUrl(aId) : null;
-                const isImage = IMAGE_MIME_TYPES.has(a.mimeType);
+                const name = a.fileName || a.name || 'File';
+                const aId  = a.id || a.attachment_id || a.serverAttachmentId;
+                const url  = (getViewUrl && aId) ? getViewUrl(aId) : null;
 
-                if (usePreview && isImage && a.imageBase64) {
+                // Usa imageMimeType (verificato dal server) se disponibile, fallback a mimeType
+                const effectiveMime = a.imageMimeType || a.mimeType || '';
+                // Verifica doppia: tipo MIME è immagine E i dati base64 iniziano con data:image/
+                const hasValidImage = IMAGE_MIME_TYPES.has(effectiveMime)
+                    && typeof a.imageBase64 === 'string'
+                    && a.imageBase64.startsWith('data:image/');
+
+                if (usePreview && hasValidImage) {
                     // Modalità anteprima: immagine embedded + link cliccabile sotto
                     const imgIdx = imageRegistry.length;
                     const rId   = `rId${100 + imgIdx}`;
                     const imgId = 100 + imgIdx;
-                    const ext   = IMAGE_EXTS[a.mimeType] || 'jpg';
-                    imageRegistry.push({ rId, imgId, base64: a.imageBase64, mimeType: a.mimeType, ext });
+                    const ext   = IMAGE_EXTS[effectiveMime] || 'jpg';
+                    imageRegistry.push({ rId, imgId, base64: a.imageBase64, mimeType: effectiveMime, ext });
 
                     const imgXml  = xmlImageOoxml(rId, imgId);
                     const linkRow = url

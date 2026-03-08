@@ -246,6 +246,7 @@ async function preloadImagesIntoAudit(audit, getViewUrl) {
     const attachments = audit.attachments || [];
     await Promise.allSettled(
         attachments.map(async (att) => {
+            // Prima verifica: tipo salvato nel DB
             if (!imageTypes.includes(att.mimeType)) return;
             const id = att.serverAttachmentId || att.id;
             if (!id) return;
@@ -254,8 +255,15 @@ async function preloadImagesIntoAudit(audit, getViewUrl) {
                 const resp = await fetch(url);
                 if (!resp.ok) return;
                 const blob = await resp.blob();
-                att.imageBase64 = await blobToBase64(blob);
-                att.imageMimeType = blob.type || att.mimeType;
+                // Seconda verifica: tipo REALE restituito dal server
+                // Se il server dice che è un PDF o altro, non lo trattiamo come immagine
+                const realMimeType = blob.type || att.mimeType;
+                if (!imageTypes.includes(realMimeType)) {
+                    console.warn('[wordExport] allegato ignorato: tipo reale non è immagine', { stored: att.mimeType, real: realMimeType, id });
+                    return;
+                }
+                att.imageBase64   = await blobToBase64(blob);
+                att.imageMimeType = realMimeType;
             } catch (e) {
                 console.warn('[wordExport] preload image failed for att', id, e.message);
             }
