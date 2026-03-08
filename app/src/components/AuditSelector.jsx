@@ -11,6 +11,18 @@ import { getNextAuditNumber, sortAuditsByNumber } from "../utils/auditUtils";
 import apiService from "../services/apiService";
 import "./AuditSelector.css";
 
+/**
+ * Lista degli standard disponibili per la selezione in fase di creazione audit.
+ * Per aggiungere un nuovo standard: inserire una nuova riga qui.
+ */
+const AVAILABLE_STANDARDS = [
+  { code: "ISO_9001",   label: "ISO 9001:2015 \u2014 Qualit\u00e0" },
+  { code: "ISO_14001",  label: "ISO 14001:2015 \u2014 Ambiente" },
+  { code: "ISO_45001",  label: "ISO 45001:2018 \u2014 Salute e Sicurezza" },
+  { code: "ISO_3834_2", label: "ISO 3834-2 \u2014 Audit Fornitori in Campo" },
+  { code: "RDP_MSN",    label: "RDP Mason \u2014 Audit di Sistema Saldatura (ISO 3834-2)" },
+];
+
 function AuditSelector() {
   const {
     audits,
@@ -529,30 +541,16 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
           <div className="form-group">
             <label>Norme Applicabili *</label>
             <div className="checkbox-group">
-              <label key="ISO_9001" className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.norms.includes("ISO_9001")}
-                  onChange={() => handleNormToggle("ISO_9001")}
-                />
-                <span>ISO 9001:2015 (Qualità)</span>
-              </label>
-              <label key="ISO_14001" className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.norms.includes("ISO_14001")}
-                  onChange={() => handleNormToggle("ISO_14001")}
-                />
-                <span>ISO 14001:2015 (Ambiente)</span>
-              </label>
-              <label key="ISO_45001" className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.norms.includes("ISO_45001")}
-                  onChange={() => handleNormToggle("ISO_45001")}
-                />
-                <span>ISO 45001:2018 (Sicurezza)</span>
-              </label>
+              {AVAILABLE_STANDARDS.map(({ code, label }) => (
+                <label key={code} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.norms.includes(code)}
+                    onChange={() => handleNormToggle(code)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
             </div>
             {errors.norms && (
               <span className="error-message">{errors.norms}</span>

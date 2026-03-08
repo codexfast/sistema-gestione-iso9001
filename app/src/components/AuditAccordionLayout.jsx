@@ -16,14 +16,59 @@ import ChecklistModule from "./ChecklistModule";
 import AuditOutcomeSection from "./AuditOutcomeSection";
 import ExportPanel from "./ExportPanel";
 
-// Mappa standard → codici normalizzati accettati.
-// Per aggiungere un nuovo standard inserire qui una nuova voce, senza toccare altro.
-const STANDARD_INIT_MAP = {
-  ISO_9001:   ["ISO_9001",  "ISO_9001_2015"],
-  ISO_14001:  ["ISO_14001", "ISO_14001_2015"],
-  ISO_3834_2: ["ISO_3834",  "ISO_3834_2", "ISO_3834_2_2021"],
-  ISO_45001:  ["ISO_45001", "ISO_45001_2018"],
-};
+/**
+ * Configurazione centralizzata di tutti gli standard supportati.
+ * Per aggiungere un nuovo standard: aggiungere UNA SOLA RIGA qui.
+ *
+ * Campi:
+ *   key      — chiave interna usata nella checklist (es. "ISO_9001")
+ *   codes    — tutti i codici accettati da selectedStandards (incluse varianti anno)
+ *   label    — testo mostrato nell'accordion
+ *   icon     — emoji icona nella UI
+ *   subsId   — id CSS della sotto-sezione accordion (univoco, lowercase, senza spazi)
+ */
+const STANDARDS_CONFIG = [
+  {
+    key:    "ISO_9001",
+    codes:  ["ISO_9001", "ISO_9001_2015"],
+    label:  "ISO 9001:2015 \u2014 Qualit\u00e0",
+    icon:   "\uD83D\uDCCB",
+    subsId: "iso-9001",
+  },
+  {
+    key:    "ISO_14001",
+    codes:  ["ISO_14001", "ISO_14001_2015"],
+    label:  "ISO 14001:2015 \u2014 Ambiente",
+    icon:   "\uD83C\uDF31",
+    subsId: "iso-14001",
+  },
+  {
+    key:    "ISO_45001",
+    codes:  ["ISO_45001", "ISO_45001_2018"],
+    label:  "ISO 45001:2018 \u2014 Salute e Sicurezza",
+    icon:   "\uD83E\uDDBA",
+    subsId: "iso-45001",
+  },
+  {
+    key:    "ISO_3834_2",
+    codes:  ["ISO_3834", "ISO_3834_2", "ISO_3834_2_2021"],
+    label:  "ISO 3834-2 \u2014 Audit Fornitori in Campo",
+    icon:   "\uD83D\uDD27",
+    subsId: "iso-3834",
+  },
+  {
+    key:    "RDP_MSN",
+    codes:  ["RDP_MSN"],
+    label:  "RDP Mason \u2014 Audit di Sistema Saldatura",
+    icon:   "\uD83D\uDCCA",
+    subsId: "rdp-msn",
+  },
+];
+
+// Mappa key → codes (usata da STANDARD_INIT_MAP per retrocompatibilità interna)
+const STANDARD_INIT_MAP = Object.fromEntries(
+  STANDARDS_CONFIG.map(({ key, codes }) => [key, codes])
+);
 
 function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSaved }) {
   const { initializeChecklist, fetchAndApplyServerResponses } = useStorage();
@@ -36,15 +81,15 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
     export: false, // NUOVO: sezione export
   });
 
-  // Stato per gestire quali sotto-sezioni sono aperte
-  const [openSubSections, setOpenSubSections] = useState({
-    "general-data-form": false, // Chiusa di default
+  // Stato per gestire quali sotto-sezioni sono aperte.
+  // Le sottosezioni standard sono generate dinamicamente da STANDARDS_CONFIG.
+  const [openSubSections, setOpenSubSections] = useState(() => ({
+    "general-data-form": false,
     objective: false,
     "pending-issues": false,
-    "iso-9001": false,
-    "iso-14001": false,
-    "iso-45001": false,
-  });
+    "cert-findings": false,
+    ...Object.fromEntries(STANDARDS_CONFIG.map(({ subsId }) => [subsId, false])),
+  }));
 
   const toggleSection = (sectionId) => {
     setOpenSections((prev) => ({
@@ -335,91 +380,32 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
 
           {openSections["checklist"] && (
             <div className="accordion-content">
-              {/* ISO 9001 - Solo se selezionato (accetta sia "ISO_9001" che "ISO_9001_2015") */}
-              {selectedStandards.some(
-                (s) => s === "ISO_9001" || s === "ISO_9001_2015"
-              ) && (
-                <div className="accordion-subsection standard-section">
-                  <button
-                    className={`accordion-subheader standard-header ${
-                      openSubSections["iso-9001"] ? "open" : ""
-                    }`}
-                    onClick={() => toggleSubSection("iso-9001")}
-                  >
-                    <span className="standard-icon">📋</span>
-                    <span className="subsection-title">
-                      ISO 9001:2015 - Qualità
-                    </span>
-                    <span className="subsection-arrow">
-                      {openSubSections["iso-9001"] ? "▼" : "▶"}
-                    </span>
-                  </button>
-
-                  {openSubSections["iso-9001"] && (
-                    <div className="subsection-content">
-                      <ChecklistModule />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ISO 14001 - Solo se selezionato (accetta sia "ISO_14001" che "ISO_14001_2015") */}
-              {selectedStandards.some(
-                (s) => s === "ISO_14001" || s === "ISO_14001_2015"
-              ) && (
-                <div className="accordion-subsection standard-section">
-                  <button
-                    className={`accordion-subheader standard-header ${
-                      openSubSections["iso-14001"] ? "open" : ""
-                    }`}
-                    onClick={() => toggleSubSection("iso-14001")}
-                  >
-                    <span className="standard-icon">🌱</span>
-                    <span className="subsection-title">
-                      ISO 14001:2015 - Ambiente
-                    </span>
-                    <span className="subsection-arrow">
-                      {openSubSections["iso-14001"] ? "▼" : "▶"}
-                    </span>
-                  </button>
-
-                  {openSubSections["iso-14001"] && (
-                    <div className="subsection-content">
-                      <ChecklistModule defaultNorm="ISO_14001" />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ISO 45001 - Solo se selezionato (accetta sia "ISO_45001" che "ISO_45001_2018") */}
-              {selectedStandards.some(
-                (s) => s === "ISO_45001" || s === "ISO_45001_2018"
-              ) && (
-                <div className="accordion-subsection standard-section">
-                  <button
-                    className={`accordion-subheader standard-header ${
-                      openSubSections["iso-45001"] ? "open" : ""
-                    }`}
-                    onClick={() => toggleSubSection("iso-45001")}
-                  >
-                    <span className="standard-icon">🦺</span>
-                    <span className="subsection-title">
-                      ISO 45001:2018 - Sicurezza
-                    </span>
-                    <span className="subsection-arrow">
-                      {openSubSections["iso-45001"] ? "▼" : "▶"}
-                    </span>
-                  </button>
-
-                  {openSubSections["iso-45001"] && (
-                    <div className="subsection-content">
-                      <div className="checklist-placeholder">
-                        <p>Checklist ISO 45001 - In sviluppo</p>
+              {/* Sezioni checklist generate dinamicamente da STANDARDS_CONFIG */}
+              {STANDARDS_CONFIG.map(({ key, codes, label, icon, subsId }) => {
+                const isSelected = selectedStandards.some((s) => codes.includes(s));
+                if (!isSelected) return null;
+                return (
+                  <div key={key} className="accordion-subsection standard-section">
+                    <button
+                      className={`accordion-subheader standard-header ${
+                        openSubSections[subsId] ? "open" : ""
+                      }`}
+                      onClick={() => toggleSubSection(subsId)}
+                    >
+                      <span className="standard-icon">{icon}</span>
+                      <span className="subsection-title">{label}</span>
+                      <span className="subsection-arrow">
+                        {openSubSections[subsId] ? "\u25BC" : "\u25B6"}
+                      </span>
+                    </button>
+                    {openSubSections[subsId] && (
+                      <div className="subsection-content">
+                        <ChecklistModule defaultNorm={key} />
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Messaggio se nessuno standard selezionato */}
               {selectedStandards.length === 0 && (

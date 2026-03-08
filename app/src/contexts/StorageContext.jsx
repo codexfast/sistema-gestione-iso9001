@@ -908,6 +908,7 @@ export function StorageProvider({ children, useMockData = false }) {
         ISO_3834:        6,
         ISO_3834_2:      6,
         ISO_3834_2_2021: 6,
+        RDP_MSN:         7,
       };
 
       const standardId = standardIdMap[standard];

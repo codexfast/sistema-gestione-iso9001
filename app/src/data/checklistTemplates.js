@@ -180,13 +180,14 @@ export const ISO_14001_TEMPLATE = {
 
 /**
  * Template ISO 3834-2:2021 (Requisiti di qualità per la saldatura per fusione dei materiali metallici)
- * Requisiti completi — 36 domande di audit
+ * Requisiti completi — 36 domande di audit (clausole norma ISO 3834-2)
+ * Usato da Mason per audit di seconda parte su committenti.
  * questionId: null = domande non ancora nel DB (sync silenzioso)
  */
-export const ISO_3834_TEMPLATE = {
-  standardId: 6,
-  standardCode: "ISO_3834_2",
-  standardName: "ISO 3834-2:2021",
+export const RDP_MSN_TEMPLATE = {
+  standardId: 7,
+  standardCode: "RDP_MSN",
+  standardName: "Rapporto di Prova / Audit Fornitori (ISO 3834)",
   sections: [
     {
       sectionCode: "3834_s4",
@@ -291,6 +292,92 @@ export const ISO_3834_TEMPLATE = {
 };
 
 /**
+ * Template ISO 3834-2 — Checklist In Campo per Audit Fornitori (Mason Srl)
+ * 22 domande suddivise in 4 sezioni operative.
+ * Fonte: Checklist_in campo_TIPO_audit_fornitori.pdf
+ * questionId: null = domande non ancora nel DB (sync silenzioso)
+ */
+export const ISO_3834_TEMPLATE = {
+  standardId: 6,
+  standardCode: "ISO_3834_2",
+  standardName: "ISO 3834-2 — Audit Fornitori in Campo",
+  sections: [
+    {
+      sectionCode: "3834f_s1",
+      sectionTitle: "GESTIONE QUALIT\u00c0",
+      displayOrder: 1,
+      questions: [
+        { questionId: null, clauseRef: "3834f_q1",  displayOrder: 1,  questionType: "conformity", isMandatory: true,
+          questionText: "Il fornitore \u00e8 in possesso di certificazione UNI EN ISO 9001?" },
+        { questionId: null, clauseRef: "3834f_q2",  displayOrder: 2,  questionType: "conformity", isMandatory: true,
+          questionText: "Qualora il fornitore sia certificato ISO 3834 si effettua un corretto riesame dei requisiti?" },
+        { questionId: null, clauseRef: "3834f_q3",  displayOrder: 3,  questionType: "conformity", isMandatory: true,
+          questionText: "Vengono subappaltate alcune attivit\u00e0 (es. saldatura, ispezione, controlli non distruttivi, trattamenti termici)?" },
+        { questionId: null, clauseRef: "3834f_q4",  displayOrder: 4,  questionType: "conformity", isMandatory: true,
+          questionText: "\u00c8 stato stabilito un criterio di accettabilit\u00e0 fra le parti?" },
+        { questionId: null, clauseRef: "3834f_q5",  displayOrder: 5,  questionType: "conformity", isMandatory: false,
+          questionText: "Il fornitore ha preparato il PPAP in accordo alle specifiche di riferimento?" },
+        { questionId: null, clauseRef: "3834f_q6",  displayOrder: 6,  questionType: "conformity", isMandatory: true,
+          questionText: "Come vengono gestite le eventuali non conformit\u00e0?" }
+      ]
+    },
+    {
+      sectionCode: "3834f_s2",
+      sectionTitle: "CONTROLLO DOCUMENTALE",
+      displayOrder: 2,
+      questions: [
+        { questionId: null, clauseRef: "3834f_q7",  displayOrder: 7,  questionType: "conformity", isMandatory: true,
+          questionText: "La rintracciabilit\u00e0 del materiale \u00e8 garantita? Vengono gestiti i certificati con documenti secondo ISO 10204?" },
+        { questionId: null, clauseRef: "3834f_q8",  displayOrder: 8,  questionType: "conformity", isMandatory: true,
+          questionText: "\u00c8 presente un coordinatore di saldatura (IWT/IWE)?" },
+        { questionId: null, clauseRef: "3834f_q9",  displayOrder: 9,  questionType: "conformity", isMandatory: true,
+          questionText: "I saldatori e gli operatori di saldatura (WQ) sono in grado di eseguire le attivit\u00e0 di saldatura? Sono provvisti di qualifiche ISO 9606/ISO 14732?" },
+        { questionId: null, clauseRef: "3834f_q10", displayOrder: 10, questionType: "conformity", isMandatory: true,
+          questionText: "I procedimenti di saldatura (WPQR) sono correttamente qualificati (ISO 15614/ISO 15613)?" },
+        { questionId: null, clauseRef: "3834f_q11", displayOrder: 11, questionType: "conformity", isMandatory: true,
+          questionText: "Sono presenti specifiche di saldatura (WPS) applicabili ai componenti ispezionati?" },
+        { questionId: null, clauseRef: "3834f_q12", displayOrder: 12, questionType: "conformity", isMandatory: true,
+          questionText: "Il personale addetto alle prove non distruttive \u00e8 qualificato (certificazione CND secondo ISO 9712)?" }
+      ]
+    },
+    {
+      sectionCode: "3834f_s3",
+      sectionTitle: "ISPEZIONE IN CAMPO",
+      displayOrder: 3,
+      questions: [
+        { questionId: null, clauseRef: "3834f_q13", displayOrder: 13, questionType: "conformity", isMandatory: true,
+          questionText: "Il fornitore possiede adeguate attrezzature per la saldatura? Sono manutenute e i parametri di voltaggio/corrente controllati periodicamente?" },
+        { questionId: null, clauseRef: "3834f_q14", displayOrder: 14, questionType: "conformity", isMandatory: true,
+          questionText: "Sono disponibili i disegni tecnici nelle aree di saldatura?" },
+        { questionId: null, clauseRef: "3834f_q15", displayOrder: 15, questionType: "conformity", isMandatory: true,
+          questionText: "Controllo della pulizia del pezzo: il materiale base \u00e8 pulito e privo di sporcizia prima della saldatura?" },
+        { questionId: null, clauseRef: "3834f_q16", displayOrder: 16, questionType: "conformity", isMandatory: false,
+          questionText: "Le maschere di saldatura sono monitorate dimensionalmente? Sono etichettate e controllate periodicamente?" },
+        { questionId: null, clauseRef: "3834f_q17", displayOrder: 17, questionType: "conformity", isMandatory: true,
+          questionText: "La puntatura del pezzo presenta criticit\u00e0? C'\u00e8 personale dedicato con patentini e istruzioni operative dedicate?" },
+        { questionId: null, clauseRef: "3834f_q18", displayOrder: 18, questionType: "conformity", isMandatory: true,
+          questionText: "Eventuali riparazioni sul pezzo vengono registrate? Esistono WPS dedicate alle riparazioni?" },
+        { questionId: null, clauseRef: "3834f_q19", displayOrder: 19, questionType: "conformity", isMandatory: true,
+          questionText: "Le condizioni di stoccaggio del Materiale Base, d'Apporto e Gas risultano adeguate (umidit\u00e0, temperatura)?" }
+      ]
+    },
+    {
+      sectionCode: "3834f_s4",
+      sectionTitle: "CONTROLLO POST-SALDATURA",
+      displayOrder: 4,
+      questions: [
+        { questionId: null, clauseRef: "3834f_q20", displayOrder: 20, questionType: "conformity", isMandatory: true,
+          questionText: "Sono eseguiti e registrati Controlli Non Distruttivi (CND)? Quali sono e che estensione hanno?" },
+        { questionId: null, clauseRef: "3834f_q21", displayOrder: 21, questionType: "conformity", isMandatory: true,
+          questionText: "Si eseguono controlli dimensionali del pezzo in accordo ai disegni contrattuali? \u00c8 disponibile il rapporto dimensionale?" },
+        { questionId: null, clauseRef: "3834f_q22", displayOrder: 22, questionType: "conformity", isMandatory: false,
+          questionText: "\u00c8 contemplata una marcatura del pezzo finito?" }
+      ]
+    }
+  ]
+};
+
+/**
  * Template ISO 45001:2018 (Sistema di Gestione per la Salute e Sicurezza sul Lavoro)
  * Clausole 4-10 — 35 domande di audit
  * questionId: null = domande non ancora nel DB (sync silenzioso)
@@ -384,10 +471,11 @@ export const ISO_45001_TEMPLATE = {
  * Registry di tutti i templates disponibili
  */
 export const CHECKLIST_TEMPLATES = {
-  1: ISO_9001_TEMPLATE,
-  2: ISO_14001_TEMPLATE,
-  3: ISO_3834_TEMPLATE,
-  4: ISO_45001_TEMPLATE,
+  1: ISO_9001_TEMPLATE,   // ISO 9001:2015
+  2: ISO_14001_TEMPLATE,  // ISO 14001:2015
+  3: ISO_45001_TEMPLATE,  // ISO 45001:2018
+  6: ISO_3834_TEMPLATE,   // ISO 3834-2 Checklist In Campo (Mason)
+  7: RDP_MSN_TEMPLATE,    // Rapporto di Prova / Audit Fornitori (clausole norma ISO 3834-2)
 };
 
 /**
