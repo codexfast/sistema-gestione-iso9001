@@ -58,8 +58,8 @@ function AttachmentSection({ questionId, attachmentManager, onUploadSuccess }) {
   /**
    * Handle attachment removal
    */
-  const handleRemove = async (index) => {
-    const attachment = questionAttachments[index];
+  const handleRemove = async (indexInFiltered) => {
+    const attachment = questionAttachments[indexInFiltered];
     if (
       !window.confirm(
         `Rimuovere "${attachment.name}"?\n\n(Il file fisico rimarrà sul disco per tracciabilità)`
@@ -67,8 +67,12 @@ function AttachmentSection({ questionId, attachmentManager, onUploadSuccess }) {
     ) {
       return;
     }
-
-    const result = await attachmentManager.removeAttachment(questionId, index);
+    // Indice nella lista completa (removeAttachment usa listAttachments, non la lista filtrata)
+    const indexInFull = allAttachments.findIndex(
+      (a) => (a.storedName === attachment.storedName || a.name === attachment.name) &&
+        (a.path === attachment.path || (a.size === attachment.size && !a.path && !attachment.path))
+    );
+    const result = await attachmentManager.removeAttachment(questionId, indexInFull >= 0 ? indexInFull : indexInFiltered);
 
     if (!result.success) {
       alert(`❌ Errore: ${result.error}`);

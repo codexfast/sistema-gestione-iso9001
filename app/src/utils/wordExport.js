@@ -258,6 +258,9 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     doc.render(buildTemplateData(auditForGen));
     const processedZip = doc.getZip();
 
+    if (options.photoMode === 'preview') {
+        await preloadImagesIntoAudit(auditForGen, getViewUrl);
+    }
     injectOoxmlMarkers(processedZip, auditForGen, getViewUrl, options);
 
     return processedZip.generate({

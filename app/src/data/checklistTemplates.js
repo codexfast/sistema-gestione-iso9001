@@ -303,7 +303,7 @@ export const ISO_3834_TEMPLATE = {
   standardName: "ISO 3834-2 — Audit Fornitori in Campo",
   sections: [
     {
-      sectionCode: "3834f_s1",
+      sectionCode: "3834_s1",
       sectionTitle: "GESTIONE QUALIT\u00c0",
       displayOrder: 1,
       questions: [
@@ -322,7 +322,7 @@ export const ISO_3834_TEMPLATE = {
       ]
     },
     {
-      sectionCode: "3834f_s2",
+      sectionCode: "3834_s2",
       sectionTitle: "CONTROLLO DOCUMENTALE",
       displayOrder: 2,
       questions: [
@@ -341,7 +341,7 @@ export const ISO_3834_TEMPLATE = {
       ]
     },
     {
-      sectionCode: "3834f_s3",
+      sectionCode: "3834_s3",
       sectionTitle: "ISPEZIONE IN CAMPO",
       displayOrder: 3,
       questions: [
@@ -362,7 +362,7 @@ export const ISO_3834_TEMPLATE = {
       ]
     },
     {
-      sectionCode: "3834f_s4",
+      sectionCode: "3834_s4",
       sectionTitle: "CONTROLLO POST-SALDATURA",
       displayOrder: 4,
       questions: [

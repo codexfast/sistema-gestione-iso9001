@@ -109,6 +109,10 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
       ISO_14001_2015: "ISO_14001",
       ISO_45001:      "ISO_45001",
       ISO_45001_2018: "ISO_45001",
+      ISO_3834:       "ISO_3834_2",
+      ISO_3834_2:     "ISO_3834_2",
+      ISO_3834_2_2021: "ISO_3834_2",
+      RDP_MSN:        "RDP_MSN",
     };
 
     selectedStandards.forEach((s) => {
@@ -406,6 +410,7 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
               key={clauseId}
               clauseId={clauseId}
               clause={clause}
+              checklistKey={checklistKey}
               isExpanded={expandedClauses.has(clauseId)}
               onToggle={() => toggleClause(clauseId)}
               onQuestionUpdate={handleQuestionUpdate}
@@ -424,6 +429,7 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
 function ClauseAccordion({
   clauseId,
   clause,
+  checklistKey,
   isExpanded,
   onToggle,
   onQuestionUpdate,
@@ -469,6 +475,7 @@ function ClauseAccordion({
               key={question.id}
               clauseId={clauseId}
               question={question}
+              checklistKey={checklistKey}
               onUpdate={onQuestionUpdate}
               attachmentManager={attachmentManager}
               auditId={auditId}
@@ -482,9 +489,15 @@ function ClauseAccordion({
 
 // === QUESTION CARD COMPONENT ===
 
-function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId }) {
+function QuestionCard({ clauseId, question, checklistKey, onUpdate, attachmentManager, auditId }) {
   // Incrementato dopo ogni upload per forzare re-fetch in AttachmentPreview
   const [attachmentRefreshKey, setAttachmentRefreshKey] = useState(0);
+
+  // Numerazione: per ISO 3834/RDP solo numero (displayOrder), per 9001/14001 clauseRef (es. 4.1)
+  const isSimpleNumbering = ['ISO_3834_2', 'RDP_MSN'].includes(checklistKey);
+  const displayRef = isSimpleNumbering && question.displayOrder != null
+    ? String(question.displayOrder)
+    : (question.clauseRef || '');
 
   const handleStatusChange = (status) => {
     onUpdate(clauseId, question.id, "status", status);
@@ -500,9 +513,9 @@ function QuestionCard({ clauseId, question, onUpdate, attachmentManager, auditId
   };
 
   return (
-    <div className={`question-card status-${question.status}`}>
+    <div className={`question-card status-${question.status} standard-${checklistKey.toLowerCase().replace(/_/g, '-')}`}>
       <div className="question-header">
-        <span className="question-reference">{question.clauseRef}</span>
+        <span className="question-reference">{displayRef}</span>
         <span className="question-text">{question.text}</span>
       </div>
 

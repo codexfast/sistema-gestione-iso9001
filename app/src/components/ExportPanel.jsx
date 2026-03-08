@@ -185,9 +185,14 @@ const ExportPanel = () => {
       }
 
       const fileNames = [];
+      const photoPreviewStandards = ['ISO_3834', 'ISO_3834_2', 'ISO_3834_2_2021', 'RDP_MSN'];
       for (const stdKey of activeStandards) {
         if (fileNames.length > 0) await new Promise(r => setTimeout(r, 900));
-        const fileName = await exportAuditToWord(auditForExport, getViewUrl, { standardKey: stdKey });
+        const isPhotoPreview = photoPreviewStandards.includes(stdKey) || String(stdKey).includes('3834');
+        const fileName = await exportAuditToWord(auditForExport, getViewUrl, {
+          standardKey: stdKey,
+          photoMode: isPhotoPreview ? 'preview' : undefined,
+        });
         fileNames.push(fileName);
         console.log(`✅ [EXPORT] Generato: ${fileName}`);
       }
@@ -212,8 +217,12 @@ const ExportPanel = () => {
       setIsExporting(true);
       const { auditForExport, getViewUrl } = await prepareAuditForExport();
 
+      const stds = auditForExport.metadata?.selectedStandards || [];
+      const hasPhotoStd = stds.some(s => String(s).includes('3834') || s === 'RDP_MSN');
+      const exportOpts = hasPhotoStd ? { photoMode: 'preview' } : {};
+
       if (fsProvider?.ready()) {
-        const result = await exportAuditToWorkspace(auditForExport, fsProvider, getViewUrl, {});
+        const result = await exportAuditToWorkspace(auditForExport, fsProvider, getViewUrl, exportOpts);
         if (result.fallback) {
           showMessage(`📱 Android: file salvato in Download (${result.fileName})`, "info");
         } else {
@@ -222,7 +231,7 @@ const ExportPanel = () => {
         return;
       }
 
-      const result = await exportAuditToFileSystem(auditForExport, getViewUrl, {});
+      const result = await exportAuditToFileSystem(auditForExport, getViewUrl, exportOpts);
       if (result.fallback) {
         showMessage(`📱 Android: file salvato in Download (${result.fileName})`, "info");
       } else {

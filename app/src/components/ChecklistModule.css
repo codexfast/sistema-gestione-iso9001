@@ -70,13 +70,22 @@
   font-weight: 600;
 }
 
-/* Header */
+/* Header — sticky per tenere i pulsanti espandi/comprimi visibili durante lo scroll */
 .checklist-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
   margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #ffffff;
+  padding: 12px 0;
+  margin: 0 -20px 20px -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .checklist-title-section h3 {
@@ -258,7 +267,7 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   margin-bottom: 10px;
-  overflow: hidden;
+  overflow: visible; /* necessario per position:sticky sull'header */
   transition: all 0.3s;
 }
 
@@ -274,6 +283,12 @@
   background: #f8f9fa;
   cursor: pointer;
   transition: background 0.2s;
+  /* Sticky: resta visibile durante lo scroll per collassare senza tornare su */
+  position: sticky;
+  top: 70px; /* sotto l'header checklist (cerca + espandi/comprimi) */
+  z-index: 10;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .clause-header:hover {
@@ -366,6 +381,25 @@
   margin-bottom: 15px;
   transition: all 0.3s;
   background: white;
+}
+
+/* Banner pastello per standard (distinguere domande per sistema) */
+.question-card.standard-iso-9001 {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+}
+.question-card.standard-iso-14001 {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+}
+.question-card.standard-iso-3834-2,
+.question-card.standard-rdp-msn {
+  background: #FFF7ED;
+  border-color: #FED7AA;
+}
+.question-card.standard-iso-45001 {
+  background: #FEF2F2;
+  border-color: #FECACA;
 }
 
 .question-card:hover {
@@ -693,6 +727,11 @@
 @media (max-width: 768px) {
   .checklist-header {
     flex-direction: column;
+  }
+
+  /* Header più alto su mobile → clause-header sticky più in basso */
+  .clause-header {
+    top: 120px;
   }
 
   .checklist-controls {

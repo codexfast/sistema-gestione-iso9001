@@ -3,6 +3,7 @@
 > **Data Inizio**: 13 gennaio 2026
 > **Ultimo Aggiornamento**: 08 marzo 2026
 > **Prossimo Step**: Test end-to-end su ISO 3834-2 e RDP_MSN → Template Word per nuovi standard
+> **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: `docs/SESSION_NOTES_20260308.md` (stato aggiornato) | `docs/DATABASE_SCHEMA.md` (schema DB)
 
 ---

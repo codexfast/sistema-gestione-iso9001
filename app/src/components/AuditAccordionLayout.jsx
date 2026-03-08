@@ -71,7 +71,7 @@ const STANDARD_INIT_MAP = Object.fromEntries(
 );
 
 function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSaved }) {
-  const { initializeChecklist, fetchAndApplyServerResponses } = useStorage();
+  const { initializeChecklist, hydrateQuestionIds, fetchAndApplyServerResponses } = useStorage();
 
   // Stato per gestire quali sezioni sono aperte
   const [openSections, setOpenSections] = useState({
@@ -130,6 +130,9 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
       if (isSelected && isEmpty) {
         console.log(`[AuditAccordionLayout] Auto-init checklist ${key} per audit:`, currentAudit.id);
         initializeChecklist(key);
+        if (key === "ISO_3834_2" || key === "RDP_MSN") {
+          hydrateQuestionIds(key)?.catch((e) => console.warn("[HYDRATE] questionIds:", e.message));
+        }
       }
     });
 

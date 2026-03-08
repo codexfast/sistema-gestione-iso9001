@@ -61,12 +61,15 @@ export function useAttachmentManager(audit, onUpdate) {
     const [uploadProgress, setUploadProgress] = useState(null);
 
     /**
-     * Ottiene lista allegati per una domanda
+     * Ottiene lista allegati per una domanda.
+     * Usa loose equality per gestire questionId numerico vs stringa (es. post-hydration).
      */
     const listAttachments = useCallback(
         (questionId) => {
             if (!audit?.attachments) return [];
-            return audit.attachments.filter((att) => att.questionId === questionId);
+            return audit.attachments.filter(
+                (att) => att.questionId == questionId || att.questionRef === questionId
+            );
         },
         [audit]
     );
@@ -126,9 +129,12 @@ export function useAttachmentManager(audit, onUpdate) {
     const addAttachments = useCallback(
         async (questionId, category, fileList) => {
             if (!storage.fsProvider?.ready()) {
+                const isIndexedDB = storage.fsProvider?.constructor?.name === 'IndexedDBProvider';
                 return {
                     success: false,
-                    error: "Nessuna cartella collegata. Seleziona una cartella prima di caricare allegati.",
+                    error: isIndexedDB
+                        ? "Storage non pronto. Attendi qualche secondo e riprova."
+                        : "Nessuna cartella collegata. Seleziona una cartella prima di caricare allegati.",
                 };
             }
 
@@ -155,16 +161,18 @@ export function useAttachmentManager(audit, onUpdate) {
                     setUploadProgress({ current: i + 1, total: files.length, fileName: file.name });
 
                     try {
-                        // Salva file tramite LocalFsProvider
+                        const auditId = audit?.metadata?.auditId || audit?.metadata?.id || audit?.id;
                         const metadata = await storage.fsProvider.saveAttachment(
                             file,
                             category,
-                            questionId
+                            questionId,
+                            { auditId }
                         );
 
-                        // Aggiungi metadata completo
+                        // Aggiungi metadata completo (questionRef per match post-hydration)
                         const attachment = {
                             questionId,
+                            questionRef: questionId,
                             category,
                             name: file.name,
                             storedName: metadata.storedName,
@@ -175,8 +183,6 @@ export function useAttachmentManager(audit, onUpdate) {
                         };
 
                         // Tenta upload server (best-effort, non bloccante)
-                        // Usa auditId numerico (metadata.auditId) per compatibilità backend
-                        const auditId = audit?.metadata?.auditId || audit?.metadata?.id || audit?.id;
 
                         // Mapping categorie IT→EN per compatibilità backend
                         const CATEGORY_MAP = {

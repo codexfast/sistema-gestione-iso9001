@@ -204,10 +204,25 @@ export class IndexedDBProvider {
     }
 
     /**
-     * Salva allegato (blob)
+     * Salva allegato (blob).
+     * Supporta due signature per compatibilità con LocalFsProvider:
+     * - (file, category, questionId, { auditId }) — da useAttachmentManager
+     * - (auditId, questionId, file, metadata) — signature legacy
      */
-    async saveAttachment(auditId, questionId, file, metadata = {}) {
+    async saveAttachment(auditIdOrFile, questionIdOrCategory, fileOrQuestionId, metadata = {}) {
         if (!this.db) throw new Error('Database non inizializzato');
+
+        let auditId, questionId, file;
+        if (auditIdOrFile instanceof File) {
+            file = auditIdOrFile;
+            const category = questionIdOrCategory;
+            questionId = fileOrQuestionId;
+            auditId = metadata?.auditId ?? null;
+        } else {
+            auditId = auditIdOrFile;
+            questionId = questionIdOrCategory;
+            file = fileOrQuestionId;
+        }
 
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(
@@ -217,8 +232,8 @@ export class IndexedDBProvider {
             const store = transaction.objectStore(STORE_ATTACHMENTS);
 
             const attachmentData = {
-                id: `${auditId}_${questionId}_${Date.now()}`,
-                auditId,
+                id: `${auditId || 'local'}_${questionId}_${Date.now()}`,
+                auditId: auditId || null,
                 questionId,
                 fileName: file.name,
                 fileType: file.type,
@@ -234,10 +249,12 @@ export class IndexedDBProvider {
                 console.log(`📎 Allegato ${file.name} salvato in IndexedDB`);
                 resolve({
                     id: attachmentData.id,
+                    storedName: file.name,
                     fileName: file.name,
                     size: file.size,
-                    uploadDate: attachmentData.uploadDate,
+                    relativePath: `indexeddb://${attachmentData.id}`,
                     path: `indexeddb://${attachmentData.id}`,
+                    uploadDate: attachmentData.uploadDate,
                 });
             };
 

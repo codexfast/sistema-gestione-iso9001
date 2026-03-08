@@ -954,6 +954,7 @@ export function StorageProvider({ children, useMockData = false }) {
             title: q.questionText,
             text: q.questionText,
             questionId: q.questionId,
+            displayOrder: q.displayOrder ?? idx + 1,
             // clauseRef: usa il valore esplicito dal template (norma ISO), altrimenti auto-generato
             clauseRef: q.clauseRef || (q.displayOrder ? String(q.displayOrder) : `${section.sectionCode}.${idx + 1}`),
             // Inizializza risposta vuota
@@ -989,6 +990,66 @@ export function StorageProvider({ children, useMockData = false }) {
       return true;
     },
     [currentAudit, updateCurrentAudit],
+  );
+
+  /**
+   * Idrata questionId nelle domande della checklist da backend (per standard 6, 7).
+   * Necessario per allegati e risposte: il backend richiede question_id INTEGER.
+   * Chiamata dopo initializeChecklist quando le domande hanno questionId: null.
+   */
+  const hydrateQuestionIds = useCallback(
+    async (standardKey) => {
+      const STANDARD_ID_MAP = { ISO_3834_2: 6, RDP_MSN: 7 };
+      const standardId = STANDARD_ID_MAP[standardKey];
+      if (!standardId || !navigator.onLine) return;
+      try {
+        const res = await apiService.get(`/checklist/questions/all?standard_id=${standardId}`);
+        const questions = res?.questions || [];
+        if (questions.length === 0) return;
+        const bySection = {};
+        questions.forEach((q) => {
+          const key = q.section_code;
+          if (!bySection[key]) bySection[key] = [];
+          bySection[key].push({ question_id: q.question_id, order: q.question_order });
+        });
+        Object.keys(bySection).forEach((k) =>
+          bySection[k].sort((a, b) => (a.order || 0) - (b.order || 0))
+        );
+        updateCurrentAudit((audit) => {
+          const checklist = audit.checklist?.[standardKey];
+          if (!checklist) return audit;
+          const updated = JSON.parse(JSON.stringify(audit));
+          const oldIdToNewId = {};
+          Object.entries(updated.checklist[standardKey]).forEach(([clauseKey, clause]) => {
+            if (!clause?.questions) return;
+            const arr = bySection[clauseKey] || [];
+            clause.questions = clause.questions.map((q, qIdx) => {
+              const oldId = q.id || `q${clauseKey}_${qIdx + 1}`;
+              if (q.questionId != null) return q;
+              const match = arr[qIdx];
+              if (!match) return q;
+              oldIdToNewId[oldId] = match.question_id;
+              return { ...q, questionId: match.question_id };
+            });
+          });
+          // Migra allegati con vecchio questionId stringa → numerico
+          if (updated.attachments?.length && Object.keys(oldIdToNewId).length) {
+            updated.attachments = updated.attachments.map((att) => {
+              const newId = oldIdToNewId[att.questionId] ?? oldIdToNewId[att.questionRef];
+              if (newId != null) {
+                return { ...att, questionId: newId, questionRef: att.questionId };
+              }
+              return att;
+            });
+          }
+          return updated;
+        });
+        console.log(`✅ [HYDRATE] questionIds idratati per ${standardKey} (${questions.length} domande)`);
+      } catch (e) {
+        console.warn(`[HYDRATE] questionIds per ${standardKey}:`, e.message);
+      }
+    },
+    [updateCurrentAudit]
   );
 
   /**
@@ -1233,6 +1294,7 @@ export function StorageProvider({ children, useMockData = false }) {
     duplicateAudit,
     deleteAudit,
     initializeChecklist,
+    hydrateQuestionIds,
     fetchAndApplyServerResponses,
     importBackup,
 
