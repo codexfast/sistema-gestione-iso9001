@@ -46,8 +46,8 @@ function QuestionRow({ question, onSaved }) {
         norm_excerpt: excerpt,
       });
       setSaved(true);
-      onSaved(question.question_id, excerpt);
-      setTimeout(() => setSaved(false), 2000);
+      onSaved(question.question_id, excerpt, question.question_text);
+      setTimeout(() => setSaved(false), 3500);
     } catch (err) {
       setError(err.message || "Errore salvataggio");
     } finally {
@@ -92,6 +92,12 @@ function ChecklistAdminPage({ onBack }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null); // { text, type }
+
+  const showToast = useCallback((text, type = "success") => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   // Controllo accesso
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
@@ -124,13 +130,14 @@ function ChecklistAdminPage({ onBack }) {
   }, [selectedStandardId, loadQuestions]);
 
   // Aggiorna excerpt nella lista locale dopo il salvataggio (evita re-fetch)
-  const handleSaved = useCallback((questionId, newExcerpt) => {
+  const handleSaved = useCallback((questionId, newExcerpt, questionText) => {
     setQuestions((prev) =>
       prev.map((q) =>
         q.question_id === questionId ? { ...q, norm_excerpt: newExcerpt } : q
       )
     );
-  }, []);
+    showToast(`✓ Salvato: ${questionText}`);
+  }, [showToast]);
 
   // Raggruppa domande per sezione
   const sections = [];
@@ -153,6 +160,13 @@ function ChecklistAdminPage({ onBack }) {
 
   return (
     <div className="checklist-admin-page">
+      {/* Toast notifica salvataggio */}
+      {toast && (
+        <div className={`ca-toast ca-toast-${toast.type}`}>
+          {toast.text}
+        </div>
+      )}
+
       {/* Intestazione */}
       <div className="ca-header">
         <button className="ca-back-btn" onClick={onBack}>
