@@ -222,7 +222,36 @@ function xmlImageOoxml(rId, imgId, widthEmu = 1905000, heightEmu = 1428750) {
 //   Col1: 3.70cm = 2098 DXA  |  Col2: 2.70cm = 1531 DXA  |  Col3: 12.07cm = 6844 DXA
 const CLAUSE_COL_DXA = [2098, 1531, 6844];
 
-function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl = null, options = {}, imageRegistry = null) {
+/**
+ * Genera una riga "stralcio normativo" che occupa tutta la larghezza della tabella.
+ * Colore di sfondo verde chiaro (EDF9F0) con testo in corsivo grigio-verde.
+ */
+function buildNormExcerptRow(excerptText, colWidths) {
+    const totalDxa = colWidths.reduce((s, w) => s + w, 0);
+    // Suddivide il testo in paragrafi se contiene \n
+    const lines = excerptText.split('\n').filter(l => l.trim());
+    const paragraphs = lines.length > 0
+        ? lines.map((line, i) => xmlPara(
+            [
+                i === 0 ? xmlRun('\uD83D\uDCCB Rif. normativo: ', { bold: true, color: '1E6B31', size: 18 }) : '',
+                xmlRun(escXml(line), { ital: true, color: '2D6A4F', size: 18 }),
+            ].join(''),
+            { sb: i === 0 ? 80 : 20, sa: i === lines.length - 1 ? 80 : 20 }
+          ))
+        : [xmlPara(xmlRun(escXml(excerptText), { ital: true, color: '2D6A4F', size: 18 }), { sb: 80, sa: 80 })];
+
+    return xmlRow([
+        xmlCell(paragraphs.join(''), {
+            span: 3,
+            fill: 'EDF9F0',
+            ml: 150,
+            mr: 100,
+            dxa: totalDxa
+        })
+    ]);
+}
+
+function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl = null, options = {}, imageRegistry = null, normExcerpts = {}) {
     const C = CLAUSE_COL_DXA;
 
     const headerRow = xmlRow([
@@ -256,7 +285,13 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
             xmlCell(xmlPara(notes, { sa: 0 }), { dxa: C[2], va: 'top' }),
         ]));
 
-        const qId   = q.questionId;
+        // Stralcio normativo (solo se presente nel DB — tipico ISO 14001)
+        const qId = q.questionId;
+        const excerpt = normExcerpts && qId != null ? (normExcerpts[Number(qId)] || normExcerpts[String(qId)]) : null;
+        if (excerpt && excerpt.trim()) {
+            allRows.push(buildNormExcerptRow(excerpt.trim(), C));
+        }
+
         const qAtts = qId != null
             ? (auditAttachments || []).filter(a => Number(a.questionId) === Number(qId))
             : [];
@@ -357,7 +392,7 @@ function buildCertFindingsOoxml(certFindings = []) {
 }
 
 // ─── Sezione checklist completa (iniettata in CHECKLIST_MARKER) ───────────────
-export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null, certFindings = []) {
+export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null, certFindings = [], normExcerpts = {}) {
     let xml = '';
 
     // Capitolo 3 — Rilievi Pendenti (Titolo1 = stesso livello di cap. 1, 2, 11)
@@ -394,7 +429,7 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
                     xmlRun(headingText, { bold: true, size: 24, color: '1D4ED8' }),
                     { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
                 );
-                xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl, options, imageRegistry);
+                xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl, options, imageRegistry, normExcerpts);
                 xml += xmlPara('', { sa: 300 });
             });
     });

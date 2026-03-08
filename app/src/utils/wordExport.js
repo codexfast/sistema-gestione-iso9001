@@ -143,12 +143,13 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
         'CHECKLIST_MARKER',
         buildChecklistSectionOoxml(
             audit.checklist,
-            audit.attachments          || [],
-            audit.pendingIssues        || [],
+            audit.attachments           || [],
+            audit.pendingIssues         || [],
             getViewUrl,
             options,
             imageRegistry,
-            audit.certificationFindings || []
+            audit.certificationFindings || [],
+            audit.normExcerpts          || {}
         )
     );
 

@@ -129,6 +129,26 @@ const ExportPanel = () => {
       console.warn('[EXPORT] allegati server non disp., uso locali:', err.message);
     }
 
+    // Fetch stralci normativi (norm_excerpt) — usati dal report ISO 14001
+    // Si caricano per qualsiasi standard che li supporti (attualmente ISO 14001 = standard_id 2)
+    const selectedStandards = currentAudit?.metadata?.selectedStandards || [];
+    const standardIdForExcerpts = selectedStandards.includes('ISO_14001') ? 2
+      : selectedStandards.includes('ISO_45001') ? 4
+      : null;
+    if (standardIdForExcerpts) {
+      try {
+        const excRes = await apiService.get(`/checklist/questions/all?standard_id=${standardIdForExcerpts}`);
+        const excMap = {};
+        (excRes.questions || []).forEach(q => {
+          if (q.norm_excerpt?.trim()) excMap[q.question_id] = q.norm_excerpt.trim();
+        });
+        auditForExport.normExcerpts = excMap;
+        console.log(`📋 [EXPORT] ${Object.keys(excMap).length} stralci normativi caricati per standard_id=${standardIdForExcerpts}`);
+      } catch (err) {
+        console.warn('[EXPORT] norm_excerpts non disponibili:', err.message);
+      }
+    }
+
     // Costruisce getViewUrl con token (encodeURIComponent per sicurezza)
     const rawToken = apiService.getToken();
     const getViewUrl = rawToken
