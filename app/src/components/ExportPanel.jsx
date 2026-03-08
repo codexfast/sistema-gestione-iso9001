@@ -77,7 +77,8 @@ const ExportPanel = () => {
    */
   const prepareAuditForExport = async () => {
     const auditForExport = { ...currentAudit };
-    const auditId = currentAudit.metadata?.id || currentAudit.id;
+    // Priorità a auditId numerico (integer DB) — stesso ordine di useAttachmentManager.js
+    const auditId = currentAudit.metadata?.auditId || currentAudit.metadata?.id || currentAudit.id;
 
     // Fetch rilievi pendenti dall'audit precedente dello stesso cliente
     try {
