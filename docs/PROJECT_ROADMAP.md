@@ -1,9 +1,9 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 06 marzo 2026
-> **Prossimo Step**: Test end-to-end con auditor su produzione → poi Pagina Admin utenti
-> **Riferimenti**: `docs/SESSION_NOTES_20260301.md` (stato aggiornato) | `docs/DATABASE_SCHEMA.md` (schema DB)
+> **Ultimo Aggiornamento**: 08 marzo 2026
+> **Prossimo Step**: Test end-to-end multi-standard su produzione → ISO 45001 / ISO 3834 Word template
+> **Riferimenti**: `docs/SESSION_NOTES_20260308.md` (stato aggiornato) | `docs/DATABASE_SCHEMA.md` (schema DB)
 
 ---
 
