@@ -504,28 +504,114 @@ function buildCertFindingsOoxml(certFindings = []) {
     return xmlTable([headerRow, ...dataRows], PCT);
 }
 
+// ─── Sezione checklist ISO 14001 (una Heading2 per domanda + tabella singola) ─
+/**
+ * Rendering specifico ISO 14001:
+ *  - Heading1 per ogni sezione legislativa (numerazione sequenziale a partire da 4)
+ *  - Heading2 per ogni singola domanda (numerazione globale a partire da 2, con 1=AP rilievi)
+ *  - Tabella a riga singola + stralcio normativo sotto ogni domanda
+ */
+function buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUrl, options, imageRegistry, certFindings, normExcerpts) {
+    let xml = '';
+
+    // ── Cap. 3: Rilievi Precedenti ──────────────────────────────────────────
+    xml += xmlPara(
+        xmlRun('3 \u2014 RILIEVI PRECEDENTI', { bold: true, size: 24, color: '1D4ED8' }),
+        { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
+    );
+    // Heading2 per il sotto-punto "AP"
+    xml += xmlPara(
+        xmlRun('1.\u2002AP \u2014 Rilievi emersi dai precedenti Audit Interni-Esterni', { bold: true, size: 22, color: '1D4ED8' }),
+        { style: 'Titolo2', sb: 100, sa: 100 }
+    );
+    xml += buildPendingIssuesOoxml(pendingIssues);
+
+    // Rilievi ente certificatore (se presenti, mostrati in fondo a cap. 3)
+    if (certFindings && certFindings.length) {
+        xml += xmlPara(
+            xmlRun('Rilievi dell\'ente certificatore', { bold: true, size: 20, color: '1D4ED8' }),
+            { sb: 200, sa: 100 }
+        );
+        xml += buildCertFindingsOoxml(certFindings);
+    }
+
+    // ── Sezioni legislative (cap. 4, 5, …) ──────────────────────────────────
+    const sortedSections = Object.entries(normData)
+        .sort(([a], [b]) =>
+            (parseInt(extractSectionNum(a), 10) || 0) -
+            (parseInt(extractSectionNum(b), 10) || 0)
+        );
+
+    let sectionNum   = 4;  // sezioni 1-3 già usate
+    let questionNum  = 2;  // 1 = AP rilievi
+
+    sortedSections.forEach(([, clause]) => {
+        if (!clause || typeof clause !== 'object') return;
+        const sectionTitle = (clause.title || '').replace(/^\d+\.?\s*[-–]\s*/, '').toUpperCase();
+
+        // Heading1 per la sezione (con interruzione di pagina)
+        xml += xmlPara(
+            xmlRun(`${sectionNum} \u2014 ${sectionTitle}`, { bold: true, size: 24, color: '1D4ED8' }),
+            { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
+        );
+        sectionNum++;
+
+        (clause.questions || []).forEach((q) => {
+            const qTitle = escXml((q.title || q.text || q.question || 'Domanda').toUpperCase());
+
+            // Heading2 per la singola domanda (compare nel sommario Word)
+            xml += xmlPara(
+                xmlRun(`${questionNum}.\u2002${qTitle}`, { bold: true, size: 22, color: '1D4ED8' }),
+                { style: 'Titolo2', sb: 200, sa: 80 }
+            );
+            questionNum++;
+
+            // Tabella a riga singola (header + 1 domanda + eventuale stralcio)
+            xml += buildClauseTableOoxml([q], auditAttachments, getViewUrl, options, imageRegistry, normExcerpts);
+            xml += xmlPara('', { sa: 160 });
+        });
+    });
+
+    return xml;
+}
+
 // ─── Sezione checklist completa (iniettata in CHECKLIST_MARKER) ───────────────
 export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pendingIssues = [], getViewUrl = null, options = {}, imageRegistry = null, certFindings = [], normExcerpts = {}) {
     let xml = '';
 
-    // Capitolo 3 — Rilievi Pendenti (Titolo1 = stesso livello di cap. 1, 2, 11)
-    xml += xmlPara(
-        xmlRun('3 \u2014 RILIEVI PENDENTI', { bold: true, size: 24, color: '1D4ED8' }),
-        { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
-    );
-    xml += buildPendingIssuesOoxml(pendingIssues);
-
-    // Capitolo 3.1 — Rilievi Ente Certificatore (Titolo2 = sottocapitolo di 3)
-    xml += xmlPara(
-        xmlRun('3.1 \u2014 RILIEVI DELL\'ENTE CERTIFICATORE', { bold: true, size: 22, color: '1D4ED8' }),
-        { style: 'Titolo2', sb: 200, sa: 200 }
-    );
-    xml += buildCertFindingsOoxml(certFindings);
-
-    if (!checklist || !Object.keys(checklist).length) return xml;
+    if (!checklist || !Object.keys(checklist).length) {
+        // Nessuna checklist: almeno i rilievi pendenti
+        xml += xmlPara(
+            xmlRun('3 \u2014 RILIEVI PENDENTI', { bold: true, size: 24, color: '1D4ED8' }),
+            { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
+        );
+        xml += buildPendingIssuesOoxml(pendingIssues);
+        return xml;
+    }
 
     Object.entries(checklist).forEach(([stdKey, normData]) => {
         if (!normData || typeof normData !== 'object') return;
+
+        // ── Rendering ISO 14001: una Heading2 per ogni domanda ───────────────
+        if (stdKey.includes('14001')) {
+            xml += buildISO14001Ooxml(normData, auditAttachments, pendingIssues, getViewUrl, options, imageRegistry, certFindings, normExcerpts);
+            return; // già gestito dentro buildISO14001Ooxml
+        }
+
+        // ── Rendering standard (ISO 9001, ISO 45001, ecc.) ───────────────────
+        // Prima volta: aggiungi cap. 3 Rilievi Pendenti
+        if (!xml.includes('RILIEVI PENDENTI') && !xml.includes('RILIEVI PRECEDENTI')) {
+            xml += xmlPara(
+                xmlRun('3 \u2014 RILIEVI PENDENTI', { bold: true, size: 24, color: '1D4ED8' }),
+                { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
+            );
+            xml += buildPendingIssuesOoxml(pendingIssues);
+            xml += xmlPara(
+                xmlRun('3.1 \u2014 RILIEVI DELL\'ENTE CERTIFICATORE', { bold: true, size: 22, color: '1D4ED8' }),
+                { style: 'Titolo2', sb: 200, sa: 200 }
+            );
+            xml += buildCertFindingsOoxml(certFindings);
+        }
 
         Object.entries(normData)
             .sort(([a], [b]) =>
@@ -536,10 +622,8 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
                 if (!clause || typeof clause !== 'object') return;
                 const num   = extractSectionNum(clauseKey);
                 const title = (clause.title || '').replace(/^\d+\.?\s*[-–]\s*/, '');
-                const headingText = num + ' \u2014 ' + title.toUpperCase();
-                // Titolo1: appare nel sommario Word (stile italiano del template)
                 xml += xmlPara(
-                    xmlRun(headingText, { bold: true, size: 24, color: '1D4ED8' }),
+                    xmlRun(num + ' \u2014 ' + title.toUpperCase(), { bold: true, size: 24, color: '1D4ED8' }),
                     { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
                 );
                 xml += buildClauseTableOoxml(clause.questions || [], auditAttachments, getViewUrl, options, imageRegistry, normExcerpts);
