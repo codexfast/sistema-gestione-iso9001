@@ -29,11 +29,11 @@ router.get('/checklist/questions', checklistController.getQuestions);
 // ── Endpoint Admin (autenticazione richiesta) ──────────────────────────────
 
 // GET /api/v1/checklist/questions/all?standard_id=2
-// Tutte le domande di uno standard con norm_excerpt — solo admin/superadmin
+// Tutte le domande di uno standard con norm_excerpt — tutti gli utenti autenticati
+// (gli stralci normativi sono testi pubblici; la modifica resta admin-only via PATCH)
 router.get(
     '/checklist/questions/all',
     authenticate,
-    authorize('superadmin', 'admin'),
     checklistController.getAllQuestionsWithExcerpt
 );
 

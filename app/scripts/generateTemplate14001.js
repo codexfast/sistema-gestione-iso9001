@@ -1,6 +1,6 @@
-﻿/**
+/**
  * generateTemplate14001.js
- * Genera il template Word per Report Audit ConformitÃ  Legislativa ISO 14001.
+ * Genera il template Word per Report Audit Conformita' Legislativa ISO 14001.
  *
  * USO:
  *   node scripts/generateTemplate14001.js
@@ -20,7 +20,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const C = {
-    primary:   '1A5276', // blu scuro (ISO 14001 â†’ verde/blu ambiente)
+    primary:   '1A5276', // blu scuro (ISO 14001 -> verde/blu ambiente)
     secondary: '1F618D',
     accent:    '1E8449', // verde scuro per accenti ISO 14001
     lightGray: 'E5E7EB',
@@ -77,7 +77,7 @@ function valueCell(text) {
     });
 }
 
-// â”€â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- HEADER ------------------------------------------------------------------
 function createPageHeader() {
     const headerTable = new Table({
         rows: [new TableRow({
@@ -94,7 +94,7 @@ function createPageHeader() {
                     children: [
                         para([run('{clientName}', { bold: true, size: 22, color: C.primary })],
                             { before: 40, after: 20 }),
-                        para([run('Audit ConformitÃ  Legislativa ISO 14001', { size: 18, color: C.secondary })],
+                        para([run('Audit Conformit\u00e0 Legislativa ISO 14001', { size: 18, color: C.secondary })],
                             { after: 40 })
                     ],
                     width: { size: 55, type: WidthType.PERCENTAGE },
@@ -146,30 +146,30 @@ function createCoverPage() {
     ];
 }
 
-// â”€â”€â”€ Sezione 1 â€“ Dati Generali â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Sezione 1: Dati Generali ------------------------------------------------
 function createSection1() {
     const rows = [
         ['OGGETTO:',                  '{auditObject}'],
         ['CAMPO APPLICAZIONE:',       '{scope}'],
         ['DOCUMENTI DI RIFERIMENTO:', '{referenceDocuments}'],
         ['DATA AUDIT:',               '{auditDate}'],
-        ['ATTIVITÃ€/PROCESSI:',        '{processes}'],
+        ['ATTIVIT\u00c0/PROCESSI:',   '{processes}'],
         ['PROGRAMMA COMUNICATO IL:',  '{programCommunicatedDate}'],
         ['VERIFICATORE:',             '{auditor}']
     ].map(([label, value]) => new TableRow({ children: [labelCell(label), valueCell(value)] }));
 
     return [
-        new Paragraph({ text: '1 â€“ DATI GENERALI', style: 'Titolo1', spacing: { before: 0, after: 300 } }),
+        new Paragraph({ text: '1 \u2014 DATI GENERALI', style: 'Titolo1', spacing: { before: 0, after: 300 } }),
         new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: stdBorders(),
             margins: { top: 80, bottom: 80, left: 100, right: 100 } }),
         new Paragraph({ text: '', spacing: { after: 400 }, pageBreakBefore: true })
     ];
 }
 
-// â”€â”€â”€ Sezione 2 â€“ Obiettivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Sezione 2: Obiettivo ----------------------------------------------------
 function createSection2() {
     return [
-        new Paragraph({ text: "2 â€“ OBIETTIVO DELL'AUDIT", style: 'Titolo1', spacing: { before: 0, after: 300 } }),
+        new Paragraph({ text: "2 \u2014 OBIETTIVO DELL'AUDIT", style: 'Titolo1', spacing: { before: 0, after: 300 } }),
         new Paragraph({ text: '{objectiveDescription}', spacing: { after: 300 } }),
         new Paragraph({ children: [run('Presenti per l\'organizzazione:', { bold: true })],
             spacing: { before: 300, after: 150 } }),
@@ -196,7 +196,7 @@ function createSection2() {
     ];
 }
 
-// â”€â”€â”€ Marker Checklist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Marker Checklist --------------------------------------------------------
 function createChecklistMarker() {
     return [
         new Paragraph({
@@ -206,12 +206,12 @@ function createChecklistMarker() {
     ];
 }
 
-// â”€â”€â”€ Sezione 11 â€“ Esito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Sezione 11: Esito -------------------------------------------------------
 function createSection11() {
     const metricsRows = [
-        ['Non ConformitÃ  (NC)',              '{ncCount}'],
+        ['Non Conformit\u00e0 (NC)',              '{ncCount}'],
         ['Osservazioni (OSS)',               '{ossCount}'],
-        ['OpportunitÃ  di Miglioramento (OM)','{omCount}'],
+        ['Opportunit\u00e0 di Miglioramento (OM)','{omCount}'],
         ['Non Valutato (NV)',                '{nvCount}']
     ].map(([label, count]) => new TableRow({ children: [
         new TableCell({ children: [para([run(label, { bold: true })], {})],
@@ -221,7 +221,7 @@ function createSection11() {
     ]}));
 
     return [
-        new Paragraph({ text: "11 â€“ ESITO DELL'AUDIT", style: 'Titolo1',
+        new Paragraph({ text: "11 \u2014 ESITO DELL'AUDIT", style: 'Titolo1',
             spacing: { before: 0, after: 300 }, pageBreakBefore: true }),
         new Paragraph({ text: 'Conclusioni', style: 'Titolo2', spacing: { before: 200, after: 150 } }),
         new Paragraph({ text: '{conclusions}', spacing: { after: 300 } }),
@@ -238,7 +238,7 @@ function createSection11() {
     ];
 }
 
-// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Main --------------------------------------------------------------------
 async function main() {
     const doc = new Document({
         styles: {
@@ -277,7 +277,7 @@ async function main() {
     const buffer  = await Packer.toBuffer(doc);
     fs.writeFileSync(outPath, buffer);
 
-    console.log('âœ… Template ISO 14001 generato:', outPath);
+    console.log('Template ISO 14001 generato:', outPath);
 }
 
-main().catch(err => { console.error('âŒ Errore:', err); process.exit(1); });
+main().catch(err => { console.error('Errore:', err); process.exit(1); });
