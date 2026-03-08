@@ -1,23 +1,24 @@
 # Session Notes – 08 marzo 2026
 
-**Branch**: `main` | **Deploy**: Netlify live `https://systemgest.netlify.app` | **Commit**: `59d7f33`
+**Branch**: `main` | **Deploy**: Netlify live `https://systemgest.netlify.app` | **Commit**: `a02718d`
 
 ---
 
 ## PUNTO DI RIPRESA — PROSSIMA SESSIONE
 
-**Stato**: ✅ Deploy completato. Fix robusteezza e consistenza multi-standard applicati.
+**Stato**: ✅ Deploy completato. 5 standard attivi: ISO 9001, ISO 14001, ISO 45001, ISO 3834-2 (Audit Fornitori), RDP Mason.
 
 **Prossime priorità:**
 
 1. **Test end-to-end** su `https://systemgest.netlify.app`:
-   - Creare audit multi-standard (ISO 9001 + ISO 14001) e verificare che i flag persistano dopo reload
-   - Rispondere ad alcune domande per entrambi gli standard e verificare che le risposte si salvino correttamente
-   - Generare report Word per ciascuno standard selezionato e verificare contenuto
+   - Creare audit con ISO 3834-2 o RDP Mason e verificare checklist e salvataggio
+   - Verificare che i flag persistano dopo reload per tutti gli standard
 
-2. **ISO 45001 e ISO 3834**: template Word da generare (analoghi a ISO 14001)
+2. **Template Word** per ISO 3834-2 e RDP_MSN (analoghi a ISO 9001/14001)
 
-3. **Pagina Admin utenti** (priorità bassa)
+3. **Sistema punteggio** (task in sospeso): NC=0, OSS=1, C=2 — colonna score nelle opzioni risposta, calcolo differito
+
+4. **Pagina Admin utenti** (priorità bassa)
 
 ---
 
@@ -69,28 +70,52 @@ Nuovo file `backend/scripts/check-consistency.js` con 5 test automatici.
 
 ---
 
+### Parte 2 — Nuovi standard ISO 3834-2 e RDP_MSN + UI dinamica
+
+#### 9. Standard RDP_MSN (id=7) aggiunto al DB
+- Migration `run-migration-023.js` eseguita
+- `RDP_MSN` = "Rapporto di Prova / Audit Fornitori ISO 3834 (Mason)" — checklist clausole norma (audit di seconda parte)
+
+#### 10. ISO 3834-2 Checklist In Campo (22 domande)
+- Nuovo `ISO_3834_TEMPLATE` basato su `Checklist_in campo_TIPO_audit_fornitori.pdf`
+- 4 sezioni: GESTIONE QUALITÀ (1-6), CONTROLLO DOCUMENTALE (7-12), ISPEZIONE IN CAMPO (13-19), CONTROLLO POST-SALDATURA (20-22)
+- Il vecchio template (36 domande clausole norma) rinominato in `RDP_MSN_TEMPLATE`
+
+#### 11. UI completamente dinamica
+- **AuditSelector.jsx**: checkbox generate da `AVAILABLE_STANDARDS` — una riga per nuovo standard
+- **AuditAccordionLayout.jsx**: sezioni checklist generate da `STANDARDS_CONFIG` — una riga per nuovo standard
+- Per aggiungere un futuro standard: 1 riga in `AVAILABLE_STANDARDS`, 1 riga in `STANDARDS_CONFIG`, template + mappe
+
+---
+
 ## Stato scalabilità multi-standard
 
-**Cosa è automatico** (aggiungere un nuovo standard NON richiede modifiche a):
-- `AuditAccordionLayout.jsx` → basta aggiungere una riga in `STANDARD_INIT_MAP`
-
-**Cosa richiede ancora modifiche manuali coordinate** (checklist per nuovi standard):
+**Punti unici da modificare per un nuovo standard:**
 | File | Cosa aggiungere |
 |------|-----------------|
-| `checklistTemplates.js` | Nuovo template con `standardId` corretto |
-| `syncService.js` / `auditConverter.js` / `StorageContext.jsx` | Mapping code→ID |
+| `AuditSelector.jsx` | 1 riga in `AVAILABLE_STANDARDS` |
+| `AuditAccordionLayout.jsx` | 1 riga in `STANDARDS_CONFIG` |
+| `checklistTemplates.js` | Nuovo template + riga in `CHECKLIST_TEMPLATES` |
+| `auditConverter.js` / `syncService.js` / `StorageContext.jsx` | Mapping code→ID |
 | `wordExportHelpers.js` | Label nel report Word |
-| `wordExport.js` | `getTemplateUrl` per il nuovo template |
-| `app/public/templates/` | File `.docx` template |
-| DB `standards` | Riga con `standard_id` corretto |
-| `AuditAccordionLayout.jsx` | Aggiungere riga in `STANDARD_INIT_MAP` |
+| DB `standards` | Riga (migration script) |
 
-Totale: ~8 punti coordinati per un nuovo standard. Accettabile per una app di questa complessità.
+Totale: ~6 punti coordinati. Nessun JSX hardcodato.
 
 ---
 
 ## Stato DB (08/03/2026)
 
+**Tabella standard_id:**
+| ID | standard_code | Descrizione |
+|----|---------------|-------------|
+| 1 | ISO_9001_2015 | Qualità |
+| 2 | ISO_14001_2015 | Ambiente |
+| 3 | ISO_45001_2018 | Salute e Sicurezza |
+| 6 | ISO_3834_2 | Checklist Audit Fornitori in Campo |
+| 7 | RDP_MSN | Rapporto di Prova / Audit di Sistema Saldatura |
+
+**Audit esistenti:**
 | audit_id | audit_number | client | standard | risposte |
 |----------|-------------|--------|----------|---------|
 | 4915 | 2026-03 | (draft) | ISO 9001 | 22 |
@@ -102,15 +127,19 @@ Totale: ~8 punti coordinati per un nuovo standard. Accettabile per una app di qu
 ## File modificati in questa sessione
 
 **Frontend** (`app/src/`):
-- `components/AuditAccordionLayout.jsx` — STANDARD_INIT_MAP aggiornato, handleStandardsUpdate scalabile, race condition fix
-- `contexts/StorageContext.jsx` — standardIdMap corretto, selectedStandards preservation fix
-- `utils/auditConverter.js` — mappature ID corrette, NORMALIZE map completa
-- `services/syncService.js` — STANDARD_CODE_TO_ID corretto
-- `data/checklistTemplates.js` — standardId corretti per ISO 3834 (6) e ISO 45001 (3)
+- `components/AuditSelector.jsx` — `AVAILABLE_STANDARDS` dinamico, 5 checkbox (ISO 9001, 14001, 45001, ISO 3834-2, RDP_MSN)
+- `components/AuditAccordionLayout.jsx` — `STANDARDS_CONFIG` dinamico, sezioni checklist generate da config
+- `contexts/StorageContext.jsx` — standardIdMap con RDP_MSN: 7
+- `utils/auditConverter.js` — mappature ID corrette, RDP_MSN aggiunto
+- `services/syncService.js` — STANDARD_CODE_TO_ID con RDP_MSN: 7
+- `data/checklistTemplates.js` — RDP_MSN_TEMPLATE (rinominato), ISO_3834_TEMPLATE (22 domande), CHECKLIST_TEMPLATES: {1,2,3,6,7}
+- `utils/wordExportHelpers.js` — label per ISO_3834_2 e RDP_MSN
 - `components/ExportPanel.jsx` — standardIdForExcerpts corretto
 - `components/AuditForm.jsx` — ELIMINATO (orfano)
 
 **Backend** (`backend/`):
 - `src/routes/audit.routes.js` — rimosso endpoint bulk duplicato
 - `src/controllers/response.controller.js` — fix fallback clause_ref
+- `scripts/run-migration-023.js` — NUOVO: inserisce standard RDP_MSN (id=7)
+- `scripts/check-standards-cat.js` — NUOVO: verifica categorie standards
 - `scripts/check-consistency.js` — NUOVO script test DB

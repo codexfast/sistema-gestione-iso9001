@@ -2,7 +2,7 @@
 
 > **Data Inizio**: 13 gennaio 2026
 > **Ultimo Aggiornamento**: 08 marzo 2026
-> **Prossimo Step**: Test end-to-end multi-standard su produzione → ISO 45001 / ISO 3834 Word template
+> **Prossimo Step**: Test end-to-end su ISO 3834-2 e RDP_MSN → Template Word per nuovi standard
 > **Riferimenti**: `docs/SESSION_NOTES_20260308.md` (stato aggiornato) | `docs/DATABASE_SCHEMA.md` (schema DB)
 
 ---
