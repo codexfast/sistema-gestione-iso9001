@@ -388,7 +388,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
                 const isSelected = selectedStandards.some((s) => codes.includes(s));
                 if (!isSelected) return null;
                 return (
-                  <div key={key} className="accordion-subsection standard-section">
+                  <div key={key} className={`accordion-subsection standard-section standard-${key.toLowerCase().replace(/_/g, '-')}`}>
                     <button
                       className={`accordion-subheader standard-header ${
                         openSubSections[subsId] ? "open" : ""

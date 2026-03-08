@@ -266,11 +266,54 @@
 }
 
 /* ============================================
-   STANDARD SECTIONS (ISO 9001/14001/45001)
+   STANDARD SECTIONS — Colori pastello per sistema
    ============================================ */
 
 .standard-section {
   border-left: 3px solid #0071e3;
+}
+
+.standard-section.standard-iso-9001 {
+  border-left-color: #3b82f6;
+}
+.standard-section.standard-iso-9001 .accordion-subheader {
+  background-color: #EFF6FF;
+}
+.standard-section.standard-iso-9001 .accordion-subheader.open {
+  background-color: #DBEAFE;
+}
+
+.standard-section.standard-iso-14001 {
+  border-left-color: #10b981;
+}
+.standard-section.standard-iso-14001 .accordion-subheader {
+  background-color: #ECFDF5;
+}
+.standard-section.standard-iso-14001 .accordion-subheader.open {
+  background-color: #D1FAE5;
+}
+
+.standard-section.standard-iso-3834-2,
+.standard-section.standard-rdp-msn {
+  border-left-color: #f97316;
+}
+.standard-section.standard-iso-3834-2 .accordion-subheader,
+.standard-section.standard-rdp-msn .accordion-subheader {
+  background-color: #FFF7ED;
+}
+.standard-section.standard-iso-3834-2 .accordion-subheader.open,
+.standard-section.standard-rdp-msn .accordion-subheader.open {
+  background-color: #FFEDD5;
+}
+
+.standard-section.standard-iso-45001 {
+  border-left-color: #ef4444;
+}
+.standard-section.standard-iso-45001 .accordion-subheader {
+  background-color: #FEF2F2;
+}
+.standard-section.standard-iso-45001 .accordion-subheader.open {
+  background-color: #FECACA;
 }
 
 .standard-header {

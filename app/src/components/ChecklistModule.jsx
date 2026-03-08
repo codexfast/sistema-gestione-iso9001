@@ -47,6 +47,7 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
     auditSaveStatus,
     isSaving,
     initializeChecklist,
+    hydrateQuestionIds,
   } = useStorage();
 
   const [expandedClauses, setExpandedClauses] = useState(new Set([])); // Tutti chiusi
@@ -126,6 +127,14 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
       }
     });
   }, [currentAudit?.id]); // Esegui solo al cambio audit (non ad ogni update)
+
+  // Idrata questionId per ISO 3834/RDP quando il modulo è visibile (allegati e risposte)
+  useEffect(() => {
+    const key = normalizeChecklistKey(selectedNorm);
+    if ((key === "ISO_3834_2" || key === "RDP_MSN") && currentAudit?.checklist?.[key]) {
+      hydrateQuestionIds(key)?.catch((e) => console.warn("[HYDRATE] questionIds:", e.message));
+    }
+  }, [currentAudit?.id, selectedNorm, hydrateQuestionIds]);
 
   // TUTTI gli hooks devono essere prima degli early returns
   const stats = useMemo(() => {
@@ -398,6 +407,26 @@ function ChecklistModule({ defaultNorm = "ISO_9001" }) {
 
       {/* RIMOSSO: Legenda status (ora visualizzata nella sezione Esito Audit) */}
 
+      {/* Barra floating espandi/comprimi — segue lo scroll (position: fixed) */}
+      <div className="checklist-floating-bar" aria-hidden="true">
+        <button
+          type="button"
+          className="btn-floating"
+          onClick={expandAll}
+          title="Espandi tutte le sezioni"
+        >
+          ⬇️ Espandi
+        </button>
+        <button
+          type="button"
+          className="btn-floating"
+          onClick={collapseAll}
+          title="Comprimi tutte le sezioni"
+        >
+          ⬆️ Comprimi
+        </button>
+      </div>
+
       {/* Accordion clausole */}
       <div className="checklist-accordion">
         {Object.entries(filteredClauses).length === 0 ? (
@@ -447,8 +476,9 @@ function ClauseAccordion({
     return { total, answered, percentage };
   }, [clause.questions]);
 
+  const standardClass = `standard-${(checklistKey || "").toLowerCase().replace(/_/g, "-")}`;
   return (
-    <div className={`clause-accordion ${isExpanded ? "expanded" : ""}`}>
+    <div className={`clause-accordion ${isExpanded ? "expanded" : ""} ${standardClass}`}>
       <div className="clause-header" onClick={onToggle}>
         <div className="clause-title">
           <span className="clause-icon">{isExpanded ? "▼" : "▶"}</span>

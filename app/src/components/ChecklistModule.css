@@ -255,6 +255,37 @@
   background: #17a2b8;
 }
 
+/* Barra floating espandi/comprimi — sempre visibile durante lo scroll */
+.checklist-floating-bar {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+.btn-floating {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-floating:hover {
+  background: #f3f4f6;
+  border-color: #007bff;
+  color: #007bff;
+}
+
 /* Empty Search */
 .empty-search {
   text-align: center;
@@ -274,6 +305,18 @@
 .clause-accordion:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+/* Colori header clausola coerenti con lo standard */
+.clause-accordion.standard-iso-9001 .clause-header { background: #EFF6FF; }
+.clause-accordion.standard-iso-9001.expanded .clause-header { background: #3b82f6; color: white; }
+.clause-accordion.standard-iso-14001 .clause-header { background: #ECFDF5; }
+.clause-accordion.standard-iso-14001.expanded .clause-header { background: #10b981; color: white; }
+.clause-accordion.standard-iso-3834-2 .clause-header,
+.clause-accordion.standard-rdp-msn .clause-header { background: #FFF7ED; }
+.clause-accordion.standard-iso-3834-2.expanded .clause-header,
+.clause-accordion.standard-rdp-msn.expanded .clause-header { background: #f97316; color: white; }
+.clause-accordion.standard-iso-45001 .clause-header { background: #FEF2F2; }
+.clause-accordion.standard-iso-45001.expanded .clause-header { background: #ef4444; color: white; }
 
 .clause-header {
   display: flex;
