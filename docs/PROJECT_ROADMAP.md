@@ -83,7 +83,7 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 
 ---
 
-## Stato Avanzamento al 07/03/2026
+## Stato Avanzamento al 08/03/2026
 
 | Area | Descrizione | Status |
 |---|---|---|
@@ -107,18 +107,21 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 | **ISO 3834-2** | Standard, sezioni DB, template Word generato | ✅ Completato (06/03) |
 | **UX audit** | Pulsante "← Lista Audit" + indicatore salvataggio | ✅ Completato (06/03) |
 | **Fix campo Note** | Barra spaziatrice funzionante (rimosso trim live) | ✅ Completato (06/03) |
-| Export Word ISO 3834 | Da testare su produzione | 🔲 Da testare |
 | **Fix sommario Word** | Stili Titolo1/2, colonne DXA, margini stretti | ✅ Completato (07/03) |
 | **Fix VERIFICATORE** | Campo meta.auditorName corretto | ✅ Completato (07/03) |
 | **Fix backend paths** | require() corretti in certificationFindings | ✅ Completato (07/03) |
+| **Fix colonne Word fisse** | tblLayout fixed + ordine OOXML corretto | ✅ Completato (08/03) |
+| **Fix allegati in Word** | auditId numerico, hyperlink fldSimple cliccabili | ✅ Completato (08/03) |
+| Export Word ISO 3834 | Da testare su produzione | 🔲 Da testare |
+| **Foto embedded in Word** | pic:cNvPr id duplicati → doc corrotto; da reimplementare | 🔲 Backlog tecnico |
 | Pagina Admin utenti | UI gestione utenti e abbonamenti | 🔲 Backlog |
 | ISO 14001 checklist completa | Da norma PDF disponibile | 🔲 Prossima priorità |
 | ISO 45001 checklist | Da norma PDF disponibile | 🔲 Backlog |
 | Modulo SAL (Scenario 3) | Nuovo tipo documento per Camellini | 🔲 Backlog |
-| Modulo RDP (Scenario 4) | Nuovo tipo documento per Mason | 🔲 Backlog |
+| Modulo RDP (Scenario 4) | Nuovo tipo documento per Mason — richiede foto embedded | 🔲 Backlog |
 | Campo norm_excerpt | Stralcio norma nel report Word | 🔲 Backlog |
 
-**Progress Overall**: ~82% funzionalità core Scenario 1
+**Progress Overall**: ~85% funzionalità core Scenario 1
 
 ---
 
@@ -243,6 +246,15 @@ DB: tabella rdp_sections, rdp_tests (test_name, expected_value, measured_value, 
 UI: nuovo componente RDPModule.jsx con form prove + EvidenceManager obbligatorio
 Word: template RDP con tabelle prove e galleria foto embedded
 ```
+
+> ⚠️ **Prerequisito bloccante**: Il modulo RDP richiede foto embedded nel Word.
+> Il codice di embedding (xmlImageOoxml) è stato disabilitato il 08/03/2026 per bug OOXML
+> (pic:cNvPr id duplicati → documento corrotto in Word).
+> **Da risolvere prima di sviluppare RDP**:
+> - Fix `xmlImageOoxml`: id univoci per ogni immagine (imgId su pic:cNvPr, non 0)
+> - Test end-to-end con allegati immagine reali su produzione
+> - Poi riabilitare `usePreview` in `wordExportHelpers.js` e `preloadImagesIntoAudit` in `wordExport.js`
+> - Stima fix: 2-3 ore (codice già scritto, solo bug da correggere + test)
 
 #### Struttura `document_type` in `audits`
 ```sql
@@ -384,4 +396,4 @@ custom_questions  (id, checklist_id FK, question_text, expected_answer, weight, 
 ---
 
 **Ultimo Aggiornamento**: 08 marzo 2026
-**Prossimo Review**: dopo test export Word con sommario completo
+**Prossimo Step**: ISO 14001 checklist completa da norma PDF (task 0.2)
