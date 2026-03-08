@@ -287,8 +287,12 @@ export class SyncService {
 
         try {
             // Mappa campi frontend→backend per multi-standard support
-            const rawCodes = auditData.selectedStandards || auditData.standard_ids || auditData.standardIds ||
-                (auditData.standardId ? [auditData.standardId] : ['ISO_9001']);
+            // selectedStandards può essere al top-level (payload piatto) oppure dentro metadata (oggetto audit completo)
+            const rawCodes = auditData.selectedStandards
+                || auditData.metadata?.selectedStandards
+                || auditData.standard_ids
+                || auditData.standardIds
+                || (auditData.standardId ? [auditData.standardId] : ['ISO_9001']);
 
             // Converti ogni codice stringa → ID numerico (es. "ISO_14001" → 2)
             const resolvedIds = rawCodes.map(c =>

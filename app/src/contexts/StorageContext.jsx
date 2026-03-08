@@ -323,6 +323,26 @@ export function StorageProvider({ children, useMockData = false }) {
                 auditsToUploadRichData.push(merged);
               }
               
+              // Preserva selectedStandards dalla versione locale se il server ha solo ['ISO_9001']
+              // (succede quando la sincronizzazione precedente non ha inviato gli standard corretti)
+              const localStds = localAudit?.metadata?.selectedStandards;
+              const serverStds = serverAudit?.metadata?.selectedStandards || [];
+              if (localStds && localStds.length > 1 && serverStds.length <= 1) {
+                merged.metadata = { ...merged.metadata, selectedStandards: localStds };
+              }
+
+              // Preserva checklist dalla versione locale se il server ha solo ISO_9001 vuoto
+              // (il server non salva la checklist, quindi quella locale è sempre più completa)
+              const localChecklist = localAudit?.checklist;
+              const serverChecklistKeys = Object.keys(serverAudit?.checklist || {});
+              const localChecklistKeys = Object.keys(localChecklist || {});
+              if (localChecklistKeys.length > 0 &&
+                  (serverChecklistKeys.length === 0 ||
+                   (serverChecklistKeys.length === 1 && serverChecklistKeys[0] === 'ISO_9001' &&
+                    Object.keys(serverAudit?.checklist?.ISO_9001 || {}).length === 0))) {
+                merged.checklist = localChecklist;
+              }
+
               // Preserva allegati locali se il server non li include
               if (localAudit?.attachments?.length > 0 && !(serverAudit?.attachments?.length > 0)) {
                 merged.attachments = localAudit.attachments;
@@ -620,7 +640,7 @@ export function StorageProvider({ children, useMockData = false }) {
                   status: updated.metadata?.status,
                   notes: updated.metadata?.notes,
                   ...calculatedMetrics, // Metriche calcolate da checklist
-                  standard_id: 1, // ISO 9001
+                  selectedStandards: updated.metadata?.selectedStandards || [],
                   updated_at: syncUpdatedAt,
                   // Campi ricchi: persistenza multi-device
                   // Nota: Dashboard li salva dentro metadata (handleMetadataUpdate)
