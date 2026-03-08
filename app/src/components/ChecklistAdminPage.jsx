@@ -19,6 +19,52 @@ import { useAuth } from "../contexts/AuthContext";
 import apiService from "../services/apiService";
 import "./ChecklistAdminPage.css";
 
+// ── Legenda Markdown ───────────────────────────────────────────────────────
+
+const MARKDOWN_LEGEND = [
+  { symbol: "| col1 | col2 |",        desc: "riga di tabella" },
+  { symbol: "|------|------|",         desc: "separatore header (opzionale)" },
+  { symbol: "- testo",                 desc: "punto elenco" },
+  { symbol: "**testo**",              desc: "grassetto" },
+  { symbol: "testo normale",           desc: "paragrafo in corsivo" },
+];
+
+function MarkdownLegend() {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="md-legend">
+      <button className="md-legend-toggle" onClick={() => setOpen(v => !v)}>
+        {open ? "▲" : "▼"} Formattazione supportata nel testo
+      </button>
+      {open && (
+        <div className="md-legend-body">
+          <p className="md-legend-intro">
+            Puoi usare questi simboli nel campo stralcio — verranno convertiti in formattazione Word:
+          </p>
+          <table className="md-legend-table">
+            <thead><tr><th>Scrivi</th><th>Risultato nel Word</th></tr></thead>
+            <tbody>
+              {MARKDOWN_LEGEND.map((row, i) => (
+                <tr key={i}>
+                  <td><code>{row.symbol}</code></td>
+                  <td>{row.desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="md-legend-example">
+            <strong>Esempio tabella:</strong><br />
+            <code>| Carica | Frequenza |</code><br />
+            <code>|--------|-----------|</code><br />
+            <code>| &lt; 5 kg | Annuale |</code><br />
+            <code>| ≥ 5 kg | Semestrale |</code>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Costanti ───────────────────────────────────────────────────────────────
 
 const STANDARDS = [
@@ -217,6 +263,9 @@ function ChecklistAdminPage({ onBack }) {
           Nessuna domanda trovata per questo standard.
         </div>
       )}
+
+      {/* Legenda formattazione Markdown */}
+      {!loading && sections.length > 0 && <MarkdownLegend />}
 
       {!loading && sections.map((section) => (
         <div key={section.code} className="ca-section">

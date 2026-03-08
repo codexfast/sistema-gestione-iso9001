@@ -130,11 +130,14 @@ const ExportPanel = () => {
     }
 
     // Fetch stralci normativi (norm_excerpt) — usati dal report ISO 14001
-    // Si caricano per qualsiasi standard che li supporti (attualmente ISO 14001 = standard_id 2)
+    // Usa .some(includes) per gestire varianti '14001', 'ISO_14001', 'ISO_14001_2015'
     const selectedStandards = currentAudit?.metadata?.selectedStandards || [];
-    const standardIdForExcerpts = selectedStandards.includes('ISO_14001') ? 2
-      : selectedStandards.includes('ISO_45001') ? 4
-      : null;
+    const checklistKeys = Object.keys(currentAudit?.checklist || {});
+    const has14001 = selectedStandards.some(s => String(s).includes('14001'))
+      || checklistKeys.some(k => k.includes('14001'));
+    const has45001 = selectedStandards.some(s => String(s).includes('45001'))
+      || checklistKeys.some(k => k.includes('45001'));
+    const standardIdForExcerpts = has14001 ? 2 : has45001 ? 4 : null;
     if (standardIdForExcerpts) {
       try {
         const excRes = await apiService.get(`/checklist/questions/all?standard_id=${standardIdForExcerpts}`);

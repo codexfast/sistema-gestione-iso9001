@@ -46,8 +46,22 @@ const TEMPLATE_MAP = {
 };
 
 function getTemplateUrl(audit) {
+    // 1. Prova dal campo esplicito standardCode
     const code = audit?.metadata?.standardCode;
     if (code && TEMPLATE_MAP[code]) return TEMPLATE_MAP[code];
+
+    // 2. Rilevamento robusto: controlla selectedStandards e chiavi della checklist
+    //    Gestisce varianti: 'ISO_14001', 'ISO_14001_2015', '14001' ecc.
+    const standards = audit?.metadata?.selectedStandards || [];
+    const clKeys    = Object.keys(audit?.checklist || {});
+    const has = (tag) =>
+        standards.some(s => String(s).includes(tag)) ||
+        clKeys.some(k => k.includes(tag));
+
+    if (has('14001')) return TEMPLATE_MAP['ISO_14001'];
+    if (has('45001')) return TEMPLATE_MAP['ISO_45001'];
+    if (has('3834'))  return TEMPLATE_MAP['ISO_3834_2'];
+
     return TEMPLATE_MAP['default'];
 }
 

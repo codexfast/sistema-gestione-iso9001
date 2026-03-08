@@ -278,6 +278,83 @@
   font-style: italic;
 }
 
+/* ── Legenda Markdown ───────────────────────────────────────────────────── */
+
+.md-legend {
+  margin-bottom: 20px;
+  border: 1px solid var(--border-light, #ddd);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.md-legend-toggle {
+  width: 100%;
+  padding: 10px 16px;
+  background: #f0f7ff;
+  border: none;
+  text-align: left;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1565c0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.md-legend-toggle:hover { background: #dbeafe; }
+
+.md-legend-body {
+  padding: 14px 16px;
+  background: #fafcff;
+}
+
+.md-legend-intro {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #555);
+}
+
+.md-legend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+}
+.md-legend-table th {
+  background: #e8f0fe;
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 700;
+  color: #1565c0;
+  border-bottom: 2px solid #c5cae9;
+}
+.md-legend-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: middle;
+}
+.md-legend-table code {
+  background: #f0f0f0;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  color: #333;
+  white-space: nowrap;
+}
+
+.md-legend-example {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #555);
+  line-height: 1.8;
+}
+.md-legend-example code {
+  display: inline-block;
+  background: #f0f0f0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  color: #333;
+}
+
 /* ── Toast notifica salvataggio ─────────────────────────────────────────── */
 
 .ca-toast {

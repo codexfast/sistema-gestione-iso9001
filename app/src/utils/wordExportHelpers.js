@@ -222,31 +222,144 @@ function xmlImageOoxml(rId, imgId, widthEmu = 1905000, heightEmu = 1428750) {
 //   Col1: 3.70cm = 2098 DXA  |  Col2: 2.70cm = 1531 DXA  |  Col3: 12.07cm = 6844 DXA
 const CLAUSE_COL_DXA = [2098, 1531, 6844];
 
+// ─── Mini-parser Markdown per norm_excerpt ────────────────────────────────────
 /**
- * Genera una riga "stralcio normativo" che occupa tutta la larghezza della tabella.
- * Colore di sfondo verde chiaro (EDF9F0) con testo in corsivo grigio-verde.
+ * Converte testo con mini-markup in OOXML.
+ * Supporta:
+ *   | col | col |   → riga tabella (prima riga = header, riga |---|---| ignorata)
+ *   - testo         → punto elenco
+ *   **testo**       → grassetto inline
+ *   testo normale   → paragrafo corsivo
+ */
+
+/** Converte "**a** normale **b**" in serie di xmlRun */
+function parseInlineMarkdown(text, baseOpts = {}) {
+    const parts = text.split(/\*\*(.*?)\*\*/g);
+    return parts.map((part, i) =>
+        i % 2 === 0
+            ? xmlRun(escXml(part), { ital: true,  color: '2D6A4F', size: 18, ...baseOpts })
+            : xmlRun(escXml(part), { bold: true,  color: '1E5C30', size: 18 })
+    ).join('');
+}
+
+/** Riga separatore Markdown: |---|---| */
+function isTableSeparator(line) {
+    return /^\|[\s\-:|]+\|$/.test(line.trim());
+}
+
+/** Converti blocco di righe tabella Markdown in xmlTable OOXML */
+function buildMarkdownTableOoxml(tableLines) {
+    const rows = tableLines.filter(l => !isTableSeparator(l));
+    if (!rows.length) return '';
+
+    // Calcola numero colonne dalla prima riga
+    const parseCells = (line) =>
+        line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+
+    const numCols  = parseCells(rows[0]).length;
+    const pct      = Math.floor(100 / numCols);
+    const colPcts  = Array(numCols).fill(pct);
+
+    const ooxmlRows = rows.map((line, rowIdx) => {
+        const cells = parseCells(line);
+        const isHdr = rowIdx === 0;
+        return xmlRow(
+            cells.map(cell =>
+                xmlCell(
+                    xmlPara(
+                        isHdr
+                            ? xmlRun(escXml(cell), { bold: true, size: 18, color: '1E5C30' })
+                            : parseInlineMarkdown(cell),
+                        { align: 'center', sa: 0, sb: 0 }
+                    ),
+                    { fill: isHdr ? 'C8E6C9' : 'FFFFFF', pct }
+                )
+            ),
+            { header: isHdr }
+        );
+    });
+
+    return xmlTable(ooxmlRows, colPcts);
+}
+
+/** Costruisce il contenuto OOXML dello stralcio, interpretando il mini-markup */
+function parseNormExcerptContent(text) {
+    const lines  = text.split('\n');
+    let result   = '';
+    let i        = 0;
+    let firstBlock = true;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // Riga tabella Markdown
+        if (line.trim().startsWith('|')) {
+            const tableLines = [];
+            while (i < lines.length && lines[i].trim().startsWith('|')) {
+                tableLines.push(lines[i]);
+                i++;
+            }
+            if (firstBlock) {
+                // Prima del blocco di tabella aggiungi etichetta
+                result += xmlPara(
+                    xmlRun('\uD83D\uDCCB Rif. normativo:', { bold: true, color: '1E6B31', size: 18 }),
+                    { sb: 80, sa: 60 }
+                );
+                firstBlock = false;
+            }
+            result += buildMarkdownTableOoxml(tableLines);
+            result += xmlPara('', { sa: 60 }); // spazio dopo tabella
+            continue;
+        }
+
+        // Riga separatore (ignorata se fuori tabella)
+        if (isTableSeparator(line)) { i++; continue; }
+
+        // Punto elenco: "- testo" o "• testo"
+        if (/^[-•]\s/.test(line.trim())) {
+            const content = line.trim().replace(/^[-•]\s/, '');
+            const prefix  = firstBlock
+                ? xmlRun('\uD83D\uDCCB Rif. normativo:  ', { bold: true, color: '1E6B31', size: 18 })
+                : '';
+            result += xmlPara(
+                [prefix, parseInlineMarkdown(content)].join(''),
+                { sb: firstBlock ? 80 : 30, sa: 30 }
+            );
+            firstBlock = false;
+            i++;
+            continue;
+        }
+
+        // Riga vuota → salta
+        if (!line.trim()) { i++; continue; }
+
+        // Testo normale
+        const prefix = firstBlock
+            ? xmlRun('\uD83D\uDCCB Rif. normativo:  ', { bold: true, color: '1E6B31', size: 18 })
+            : '';
+        result += xmlPara(
+            [prefix, parseInlineMarkdown(line.trim())].join(''),
+            { sb: firstBlock ? 80 : 30, sa: 30 }
+        );
+        firstBlock = false;
+        i++;
+    }
+
+    return result || xmlPara(
+        xmlRun('— stralcio non disponibile', { ital: true, color: '9CA3AF', size: 18 }),
+        { sb: 80, sa: 80 }
+    );
+}
+
+/**
+ * Riga "stralcio normativo" a larghezza piena con mini-Markdown.
+ * Sfondo verde chiaro (EDF9F0).
  */
 function buildNormExcerptRow(excerptText, colWidths) {
     const totalDxa = colWidths.reduce((s, w) => s + w, 0);
-    // Suddivide il testo in paragrafi se contiene \n
-    const lines = excerptText.split('\n').filter(l => l.trim());
-    const paragraphs = lines.length > 0
-        ? lines.map((line, i) => xmlPara(
-            [
-                i === 0 ? xmlRun('\uD83D\uDCCB Rif. normativo: ', { bold: true, color: '1E6B31', size: 18 }) : '',
-                xmlRun(escXml(line), { ital: true, color: '2D6A4F', size: 18 }),
-            ].join(''),
-            { sb: i === 0 ? 80 : 20, sa: i === lines.length - 1 ? 80 : 20 }
-          ))
-        : [xmlPara(xmlRun(escXml(excerptText), { ital: true, color: '2D6A4F', size: 18 }), { sb: 80, sa: 80 })];
-
     return xmlRow([
-        xmlCell(paragraphs.join(''), {
-            span: 3,
-            fill: 'EDF9F0',
-            ml: 150,
-            mr: 100,
-            dxa: totalDxa
+        xmlCell(parseNormExcerptContent(excerptText), {
+            span: 3, fill: 'EDF9F0', ml: 150, mr: 100, dxa: totalDxa
         })
     ]);
 }
