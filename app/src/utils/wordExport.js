@@ -288,10 +288,10 @@ export async function exportAuditToWord(audit, getViewUrl = null, options = {}) 
     return fileName;
 }
 
-export async function exportAuditToFileSystem(audit) {
+export async function exportAuditToFileSystem(audit, getViewUrl = null, options = {}) {
     if (!audit?.metadata) throw new Error('Audit non valido: metadata mancante');
     if (!window.showDirectoryPicker) {
-        const fileName = await exportAuditToWord(audit);
+        const fileName = await exportAuditToWord(audit, getViewUrl, options);
         return { success: true, path: 'Download/' + fileName, fileName, fallback: true };
     }
     try {
@@ -300,7 +300,7 @@ export async function exportAuditToFileSystem(audit) {
         const year         = audit.metadata.projectYear || new Date().getFullYear();
         const clientName   = (audit.metadata.clientName || 'Cliente').replace(/[^a-z0-9]/gi, '_');
         const clientFolder = await auditFolder.getDirectoryHandle(year + '-' + clientName, { create: true });
-        const blob         = await generateDocxBlob(audit, null);
+        const blob         = await generateDocxBlob(audit, getViewUrl, options);
         const fileName     = buildFileName(audit);
         const fileHandle   = await clientFolder.getFileHandle(fileName, { create: true });
         const writable     = await fileHandle.createWritable();
@@ -313,14 +313,14 @@ export async function exportAuditToFileSystem(audit) {
     }
 }
 
-export async function exportAuditToWorkspace(audit, fsProvider) {
+export async function exportAuditToWorkspace(audit, fsProvider, getViewUrl = null, options = {}) {
     if (!audit?.metadata) throw new Error('Audit non valido: metadata mancante');
     if (!window.showDirectoryPicker || !fsProvider?.ready()) {
-        const fileName = await exportAuditToWord(audit);
+        const fileName = await exportAuditToWord(audit, getViewUrl, options);
         return { success: true, path: 'Download/' + fileName, fileName, fallback: true };
     }
     try {
-        const blob      = await generateDocxBlob(audit, null);
+        const blob      = await generateDocxBlob(audit, getViewUrl, options);
         const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const client    = (audit.metadata.clientName  || 'Cliente').replace(/[^a-z0-9]/gi, '_');
         const number    = (audit.metadata.auditNumber || 'N-A').replace(/[^a-z0-9]/gi, '_');

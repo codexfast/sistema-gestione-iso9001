@@ -71,6 +71,92 @@ const ExportPanel = () => {
     setPendingExportFn(null);
   };
 
+  /**
+   * Prepara l'audit per l'export: fetch allegati e rilievi dal server,
+   * costruisce getViewUrl con token. Condivisa da entrambi i pulsanti.
+   */
+  const prepareAuditForExport = async () => {
+    const auditForExport = { ...currentAudit };
+    const auditId = currentAudit.metadata?.id || currentAudit.id;
+
+    // Fetch rilievi pendenti dall'audit precedente dello stesso cliente
+    try {
+      const clientName = currentAudit.metadata?.clientName;
+      const auditUuid  = currentAudit.metadata?.id || null;
+      if (clientName) {
+        const reauditInfo = await apiService.checkReaudit(clientName, auditUuid);
+        if (reauditInfo.has_previous_audit && reauditInfo.last_audit_id) {
+          const ncData = await apiService.getNcResponses(reauditInfo.last_audit_id);
+          const rawIssues = (ncData.responses || []).filter(i => i.conformity_status !== 'OM');
+          if (rawIssues.length > 0) {
+            auditForExport.pendingIssues = rawIssues.map(i => ({
+              clause:            i.section_code || '',
+              description:       i.question_text || `Domanda ${i.question_id}`,
+              originAuditNumber: reauditInfo.last_audit_number || `#${reauditInfo.last_audit_id}`,
+              status:            'open',
+              resolutionNotes:   i.notes || '',
+            }));
+            console.log(`📋 [EXPORT] ${rawIssues.length} rilievi pendenti da audit_responses`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[EXPORT] pending issues non disp., uso locali:', err.message);
+    }
+
+    // Fetch rilievi ente certificatore
+    try {
+      const companyId  = currentAudit?.metadata?.companyId;
+      const standardId = currentAudit?.metadata?.selectedStandards?.includes("ISO_14001") ? 2
+        : currentAudit?.metadata?.selectedStandards?.includes("ISO_45001") ? 3 : 1;
+      if (companyId) {
+        const cfRes = await apiService.get(
+          `/companies/${companyId}/certification-findings?standard_id=${standardId}`
+        );
+        auditForExport.certificationFindings = cfRes.data || [];
+        console.log(`📋 [EXPORT] ${auditForExport.certificationFindings.length} rilievi ente certificatore`);
+      }
+    } catch (err) {
+      console.warn('[EXPORT] rilievi ente non disp.:', err.message);
+      auditForExport.certificationFindings = [];
+    }
+
+    // Fetch allegati dal server e normalizza in formato wordExport (camelCase)
+    try {
+      const rawAtts = await apiService.getAttachments(auditId);
+      const serverAtts = Array.isArray(rawAtts) ? rawAtts : (rawAtts?.data ?? rawAtts?.attachments ?? []);
+      if (serverAtts?.length > 0) {
+        const normalized = serverAtts.map(att => ({
+          id:                 att.attachment_id,
+          questionId:         att.question_id,
+          name:               att.file_name,
+          fileName:           att.file_name,
+          fileSize:           att.file_size,
+          mimeType:           att.mime_type,
+          category:           att.category,
+          description:        att.description,
+          serverAttachmentId: att.attachment_id,
+        }));
+        const serverQuestionIds = new Set(normalized.map(a => a.questionId).filter(Boolean));
+        const localOnly = (auditForExport.attachments || []).filter(
+          a => !serverQuestionIds.has(a.questionId)
+        );
+        auditForExport.attachments = [...normalized, ...localOnly];
+        console.log(`📎 [EXPORT] ${normalized.length} allegati da server + ${localOnly.length} solo locali`);
+      }
+    } catch (err) {
+      console.warn('[EXPORT] allegati server non disp., uso locali:', err.message);
+    }
+
+    // Costruisce getViewUrl con token (encodeURIComponent per sicurezza)
+    const rawToken = apiService.getToken();
+    const getViewUrl = rawToken
+      ? (id) => `${apiService.baseUrl}/attachments/${id}/view?token=${encodeURIComponent(rawToken)}`
+      : null;
+
+    return { auditForExport, getViewUrl };
+  };
+
   const handleExportWord = async () => {
     if (!currentAudit) return;
     askPhotoModeAndExport((mode) => doExportWord(mode));
@@ -79,92 +165,7 @@ const ExportPanel = () => {
   const doExportWord = async (mode) => {
     try {
       setIsExporting(true);
-
-      // Fetcha dati live dal server (best-effort, non bloccante)
-      const auditForExport = { ...currentAudit };
-      const auditId = currentAudit.metadata?.id || currentAudit.id;
-
-      // Fetch rilievi pendenti: usa checkReaudit + getNcResponses (audit_responses reali)
-      // La tabella pending_issues non è ancora popolata automaticamente → legge direttamente
-      // le risposte NC/OSS/NV dall'audit precedente dello stesso cliente.
-      try {
-        const clientName = currentAudit.metadata?.clientName;
-        const auditUuid  = currentAudit.metadata?.id || null;
-        if (clientName) {
-          const reauditInfo = await apiService.checkReaudit(clientName, auditUuid);
-          if (reauditInfo.has_previous_audit && reauditInfo.last_audit_id) {
-            const ncData = await apiService.getNcResponses(reauditInfo.last_audit_id);
-            const rawIssues = (ncData.responses || []).filter(i => i.conformity_status !== 'OM');
-            if (rawIssues.length > 0) {
-              // Normalizza campi per buildPendingIssuesOoxml (wordExportHelpers.js)
-              auditForExport.pendingIssues = rawIssues.map(i => ({
-                clause:            i.section_code || '',
-                description:       i.question_text || `Domanda ${i.question_id}`,
-                originAuditNumber: reauditInfo.last_audit_number || `#${reauditInfo.last_audit_id}`,
-                status:            'open',
-                resolutionNotes:   i.notes || '',
-              }));
-              console.log(`📋 [EXPORT] ${rawIssues.length} rilievi pendenti da audit_responses`);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[EXPORT] pending issues non disp., uso locali:', err.message);
-      }
-
-      // Fetch rilievi ente certificatore
-      try {
-        const companyId = currentAudit?.metadata?.companyId;
-        const standardId = currentAudit?.metadata?.selectedStandards?.includes("ISO_14001") ? 2
-          : currentAudit?.metadata?.selectedStandards?.includes("ISO_45001") ? 3 : 1;
-        if (companyId) {
-          const cfRes = await apiService.get(
-            `/companies/${companyId}/certification-findings?standard_id=${standardId}`
-          );
-          auditForExport.certificationFindings = cfRes.data || [];
-          console.log(`📋 [EXPORT] ${auditForExport.certificationFindings.length} rilievi ente certificatore`);
-        }
-      } catch (err) {
-        console.warn('[EXPORT] rilievi ente non disp.:', err.message);
-        auditForExport.certificationFindings = [];
-      }
-
-      // Fetch allegati dal server e normalizza in formato wordExport (camelCase)
-      try {
-        const rawAtts = await apiService.getAttachments(auditId);
-        // La risposta può essere array diretto o { data: [...] } a seconda del backend
-        const serverAtts = Array.isArray(rawAtts) ? rawAtts : (rawAtts?.data ?? rawAtts?.attachments ?? []);
-        if (serverAtts?.length > 0) {
-          // Normalizza snake_case → camelCase atteso da wordExport.js
-          const normalized = serverAtts.map(att => ({
-            id: att.attachment_id,
-            questionId: att.question_id,          // usato da createClauseTable per filtro
-            name: att.file_name,
-            fileName: att.file_name,
-            fileSize: att.file_size,
-            mimeType: att.mime_type,
-            category: att.category,
-            description: att.description,
-            serverAttachmentId: att.attachment_id
-          }));
-          // Merge: priorità allegati server; locali solo se question non ha nulla dal server
-          const serverQuestionIds = new Set(normalized.map(a => a.questionId).filter(Boolean));
-          const localOnly = (auditForExport.attachments || []).filter(
-            a => !serverQuestionIds.has(a.questionId)
-          );
-          auditForExport.attachments = [...normalized, ...localOnly];
-          console.log(`📎 [EXPORT] ${normalized.length} allegati da server + ${localOnly.length} solo locali`);
-        }
-      } catch (err) {
-        console.warn('[EXPORT] allegati server non disp., uso locali:', err.message);
-      }
-
-      // Costruisce getViewUrl con token esplicito (encodeURIComponent per sicurezza)
-      const rawToken = apiService.getToken();
-      const getViewUrl = rawToken
-        ? (id) => `${apiService.baseUrl}/attachments/${id}/view?token=${encodeURIComponent(rawToken)}`
-        : null;
-
+      const { auditForExport, getViewUrl } = await prepareAuditForExport();
       const fileName = await exportAuditToWord(auditForExport, getViewUrl, { photoMode: mode });
       showMessage(`✅ Report Word generato: ${fileName}`, "success");
     } catch (error) {
@@ -181,45 +182,25 @@ const ExportPanel = () => {
   };
 
   const doExportToFileSystem = async (mode) => {
-
-    // Se fsProvider è pronto, usa exportAuditToWorkspace (struttura ISO 9001)
-    if (fsProvider?.ready()) {
-      try {
-        setIsExporting(true);
-        const result = await exportAuditToWorkspace(currentAudit, fsProvider);
-
-        // Notifica diversa se fallback Android
-        if (result.fallback) {
-          showMessage(
-            `📱 Android: file salvato in Download (${result.fileName})`,
-            "info"
-          );
-        } else {
-          showMessage(
-            `✅ Report salvato in workspace: ${result.fileName}`,
-            "success"
-          );
-        }
-      } catch (error) {
-        console.error("Errore salvataggio workspace:", error);
-        showMessage(`❌ Errore: ${error.message}`, "error");
-      } finally {
-        setIsExporting(false);
-      }
-      return;
-    }
-
-    // Fallback: chiedi all'utente di selezionare cartella (vecchio comportamento)
     try {
       setIsExporting(true);
-      const result = await exportAuditToFileSystem(currentAudit);
+      const { auditForExport, getViewUrl } = await prepareAuditForExport();
 
-      // Notifica diversa se fallback Android
+      // Se fsProvider è pronto, usa exportAuditToWorkspace (struttura cartelle automatica)
+      if (fsProvider?.ready()) {
+        const result = await exportAuditToWorkspace(auditForExport, fsProvider, getViewUrl, { photoMode: mode });
+        if (result.fallback) {
+          showMessage(`📱 Android: file salvato in Download (${result.fileName})`, "info");
+        } else {
+          showMessage(`✅ Report salvato in workspace: ${result.fileName}`, "success");
+        }
+        return;
+      }
+
+      // Fallback: chiedi all'utente di selezionare la cartella
+      const result = await exportAuditToFileSystem(auditForExport, getViewUrl, { photoMode: mode });
       if (result.fallback) {
-        showMessage(
-          `📱 Android: file salvato in Download (${result.fileName})`,
-          "info"
-        );
+        showMessage(`📱 Android: file salvato in Download (${result.fileName})`, "info");
       } else {
         showMessage(`✅ File salvato in: ${result.path}`, "success");
       }
