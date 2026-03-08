@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/SharedComponents";
 import Dashboard from "./components/Dashboard";
 import CompaniesPage from "./components/CompaniesPage";
+import ChecklistAdminPage from "./components/ChecklistAdminPage";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -18,7 +19,8 @@ function AppContent() {
   const { currentAudit, fsProvider, audits } = useStorage();
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
   const [settingsExpanded, setSettingsExpanded] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState("audit"); // 'audit' | 'companies'
+  const [viewMode, setViewMode] = React.useState("audit"); // 'audit' | 'companies' | 'checklist-admin'
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   // Auto-save checkpoint ogni 30 secondi quando workspace collegato
   const checkpoint = useCheckpointSaver(currentAudit, fsProvider, {
@@ -38,6 +40,32 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return <Login />;
+  }
+
+  // Vista Admin — Gestione Stralci Normativi Checklist
+  if (viewMode === "checklist-admin") {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="container header-flex">
+            <h1>Sistema di Gestione (ISO 9001 / ISO 14001 / ISO 45001)</h1>
+            <div className="user-info">
+              <span className="user-name">👤 {user.full_name || user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
+            </div>
+          </div>
+        </header>
+        <main className="container">
+          <ChecklistAdminPage onBack={() => setViewMode("audit")} />
+        </main>
+        <footer className="app-footer">
+          <div className="container">
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+          </div>
+        </footer>
+      </div>
+    );
   }
 
   // Vista Anagrafica Aziende (Fase 1)
@@ -78,6 +106,11 @@ function AppContent() {
                 <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
                   🏢 Anagrafica Aziende
                 </button>
+                {isAdmin && (
+                  <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("checklist-admin")}>
+                    📋 Gestione Checklist
+                  </button>
+                )}
               </nav>
               <div className="user-info">
               <span className="user-name">
@@ -120,6 +153,11 @@ function AppContent() {
               <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
                 🏢 Aziende
               </button>
+              {isAdmin && (
+                <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("checklist-admin")}>
+                  📋 Checklist
+                </button>
+              )}
             </nav>
             {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}
             {currentAudit && (

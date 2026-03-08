@@ -162,6 +162,15 @@ main {
   border-color: rgba(255, 255, 255, 0.5);
 }
 
+.nav-link-admin {
+  background: rgba(255, 193, 7, 0.25);
+  border-color: rgba(255, 193, 7, 0.5);
+}
+.nav-link-admin:hover {
+  background: rgba(255, 193, 7, 0.4);
+  border-color: rgba(255, 193, 7, 0.8);
+}
+
 /* User Info in Header */
 .user-info {
   display: flex;

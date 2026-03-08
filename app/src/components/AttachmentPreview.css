@@ -170,25 +170,28 @@
 }
 
 .pf-action-btn.replace {
-  display: none; /* nascosto di default — desktop-only */
+  display: flex;
+  color: #1976d2;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .pf-action-btn.replace {
-    display: flex;
-  }
-  .pf-action-btn.replace:hover:not(:disabled) {
-    background: #e3f2fd;
-    border-color: #1976d2;
-  }
-  .pf-action-btn.replace:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+.pf-action-btn.replace:hover:not(:disabled) {
+  background: #e3f2fd;
+  border-color: #1976d2;
 }
 
-.pf-action-btn.delete:hover {
+.pf-action-btn.replace:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pf-action-btn.delete {
   background: #fdecea;
   border-color: #f44336;
   color: #c62828;
+}
+
+.pf-action-btn.delete:hover {
+  background: #f44336;
+  border-color: #c62828;
+  color: #fff;
 }
