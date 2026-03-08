@@ -381,11 +381,11 @@ export function StorageProvider({ children, useMockData = false }) {
             if (typeof fsProvider.clearAuditsStore === "function") {
               await fsProvider.clearAuditsStore();
             }
-            console.log("💾 [MERGE] Aggiorno IndexedDB con dati server (sostituzione cache)...");
-            for (const frontendAudit of serverAudits) {
+            console.log("💾 [MERGE] Aggiorno IndexedDB con dati mergiati (server + preserva locale)...");
+            for (const frontendAudit of mergedAudits) {
               await fsProvider.saveAudit(frontendAudit);
             }
-            console.log(`✅ [MERGE] ${serverAudits.length} audit salvati in IndexedDB`);
+            console.log(`✅ [MERGE] ${mergedAudits.length} audit mergiati salvati in IndexedDB`);
           }
 
           setAudits(mergedAudits);
@@ -710,9 +710,24 @@ export function StorageProvider({ children, useMockData = false }) {
       setAudits((prevAudits) => [...prevAudits, newAudit]);
       setCurrentAuditId(newAudit.metadata.id);
 
-      // Enqueue sync se online
+      // Enqueue sync se online — payload PIATTO (validateAuditPayload richiede audit_uuid, audit_number, client_name al root)
       if (navigator.onLine) {
-        syncService.enqueue("create_audit", newAudit).catch((err) => {
+        const m = newAudit.metadata;
+        syncService.enqueue("create_audit", {
+          audit_uuid:       m.id,
+          audit_number:     m.auditNumber,
+          client_name:      m.clientName,
+          company_id:       m.companyId ?? null,
+          project_year:     m.projectYear,
+          audit_date:       m.auditDate,
+          auditor_name:     m.auditorName,
+          audit_type:       m.auditType,
+          status:           m.status || 'draft',
+          selectedStandards: m.selectedStandards || [],
+          generalData:      m.generalData,
+          auditObjective:   m.auditObjective,
+          auditOutcome:     m.auditOutcome,
+        }).catch((err) => {
           console.error("❌ [SYNC] Errore enqueue create:", err);
         });
       }

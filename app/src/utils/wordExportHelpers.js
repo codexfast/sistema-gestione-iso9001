@@ -16,10 +16,14 @@
 
 // Nomi leggibili dei standard — aggiungere qui nuovi standard
 const STANDARD_LABELS = {
-    ISO_9001:   'ISO 9001:2015 — Sistema di Gestione per la Qualità',
-    ISO_14001:  'ISO 14001:2015 — Sistema di Gestione Ambientale',
-    ISO_45001:  'ISO 45001:2018 — Sistema di Gestione per la Salute e Sicurezza sul Lavoro',
-    ISO_3834_2: 'ISO 3834-2:2021 — Requisiti di qualità per la saldatura per fusione',
+    ISO_9001:        'ISO 9001:2015 \u2014 Sistema di Gestione per la Qualit\u00e0',
+    ISO_9001_2015:   'ISO 9001:2015 \u2014 Sistema di Gestione per la Qualit\u00e0',
+    ISO_14001:       'ISO 14001:2015 \u2014 Sistema di Gestione Ambientale',
+    ISO_14001_2015:  'ISO 14001:2015 \u2014 Sistema di Gestione Ambientale',
+    ISO_45001:       'ISO 45001:2018 \u2014 Sistema di Gestione per la Salute e Sicurezza',
+    ISO_45001_2018:  'ISO 45001:2018 \u2014 Sistema di Gestione per la Salute e Sicurezza',
+    ISO_3834_2:      'ISO 3834-2:2021 \u2014 Requisiti di qualit\u00e0 per la saldatura per fusione',
+    ISO_3834_2_2021: 'ISO 3834-2:2021 \u2014 Requisiti di qualit\u00e0 per la saldatura per fusione',
 };
 
 /**

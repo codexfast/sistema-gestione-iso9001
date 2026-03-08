@@ -56,7 +56,8 @@ export function backendToFrontend(backendAudit) {
                 }
                 const id = backendAudit.standard_id;
                 if (id === 2) return ['ISO_14001'];
-                if (id === 3) return ['ISO_45001'];
+                if (id === 3) return ['ISO_3834_2'];
+                if (id === 4) return ['ISO_45001'];
                 return ['ISO_9001'];
             })(),
             createdAt: backendAudit.created_at,
@@ -120,7 +121,8 @@ export function frontendToBackend(frontendAudit) {
         standard_id: (() => {
             const stds = meta.selectedStandards || [];
             if (stds.some(s => s === 'ISO_14001' || s === 'ISO_14001_2015')) return 2;
-            if (stds.some(s => s === 'ISO_45001' || s === 'ISO_45001_2018')) return 3;
+            if (stds.some(s => s === 'ISO_3834' || s === 'ISO_3834_2' || String(s).includes('3834'))) return 3;
+            if (stds.some(s => s === 'ISO_45001' || s === 'ISO_45001_2018')) return 4;
             return 1; // ISO 9001 default
         })(),
         created_at: meta.createdAt,
