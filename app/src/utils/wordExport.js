@@ -37,6 +37,8 @@ import {
 } from './wordExportHelpers.js';
 
 // ─── Mappa standard → template ────────────────────────────────────────────────
+// PER AGGIUNGERE UNA NUOVA NORMA: inserire qui la coppia chiave→percorso template.
+// Nient'altro da modificare nel codice.
 const TEMPLATE_MAP = {
     'ISO_9001':   '/templates/ISO9001-audit-report.docx',
     'ISO_14001':  '/templates/ISO14001-audit-report.docx',
@@ -45,24 +47,23 @@ const TEMPLATE_MAP = {
     'default':    '/templates/ISO9001-audit-report.docx',
 };
 
-function getTemplateUrl(audit) {
-    // 1. Prova dal campo esplicito standardCode
-    const code = audit?.metadata?.standardCode;
-    if (code && TEMPLATE_MAP[code]) return TEMPLATE_MAP[code];
+/**
+ * Normalizza una chiave standard al formato usato in TEMPLATE_MAP.
+ * 'ISO_9001_2015' → 'ISO_9001'  |  'ISO_14001' → 'ISO_14001'
+ * Usata sia per la selezione del template che per il filtraggio della checklist.
+ */
+function normalizeStdKey(key) {
+    if (!key) return 'default';
+    const k = String(key).toUpperCase().trim();
+    if (TEMPLATE_MAP[k]) return k;
+    // Rimuovi suffisso anno: ISO_9001_2015 → ISO_9001, ISO_3834_2_2021 → ISO_3834_2
+    const withoutYear = k.replace(/_\d{4}(_\d+)?$/, '');
+    if (TEMPLATE_MAP[withoutYear]) return withoutYear;
+    return 'default';
+}
 
-    // 2. Rilevamento robusto: controlla selectedStandards e chiavi della checklist
-    //    Gestisce varianti: 'ISO_14001', 'ISO_14001_2015', '14001' ecc.
-    const standards = audit?.metadata?.selectedStandards || [];
-    const clKeys    = Object.keys(audit?.checklist || {});
-    const has = (tag) =>
-        standards.some(s => String(s).includes(tag)) ||
-        clKeys.some(k => k.includes(tag));
-
-    if (has('14001')) return TEMPLATE_MAP['ISO_14001'];
-    if (has('45001')) return TEMPLATE_MAP['ISO_45001'];
-    if (has('3834'))  return TEMPLATE_MAP['ISO_3834_2'];
-
-    return TEMPLATE_MAP['default'];
+function getTemplateUrl(standardKey) {
+    return TEMPLATE_MAP[normalizeStdKey(standardKey)] || TEMPLATE_MAP['default'];
 }
 
 function formatDate(dateStr) {
@@ -216,13 +217,23 @@ function embedImagesInZip(zip, imageRegistry) {
 }
 
 async function generateDocxBlob(audit, getViewUrl, options = {}) {
-    // Se è specificato un singolo standard, filtra la checklist solo a quella norma
-    const stdKey = options.standardKey || null;
-    const auditForGen = stdKey
-        ? { ...audit, checklist: { [stdKey]: audit.checklist?.[stdKey] } }
-        : audit;
+    const rawKey    = options.standardKey || null;
+    const normKey   = rawKey ? normalizeStdKey(rawKey) : null;
 
-    const templateUrl = getTemplateUrl(auditForGen);
+    // Filtra la checklist alla sola norma richiesta.
+    // La chiave nella checklist può essere 'ISO_9001' o 'ISO_9001_2015':
+    // cerca la prima chiave che si normalizza al valore atteso.
+    let checklistFiltered = audit.checklist || {};
+    if (normKey) {
+        const matchKey = Object.keys(checklistFiltered)
+            .find(k => normalizeStdKey(k) === normKey);
+        checklistFiltered = matchKey
+            ? { [matchKey]: checklistFiltered[matchKey] }
+            : { [normKey]: {} };
+    }
+
+    const auditForGen = { ...audit, checklist: checklistFiltered };
+    const templateUrl = getTemplateUrl(normKey || Object.keys(checklistFiltered)[0]);
     let arrayBuffer;
     try {
         const resp = await fetch(templateUrl);
