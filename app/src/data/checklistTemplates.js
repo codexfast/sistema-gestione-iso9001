@@ -184,7 +184,7 @@ export const ISO_14001_TEMPLATE = {
  * questionId: null = domande non ancora nel DB (sync silenzioso)
  */
 export const ISO_3834_TEMPLATE = {
-  standardId: 3,
+  standardId: 6,
   standardCode: "ISO_3834_2",
   standardName: "ISO 3834-2:2021",
   sections: [
@@ -296,7 +296,7 @@ export const ISO_3834_TEMPLATE = {
  * questionId: null = domande non ancora nel DB (sync silenzioso)
  */
 export const ISO_45001_TEMPLATE = {
-  standardId: 4,
+  standardId: 3,
   standardCode: "ISO_45001_2018",
   standardName: "ISO 45001:2018",
   sections: [

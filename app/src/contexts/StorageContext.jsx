@@ -323,11 +323,11 @@ export function StorageProvider({ children, useMockData = false }) {
                 auditsToUploadRichData.push(merged);
               }
               
-              // Preserva selectedStandards dalla versione locale se il server ha solo ['ISO_9001']
-              // (succede quando la sincronizzazione precedente non ha inviato gli standard corretti)
+              // Preserva selectedStandards dalla versione locale se è più completa di quella server
+              // (es: sync precedente incompleta, oppure standard aggiunti offline)
               const localStds = localAudit?.metadata?.selectedStandards;
               const serverStds = serverAudit?.metadata?.selectedStandards || [];
-              if (localStds && localStds.length > 1 && serverStds.length <= 1) {
+              if (localStds && localStds.length > serverStds.length) {
                 merged.metadata = { ...merged.metadata, selectedStandards: localStds };
               }
 
@@ -897,17 +897,17 @@ export function StorageProvider({ children, useMockData = false }) {
         return false;
       }
 
-      // Mappa standard code → standard_id
+      // Mappa standard code → standard_id (allineata con tabella DB standards)
       const standardIdMap = {
-        ISO_9001:      1,
-        ISO_9001_2015: 1,
-        ISO_14001:     2,
-        ISO_14001_2015: 2,
-        ISO_3834:      3,
-        ISO_3834_2:    3,
-        ISO_3834_2_2021: 3,
-        ISO_45001:     4,
-        ISO_45001_2018: 4,
+        ISO_9001:        1,
+        ISO_9001_2015:   1,
+        ISO_14001:       2,
+        ISO_14001_2015:  2,
+        ISO_45001:       3,
+        ISO_45001_2018:  3,
+        ISO_3834:        6,
+        ISO_3834_2:      6,
+        ISO_3834_2_2021: 6,
       };
 
       const standardId = standardIdMap[standard];

@@ -139,7 +139,7 @@ const ExportPanel = () => {
       || checklistKeys.some(k => k.includes('14001'));
     const has45001 = selectedStandards.some(s => String(s).includes('45001'))
       || checklistKeys.some(k => k.includes('45001'));
-    const standardIdForExcerpts = has14001 ? 2 : has45001 ? 4 : null;
+    const standardIdForExcerpts = has14001 ? 2 : has45001 ? 3 : null;
     if (standardIdForExcerpts) {
       try {
         const excRes = await apiService.get(`/checklist/questions/all?standard_id=${standardIdForExcerpts}`);

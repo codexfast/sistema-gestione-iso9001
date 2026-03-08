@@ -40,10 +40,10 @@ router.put('/audits/:id', auditController.updateAudit);
 router.delete('/audits/:id', auditController.deleteAudit);
 
 
-// POST /api/v1/audits/:id/responses/bulk - Salva risposte checklist in bulk (UPSERT)
 // GET /api/v1/audits/:id/nc-responses - NC/OSS/OM risposte per re-audit preview
 router.get('/audits/:id/nc-responses', auditController.getNcResponses);
 
-router.post('/audits/:id/responses/bulk', auditController.bulkSaveResponses);
+// NOTA: POST /audits/:id/responses/bulk è gestito da response.routes.js
+// (implementazione più completa: UUID/ID, conflict detection, validazione status)
 
 module.exports = router;

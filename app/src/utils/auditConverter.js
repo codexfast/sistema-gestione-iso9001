@@ -42,9 +42,10 @@ export function backendToFrontend(backendAudit) {
             // altrimenti cade su standard_id singolo per retrocompatibilità
             selectedStandards: (() => {
                 const NORMALIZE = {
-                    ISO_9001_2015: 'ISO_9001', ISO_9001: 'ISO_9001',
+                    ISO_9001_2015: 'ISO_9001',   ISO_9001: 'ISO_9001',
                     ISO_14001_2015: 'ISO_14001', ISO_14001: 'ISO_14001',
                     ISO_45001_2018: 'ISO_45001', ISO_45001: 'ISO_45001',
+                    ISO_3834_2: 'ISO_3834_2',    ISO_3834_2_2021: 'ISO_3834_2', ISO_3834: 'ISO_3834_2',
                 };
                 if (backendAudit.standards) {
                     // GET /audits/:id  → standards è un array di oggetti [{standard_code,...}]
@@ -56,8 +57,8 @@ export function backendToFrontend(backendAudit) {
                 }
                 const id = backendAudit.standard_id;
                 if (id === 2) return ['ISO_14001'];
-                if (id === 3) return ['ISO_3834_2'];
-                if (id === 4) return ['ISO_45001'];
+                if (id === 3) return ['ISO_45001'];
+                if (id === 6) return ['ISO_3834_2'];
                 return ['ISO_9001'];
             })(),
             createdAt: backendAudit.created_at,
@@ -121,8 +122,8 @@ export function frontendToBackend(frontendAudit) {
         standard_id: (() => {
             const stds = meta.selectedStandards || [];
             if (stds.some(s => s === 'ISO_14001' || s === 'ISO_14001_2015')) return 2;
-            if (stds.some(s => s === 'ISO_3834' || s === 'ISO_3834_2' || String(s).includes('3834'))) return 3;
-            if (stds.some(s => s === 'ISO_45001' || s === 'ISO_45001_2018')) return 4;
+            if (stds.some(s => s === 'ISO_45001' || s === 'ISO_45001_2018')) return 3;
+            if (stds.some(s => s === 'ISO_3834' || s === 'ISO_3834_2' || String(s).includes('3834'))) return 6;
             return 1; // ISO 9001 default
         })(),
         created_at: meta.createdAt,

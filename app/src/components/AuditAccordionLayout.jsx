@@ -19,9 +19,10 @@ import ExportPanel from "./ExportPanel";
 // Mappa standard → codici normalizzati accettati.
 // Per aggiungere un nuovo standard inserire qui una nuova voce, senza toccare altro.
 const STANDARD_INIT_MAP = {
-  ISO_9001:  ["ISO_9001",  "ISO_9001_2015"],
-  ISO_14001: ["ISO_14001", "ISO_14001_2015"],
-  ISO_45001: ["ISO_45001", "ISO_45001_2018"],
+  ISO_9001:   ["ISO_9001",  "ISO_9001_2015"],
+  ISO_14001:  ["ISO_14001", "ISO_14001_2015"],
+  ISO_3834_2: ["ISO_3834",  "ISO_3834_2", "ISO_3834_2_2021"],
+  ISO_45001:  ["ISO_45001", "ISO_45001_2018"],
 };
 
 function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSaved }) {
@@ -87,10 +88,12 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
       }
     });
 
-    // Idrata risposte dal server per TUTTI gli standard (audit esistente con auditId)
+    // Idrata risposte dal server per TUTTI gli standard (audit esistente con auditId).
+    // Il piccolo delay garantisce che React abbia processato gli setState di initializeChecklist
+    // prima che le risposte vengano applicate alla checklist (evita race condition).
     const numericId = currentAudit.metadata?.auditId;
     if (numericId) {
-      fetchAndApplyServerResponses(numericId);
+      setTimeout(() => fetchAndApplyServerResponses(numericId), 150);
     }
   }, [currentAudit?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -112,20 +115,15 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
     // Aggiorna metadata
     onUpdate("selectedStandards", updatedStandards);
 
-    // Inizializza checklist per standard aggiunti (immediato, no setTimeout)
+    // Inizializza checklist per standard aggiunti — usa STANDARD_INIT_MAP per scalabilità
     addedStandards.forEach((standard) => {
-      // Supporta sia "ISO_9001" (key interna) che "ISO_9001_2015" (code da API/fallback)
-      if (standard === "ISO_9001" || standard === "ISO_9001_2015") {
-        console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
-        initializeChecklist("ISO_9001");
-      }
-      if (standard === "ISO_14001" || standard === "ISO_14001_2015") {
-        console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
-        initializeChecklist("ISO_14001");
-      }
-      if (standard === "ISO_45001" || standard === "ISO_45001_2018") {
-        console.log(`[Accordion] Triggering initializeChecklist for ${standard}`);
-        initializeChecklist("ISO_45001");
+      const entry = Object.entries(STANDARD_INIT_MAP).find(([, codes]) => codes.includes(standard));
+      if (entry) {
+        const [key] = entry;
+        console.log(`[Accordion] Triggering initializeChecklist for ${standard} → key: ${key}`);
+        initializeChecklist(key);
+      } else {
+        console.warn(`[Accordion] Standard non riconosciuto in STANDARD_INIT_MAP: ${standard}`);
       }
     });
 

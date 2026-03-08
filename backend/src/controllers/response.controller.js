@@ -394,13 +394,16 @@ async function bulkSaveResponses(req, res) {
                 finalQuestionId = question_id;
 
                 if (!finalQuestionId && clause_ref) {
+                    // Cerca in tutti gli standard associati all'audit (non hardcoded standard_id=1)
                     const questionLookup = await query(`
-                        SELECT question_id FROM checklist_questions
-                        WHERE section_code = @section_code AND standard_id = 1
-                    `, { section_code: clause_ref });
+                        SELECT cq.question_id FROM checklist_questions cq
+                        INNER JOIN audit_standards ast ON ast.standard_id = cq.standard_id
+                        WHERE cq.section_code = @section_code AND ast.audit_id = @audit_id
+                        ORDER BY ast.is_primary DESC
+                    `, { section_code: clause_ref, audit_id: auditIdNumeric });
 
                     if (questionLookup.recordset.length === 0) {
-                        logger.warn(`[DEBUG] Question lookup failed: clause_ref=${clause_ref}, standard_id=1`);
+                        logger.warn(`[DEBUG] Question lookup failed: clause_ref=${clause_ref}, audit_id=${auditIdNumeric}`);
                         results.errors.push({ clause_ref, error: `Question not found for clause ${clause_ref}` });
                         continue;
                     }
