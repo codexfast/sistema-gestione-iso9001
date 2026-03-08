@@ -18,6 +18,7 @@ function AuditSelector() {
     currentAuditId,
     switchAudit,
     createAudit,
+    deleteAudit,
     isSaving,
   } = useStorage();
 
@@ -45,6 +46,21 @@ function AuditSelector() {
   const handleCreateReAudit = () => {
     setIsReauditMode(true);
     setShowCreateModal(true);
+  };
+
+  const handleDeleteAudit = () => {
+    if (!currentAudit) return;
+    const num = currentAudit.metadata.auditNumber || "—";
+    const client = currentAudit.metadata.clientName || "—";
+    const first = window.confirm(
+      `Eliminare definitivamente l'audit?\n\n${num} — ${client}\n\nQuesta operazione rimuove l'audit dal browser e dal server.\nNon può essere annullata.`
+    );
+    if (!first) return;
+    const second = window.confirm(
+      `⚠️ CONFERMA FINALE\n\nAudit "${num}" verrà eliminato in modo permanente.\nProcedere?`
+    );
+    if (!second) return;
+    deleteAudit(currentAuditId);
   };
 
 
@@ -119,6 +135,15 @@ function AuditSelector() {
           >
             🔄 Re-Audit
           </button>
+
+          <button
+            onClick={handleDeleteAudit}
+            className="btn btn-icon btn-danger"
+            title="Elimina audit corrente"
+            disabled={currentAudit === null}
+          >
+            🗑️ Elimina
+          </button>
         </div>
 
         {isSaving && <span className="save-indicator">💾 Salvataggio...</span>}
@@ -131,26 +156,28 @@ function AuditSelector() {
           <div className="audit-info-item standards-info">
             <strong>Norme:</strong>{" "}
             <div className="standards-badges">
-              {(currentAudit.metadata.selectedStandards || []).map((std) => {
-                const category = std.includes("9001")
-                  ? "quality"
-                  : std.includes("14001")
-                  ? "environment"
-                  : std.includes("45001")
-                  ? "safety"
-                  : "other";
-                const displayName = std
-                  .replace("ISO_", "ISO ")
-                  .replace("_", ":");
-                return (
-                  <span
-                    key={std}
-                    className={`standard-badge-small category-${category}`}
-                  >
-                    {displayName}
-                  </span>
-                );
-              })}
+              {(() => {
+                // Usa selectedStandards; se vuoto, usa le chiavi della checklist come fallback
+                const declared = currentAudit.metadata.selectedStandards || [];
+                const ckKeys = Object.keys(currentAudit.checklist || {});
+                const display = declared.length > 0 ? declared : ckKeys;
+                return display.map((std) => {
+                  const s = String(std);
+                  const category = s.includes("9001")
+                    ? "quality"
+                    : s.includes("14001")
+                    ? "environment"
+                    : s.includes("45001")
+                    ? "safety"
+                    : "other";
+                  const displayName = s.replace("ISO_", "ISO ").replace(/_(\d)/, ":$1");
+                  return (
+                    <span key={std} className={`standard-badge-small category-${category}`}>
+                      {displayName}
+                    </span>
+                  );
+                });
+              })()}
             </div>
           </div>
           <div className="audit-info-item">
