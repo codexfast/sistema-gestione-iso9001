@@ -93,7 +93,9 @@ export const EXPORT_TYPE = {
 /**
  * @typedef {Object} AuditMetadata
  * @property {string} id - UUID univoco audit
- * @property {string} clientName - Nome cliente/organizzazione
+ * @property {string} clientName - Nome azienda committente (chi commissiona l'audit)
+ * @property {string} [auditPartyType] - 'first_party' | 'second_party' (prima parte interno / seconda parte fornitore)
+ * @property {string} [fornitoreName] - Nome fornitore auditato (solo se auditPartyType === 'second_party')
  * @property {number} projectYear - Anno audit (es. 2025)
  * @property {string} auditNumber - Numero progressivo annuale (es. "2025-01")
  * @property {string} status - Status audit (vedi AUDIT_STATUS)
@@ -245,6 +247,8 @@ export function createNewAudit(metadata) {
             id: crypto.randomUUID(),
             clientName: metadata.clientName || '',
             companyId: metadata.companyId ?? null,
+            auditPartyType: metadata.auditPartyType || 'first_party',
+            fornitoreName: metadata.fornitoreName || '',
             projectYear: metadata.projectYear || new Date().getFullYear(),
             auditNumber: metadata.auditNumber || '',
             status: AUDIT_STATUS.DRAFT,

@@ -241,7 +241,10 @@ async function createAudit(req, res) {
             auditor_name,
             audit_type,
             standard_ids,
-            notes
+            notes,
+            audit_party_type,
+            fornitore_name,
+            company_id
         } = req.body;
 
         // Validazione campi obbligatori
@@ -321,6 +324,20 @@ async function createAudit(req, res) {
 
         const newAudit = result.recordset[0];
 
+        // Persistenza tipologia audit, fornitore e company_id in audit_extra_data / colonne
+        const extraData = {
+            auditPartyType: audit_party_type || 'first_party',
+            fornitoreName: fornitore_name || ''
+        };
+        await query(`
+            UPDATE audits SET audit_extra_data = @audit_extra_data, company_id = @company_id, updated_at = GETDATE()
+            WHERE audit_id = @audit_id
+        `, {
+            audit_id: newAudit.audit_id,
+            audit_extra_data: JSON.stringify(extraData),
+            company_id: company_id || null
+        });
+
         // Associa standard
         for (const standard_id of standard_ids) {
             await query(`
@@ -377,12 +394,14 @@ async function updateAudit(req, res) {
             conformities_count,
             non_conformities_count,
             completion_percentage,
-            standard_ids
+            standard_ids,
+            audit_party_type,
+            fornitore_name
         } = req.body;
 
-        // Verifica esistenza e ownership (con timestamp corrente per conflict detection)
+        // Verifica esistenza e ownership (con timestamp e audit_extra_data per merge)
         const existingAudit = await query(`
-      SELECT audit_id, updated_at FROM audits
+      SELECT audit_id, updated_at, audit_extra_data FROM audits
       WHERE audit_id = @id 
         AND organization_id = @organization_id
         AND is_deleted = 0
@@ -475,6 +494,18 @@ async function updateAudit(req, res) {
         if (completion_percentage !== undefined) {
             updates.push('completion_percentage = @completion_percentage');
             params.completion_percentage = parseFloat(completion_percentage);
+        }
+        // Merge tipologia audit e fornitore in audit_extra_data
+        if (audit_party_type !== undefined || fornitore_name !== undefined) {
+            let extra = existingAudit.recordset[0].audit_extra_data;
+            if (extra && typeof extra === 'string') {
+                try { extra = JSON.parse(extra); } catch (_) { extra = {}; }
+            }
+            if (!extra || typeof extra !== 'object') extra = {};
+            if (audit_party_type !== undefined) extra.auditPartyType = audit_party_type;
+            if (fornitore_name !== undefined) extra.fornitoreName = fornitore_name;
+            updates.push('audit_extra_data = @audit_extra_data');
+            params.audit_extra_data = JSON.stringify(extra);
         }
 
         if (updates.length === 0 && !standard_ids) {
@@ -657,8 +688,18 @@ async function upsertAudit(req, res) {
             standard_id,
             standard_ids,   // array [1, 2] da syncService — aggiorna audit_standards completo
             updated_at,
-            audit_extra_data // JSON con generalData, auditObjective, auditOutcome
+            audit_extra_data: bodyExtra, // JSON con generalData, auditObjective, auditOutcome, auditPartyType, fornitoreName
+            audit_party_type,
+            fornitore_name
         } = req.body;
+
+        // Merge tipologia e fornitore in audit_extra_data (da body root o da audit_extra_data)
+        const audit_extra_data = (() => {
+            const base = bodyExtra && typeof bodyExtra === 'object' ? { ...bodyExtra } : (typeof bodyExtra === 'string' ? (() => { try { return JSON.parse(bodyExtra); } catch (_) { return {}; } })() : {});
+            base.auditPartyType = audit_party_type ?? base.auditPartyType ?? 'first_party';
+            base.fornitoreName = fornitore_name ?? base.fornitoreName ?? '';
+            return base;
+        })();
 
         // Risolve la lista di standard_id da registrare in audit_standards
         // Priorità: standard_ids array (nuovo) > standard_id scalare (legacy) > default ISO 9001

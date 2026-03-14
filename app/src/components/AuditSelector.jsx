@@ -220,18 +220,26 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
   const currentYear = new Date().getFullYear();
   const nextNumber = getNextAuditNumber(audits, currentYear);
 
-  // Pre-popola clientName e companyId se re-audit
+  // Pre-popola clientName, companyId, tipologia e fornitore se re-audit
   const initialClientName = isReaudit && currentAudit 
     ? currentAudit.metadata.clientName 
     : "";
   const initialCompanyId = isReaudit && currentAudit?.metadata?.companyId 
     ? currentAudit.metadata.companyId 
     : null;
+  const initialPartyType = isReaudit && currentAudit?.metadata?.auditPartyType 
+    ? currentAudit.metadata.auditPartyType 
+    : "first_party";
+  const initialFornitore = isReaudit && currentAudit?.metadata?.fornitoreName 
+    ? currentAudit.metadata.fornitoreName 
+    : "";
 
   const [formData, setFormData] = useState({
     auditNumber: nextNumber,
     clientName: initialClientName,
     companyId: initialCompanyId,
+    auditPartyType: initialPartyType,
+    fornitoreName: initialFornitore,
     auditDate: new Date().toISOString().split("T")[0],
     auditorName: "",
     norms: [],
@@ -469,7 +477,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
 
           {companies.length > 0 && !isReaudit && (
             <div className="form-group">
-              <label htmlFor="companySelect">Azienda (da anagrafica)</label>
+              <label htmlFor="companySelect">Azienda committente (da anagrafica)</label>
               <select
                 id="companySelect"
                 value={formData.companyId ?? ""}
@@ -485,12 +493,12 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
                   </option>
                 ))}
               </select>
-              <small className="form-hint">Seleziona un&apos;azienda esistente per compilare automaticamente il nome</small>
+              <small className="form-hint">Seleziona un&apos;azienda esistente per compilare il nome committente</small>
             </div>
           )}
 
           <div className="form-group">
-            <label htmlFor="clientName">Nome Cliente *</label>
+            <label htmlFor="clientName">Azienda committente *</label>
             <input
               type="text"
               id="clientName"
@@ -500,15 +508,56 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
               onBlur={handleClientNameBlur}
               disabled={isReaudit}
               className={`form-control ${errors.clientName ? "error" : ""} ${isReaudit ? "readonly" : ""}`}
-              placeholder={isReaudit ? "Azienda da re-auditare" : "es. Acme Industries SpA"}
+              placeholder={isReaudit ? "Azienda committente (non modificabile)" : "es. Acme Industries SpA"}
             />
             {isReaudit && (
-              <small className="form-hint">📌 Azienda selezionata (non modificabile)</small>
+              <small className="form-hint">📌 Azienda committente selezionata (non modificabile)</small>
             )}
             {errors.clientName && (
               <span className="error-message">{errors.clientName}</span>
             )}
           </div>
+
+          <div className="form-group">
+            <label>Tipologia audit</label>
+            <div className="checkbox-group" role="group" aria-label="Tipologia audit">
+              <label className="checkbox-label">
+                <input
+                  type="radio"
+                  name="auditPartyType"
+                  checked={formData.auditPartyType === "first_party"}
+                  onChange={() => setFormData((p) => ({ ...p, auditPartyType: "first_party", fornitoreName: p.auditPartyType === "second_party" ? "" : p.fornitoreName }))}
+                />
+                <span>Prima parte (interno) — audit sul committente</span>
+              </label>
+              <label className="checkbox-label">
+                <input
+                  type="radio"
+                  name="auditPartyType"
+                  checked={formData.auditPartyType === "second_party"}
+                  onChange={() => setFormData((p) => ({ ...p, auditPartyType: "second_party" }))}
+                />
+                <span>Seconda parte (fornitore) — audit su un fornitore</span>
+              </label>
+            </div>
+            <small className="form-hint">I nostri audit sono di prima parte (interno) o seconda parte (fornitore).</small>
+          </div>
+
+          {formData.auditPartyType === "second_party" && (
+            <div className="form-group">
+              <label htmlFor="fornitoreName">Fornitore auditato</label>
+              <input
+                type="text"
+                id="fornitoreName"
+                name="fornitoreName"
+                value={formData.fornitoreName}
+                onChange={handleChange}
+                className="form-control"
+                placeholder="es. Fornitore XYZ Srl"
+              />
+              <small className="form-hint">Azienda fornitore oggetto dell&apos;audit (seconda parte).</small>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="auditDate">Data Audit *</label>

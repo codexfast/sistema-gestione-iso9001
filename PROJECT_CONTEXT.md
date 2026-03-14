@@ -192,14 +192,15 @@ Esclude `<w:pPr>` — errore storico che corrompeva il file (commit `975ed3e`).
 
 ## Regole operative critiche
 
-1. **Prima di modificare backend**: leggere il controller/route esistente
-2. **`tail -N file`** NON funziona dopo `fuser` su questa shell → usare `cat`
-3. **NON concatenare** restart server con `;` dopo `fuser -k` → comandi separati
-4. **`conformity_status`** valori: `'C', 'NC', 'OSS', 'OM', 'NA', 'NV', NULL`
-5. **`question_type`** valori DB: `'TEXT'`, `'YES_NO'`, `'MULTIPLE_CHOICE'` (MAIUSCOLO)
-6. **`audit.status`** valori DB: `'draft'`, `'in_progress'`, `'completed'`, `'approved'` (minuscolo)
-7. **Credenziali mai in repo** — `.env` + secrets CI/CD
-8. **HTTP client**: solo Axios v1.7 con interceptor, vietato `fetch` diretto
+1. **Golden rule — flusso end-to-end**: ogni modifica che introduce nuovi campi o comportamenti **deve** coprire sia frontend sia backend (persistenza, API, sync, converter) in modo che il flusso di lavoro resti sempre funzionante. Robustezza e affidabilità di ogni modifica sono obbligatorie.
+2. **Prima di modificare backend**: leggere il controller/route esistente
+3. **`tail -N file`** NON funziona dopo `fuser` su questa shell → usare `cat`
+4. **NON concatenare** restart server con `;` dopo `fuser -k` → comandi separati
+5. **`conformity_status`** valori: `'C', 'NC', 'OSS', 'OM', 'NA', 'NV', NULL`
+6. **`question_type`** valori DB: `'TEXT'`, `'YES_NO'`, `'MULTIPLE_CHOICE'` (MAIUSCOLO)
+7. **`audit.status`** valori DB: `'draft'`, `'in_progress'`, `'completed'`, `'approved'` (minuscolo)
+8. **Credenziali mai in repo** — `.env` + secrets CI/CD
+9. **HTTP client**: solo Axios v1.7 con interceptor, vietato `fetch` diretto
 
 ---
 

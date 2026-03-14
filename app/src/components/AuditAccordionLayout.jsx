@@ -282,6 +282,43 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
 
                 {openSubSections["general-data-form"] && (
                   <div className="subsection-content">
+                    {/* Blocco Tipologia audit: modifica dopo creazione */}
+                    <div className="general-data-tipologia-block" style={{ marginBottom: '1rem' }}>
+                      <label className="subsection-label" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Tipologia audit</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="radio"
+                            name="auditPartyType"
+                            checked={(currentAudit.metadata?.auditPartyType || 'first_party') === 'first_party'}
+                            onChange={() => onUpdate('auditPartyType', 'first_party')}
+                          />
+                          Prima parte (interno)
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="radio"
+                            name="auditPartyType"
+                            checked={(currentAudit.metadata?.auditPartyType || 'first_party') === 'second_party'}
+                            onChange={() => onUpdate('auditPartyType', 'second_party')}
+                          />
+                          Seconda parte (fornitore)
+                        </label>
+                      </div>
+                      {(currentAudit.metadata?.auditPartyType || 'first_party') === 'second_party' && (
+                        <div style={{ marginTop: '0.75rem' }}>
+                          <label className="subsection-label" style={{ display: 'block', marginBottom: '0.25rem' }}>Fornitore auditato</label>
+                          <input
+                            type="text"
+                            className="subsection-input"
+                            value={currentAudit.metadata?.fornitoreName || ''}
+                            onChange={(e) => onUpdate('fornitoreName', e.target.value)}
+                            placeholder="Ragione sociale o denominazione fornitore"
+                            style={{ width: '100%', maxWidth: '400px', padding: '0.35rem 0.5rem' }}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <GeneralDataSection
                       generalData={currentAudit.metadata.generalData}
                       selectedStandards={selectedStandards}

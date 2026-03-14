@@ -195,6 +195,16 @@ async function createAuditFromSync(clientAudit, userId, organizationId) {
 
     const auditId = result.recordset[0].audit_id;
 
+    // Persistenza tipologia audit e fornitore in audit_extra_data
+    const extraData = {
+        auditPartyType: clientAudit.auditPartyType ?? clientAudit.audit_party_type ?? 'first_party',
+        fornitoreName: clientAudit.fornitoreName ?? clientAudit.fornitore_name ?? ''
+    };
+    await query(`
+        UPDATE audits SET audit_extra_data = @audit_extra_data, updated_at = GETDATE()
+        WHERE audit_id = @audit_id
+    `, { audit_id: auditId, audit_extra_data: JSON.stringify(extraData) });
+
     // Insert audit_standards (multi-standard support)
     const standardIds = clientAudit.standardIds || [clientAudit.standardId || 1]; // Retrocompatibilità
     const primaryStandardId = standardIds[0]; // Primo standard = primario
@@ -220,7 +230,27 @@ async function createAuditFromSync(clientAudit, userId, organizationId) {
  * Helper: Aggiorna audit da sync
  */
 async function updateAuditFromSync(auditId, clientAudit) {
-    // Update audit base fields
+    // Leggi audit_extra_data esistente per merge
+    const current = await query(`
+        SELECT audit_extra_data FROM audits WHERE audit_id = @audit_id
+    `, { audit_id: auditId });
+    let extraData = {};
+    if (current.recordset[0]?.audit_extra_data) {
+        const raw = current.recordset[0].audit_extra_data;
+        try {
+            extraData = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+        } catch (_) {
+            extraData = {};
+        }
+    }
+    if (clientAudit.auditPartyType !== undefined || clientAudit.audit_party_type !== undefined) {
+        extraData.auditPartyType = clientAudit.auditPartyType ?? clientAudit.audit_party_type ?? 'first_party';
+    }
+    if (clientAudit.fornitoreName !== undefined || clientAudit.fornitore_name !== undefined) {
+        extraData.fornitoreName = clientAudit.fornitoreName ?? clientAudit.fornitore_name ?? '';
+    }
+
+    // Update audit base fields + audit_extra_data
     await query(`
     UPDATE audits
     SET
@@ -229,6 +259,7 @@ async function updateAuditFromSync(auditId, clientAudit) {
       auditor_name = @auditor_name,
       status = @status,
       notes = @notes,
+      audit_extra_data = @audit_extra_data,
       updated_at = GETDATE()
     WHERE audit_id = @audit_id
   `, {
@@ -237,7 +268,8 @@ async function updateAuditFromSync(auditId, clientAudit) {
         audit_date: clientAudit.auditDate,
         auditor_name: clientAudit.auditorName,
         status: clientAudit.status,
-        notes: clientAudit.notes
+        notes: clientAudit.notes,
+        audit_extra_data: JSON.stringify(extraData)
     });
 
     // Update audit_standards se presenti nel payload

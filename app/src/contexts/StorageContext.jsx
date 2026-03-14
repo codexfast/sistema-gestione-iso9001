@@ -361,6 +361,8 @@ export function StorageProvider({ children, useMockData = false }) {
               audit_number: a.metadata?.auditNumber,
               client_name: a.metadata?.clientName,
               company_id: a.metadata?.companyId ?? null,
+              audit_party_type: a.metadata?.auditPartyType ?? 'first_party',
+              fornitore_name: a.metadata?.fornitoreName ?? '',
               project_year: a.metadata?.projectYear,
               audit_date: a.metadata?.auditDate,
               auditor_name: a.metadata?.auditorName,
@@ -633,6 +635,8 @@ export function StorageProvider({ children, useMockData = false }) {
                   audit_number: updated.metadata?.auditNumber,
                   client_name: updated.metadata?.clientName,
                   company_id: updated.metadata?.companyId ?? null,
+                  audit_party_type: updated.metadata?.auditPartyType ?? 'first_party',
+                  fornitore_name: updated.metadata?.fornitoreName ?? '',
                   project_year: updated.metadata?.projectYear,
                   audit_date: updated.metadata?.auditDate,
                   auditor_name: updated.metadata?.auditorName,
@@ -718,6 +722,8 @@ export function StorageProvider({ children, useMockData = false }) {
           audit_number:     m.auditNumber,
           client_name:      m.clientName,
           company_id:       m.companyId ?? null,
+          audit_party_type: m.auditPartyType || 'first_party',
+          fornitore_name:   m.fornitoreName || null,
           project_year:     m.projectYear,
           audit_date:       m.auditDate,
           auditor_name:     m.auditorName,
@@ -1004,7 +1010,7 @@ export function StorageProvider({ children, useMockData = false }) {
       if (!standardId || !navigator.onLine) return;
       try {
         const res = await apiService.get(`/checklist/questions/all?standard_id=${standardId}`);
-        const questions = res?.questions || [];
+        const questions = res?.questions || res?.data?.questions || [];
         if (questions.length === 0) return;
         const bySection = {};
         questions.forEach((q) => {

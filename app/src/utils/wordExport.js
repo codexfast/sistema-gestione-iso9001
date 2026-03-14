@@ -8,7 +8,8 @@
  *         NON rimuovere i segnaposto {varName} e i marker CHECKLIST/RILIEVI.
  *
  *   2. docxtemplater sostituisce i segnaposto testo:
- *         {clientName}  {auditDate}  {auditNumber}  {procedureCode}
+ *         {clientName}  {committenteName}  {auditPartyTypeLabel}  {fornitoreName}
+ *         {auditDate}  {auditNumber}  {procedureCode}
  *         {auditObject}  {scope}  {referenceDocuments}  {processes}
  *         {programCommunicatedDate}  {auditor}  {objectiveDescription}
  *         {#participants}{role}{name}{/participants}
@@ -86,8 +87,19 @@ function buildTemplateData(audit) {
     const m       = calculateMetrics(audit.checklist);
     const seq     = (meta.auditNumber || '').split('-')[1] || '01';
 
+    const auditPartyType = meta.auditPartyType || 'first_party';
+    const auditPartyTypeLabel = auditPartyType === 'second_party'
+        ? 'Seconda parte (fornitore)'
+        : 'Prima parte (interno)';
+    const fornitoreName = auditPartyType === 'second_party' && meta.fornitoreName
+        ? meta.fornitoreName
+        : '';
+
     return {
         clientName:             meta.clientName  || 'Cliente',
+        committenteName:        meta.clientName  || 'Cliente',
+        auditPartyTypeLabel,
+        fornitoreName:          fornitoreName || '—',
         auditNumber:            meta.auditNumber || 'N/A',
         procedureCode:          'PR' + seq + '.04',
         auditDate:              formatDate(meta.auditDate),
