@@ -1,7 +1,7 @@
 # PROJECT CONTEXT — SGQ ISO 9001
 
 > Documento di orientamento rapido per l'AI agent. Da leggere all'inizio di ogni sessione.  
-> Dettagli tecnici: → [DATABASE.md](DATABASE.md) | [BACKEND_API.md](BACKEND_API.md) | `docs/`
+> Dettagli tecnici: → [DATABASE.md](docs/DATABASE.md) | [BACKEND_API.md](docs/BACKEND_API.md) | `docs/`
 
 ---
 
@@ -177,13 +177,14 @@ Esclude `<w:pPr>` — errore storico che corrompeva il file (commit `975ed3e`).
 │           └── logger.js       # Winston logger
 │
 ├── docs/                       # Documentazione dettagliata
+│   ├── DATABASE.md             # ← Quick-ref DB (questo progetto)
+│   ├── BACKEND_API.md          # ← Tutti gli endpoint API
 │   ├── DATABASE_SCHEMA.md      # Schema completo DB — LEGGERE PRIMA DI TOCCARE IL DB
 │   ├── DATABASE_MAPPING.md     # Mapping frontend ↔ backend ↔ DB
 │   ├── PROJECT_ROADMAP.md      # Roadmap versioni
+│   ├── sessions/               # Session notes e commit messages
+│   ├── archive/                # Roadmap e doc storici
 │   └── adr/                    # Architecture Decision Records
-│
-├── DATABASE.md                 # ← Quick-ref DB (questo progetto)
-├── BACKEND_API.md              # ← Tutti gli endpoint API
 └── PROJECT_CONTEXT.md          # ← Questo file
 ```
 
@@ -203,6 +204,8 @@ Esclude `<w:pPr>` — errore storico che corrompeva il file (commit `975ed3e`).
 ---
 
 ## Workflow deploy
+
+**Regola**: quando si chiede un commit per Netlify (o per il deploy), eseguire sempre **commit e push** insieme, così il deploy parte subito.
 
 ### Frontend (automatico)
 ```bash

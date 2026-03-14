@@ -22,8 +22,8 @@
 2. [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) — stack, infrastruttura, regole operative
 3. [`docs/PROJECT_ROADMAP.md`](docs/PROJECT_ROADMAP.md) — stato componenti, backlog
 4. [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — schema DB critico
-5. [`BACKEND_API.md`](BACKEND_API.md) — endpoint attivi
-6. [`docs/SESSION_NOTES_20260301.md`](docs/SESSION_NOTES_20260301.md) — ultima sessione (allegati, pending issues)
+5. [`docs/BACKEND_API.md`](docs/BACKEND_API.md) — endpoint attivi
+6. [`docs/sessions/SESSION_NOTES_20260301.md`](docs/sessions/SESSION_NOTES_20260301.md) — ultima sessione (allegati, pending issues)
 7. [`docs/open_points.md`](docs/open_points.md) — bug aperti + risolti con root cause
 
 ---
@@ -387,12 +387,12 @@ docs/
   PROJECT_ROADMAP.md          ← stato avanzamento aggiornato al 01/03/2026
   DATABASE_SCHEMA.md          ← LEGGERE PRIMA DI TOCCARE IL DB
   MANUALE_UTENTE.md           ← flusso utente verificato su codice
-  SESSION_NOTES_20260301.md   ← ultima sessione: fix standard, allegati, pending issues
+  sessions/SESSION_NOTES_20260301.md   ← ultima sessione: fix standard, allegati, pending issues
   open_points.md              ← bug #006-#009 risolti, P1/P2 aperti
 
 CURSOR_HANDOFF.md             ← QUESTO FILE: punto di ingresso per Cursor
 PROJECT_CONTEXT.md            ← regole operative, stack, infrastruttura
-BACKEND_API.md                ← spec endpoint completa
+docs/BACKEND_API.md           ← spec endpoint completa
 FASE_8_EXPORT_WORD.md         ← spec export Word (leggere prima di toccare wordExport.js)
 ARCHITETTURA_ESRS_PWA_PER_AI_AGENT.md  ← data model audit completo
 ```

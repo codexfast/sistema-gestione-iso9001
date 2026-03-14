@@ -105,7 +105,7 @@ REFS: CLEANUP_ROADMAP.md
 ## Commit 3: Roadmap pulizia ambiente pre-beta test
 
 ```bash
-git add docs/CLEANUP_ROADMAP.md
+git add docs/archive/CLEANUP_ROADMAP.md
 git commit -m "docs: roadmap pulizia ambiente per beta test
 
 Piano completo cleanup ambiente in 5 fasi:

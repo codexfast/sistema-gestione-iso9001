@@ -22,11 +22,18 @@ Ogni ADR segue il template standard:
 
 ## Indice ADR
 
-| ID                                                  | Titolo                                          | Stato        | Data       |
-| --------------------------------------------------- | ----------------------------------------------- | ------------ | ---------- |
-| [ADR-001](./ADR-001-multi-agent-workflow.md)        | Multi-Agent Workflow con Tool Approval          | Accettato    | 2025-12-14 |
-| [ADR-002](./ADR-002-offline-first-sync.md)          | Offline-First Sync Strategy                     | Accettato    | 2025-12-21 |
-| [ADR-003](./ADR-003-pwa-mobile-android-strategy.md) | PWA Mobile Android Strategy per Audit sul Campo | ✅ Accettato | 2026-01-11 |
+Tutti i documenti in `docs/adr/`. Per numeri con più file (es. due ADR-002, tre ADR-003) il nome file è univoco.
+
+| File | Titolo | Stato |
+|------|--------|-------|
+| [ADR-001-multi-agent-workflow](./ADR-001-multi-agent-workflow.md) | Multi-Agent Workflow con Tool Approval | Accettato |
+| [ADR-002-offline-first-sync](./ADR-002-offline-first-sync.md) | Offline-First Sync Strategy | Accettato |
+| [ADR-002-checklist-alignment-strategy](./ADR-002-checklist-alignment-strategy.md) | Checklist Alignment Strategy | Accettato |
+| [ADR-003-pwa-mobile-android-strategy](./ADR-003-pwa-mobile-android-strategy.md) | PWA Mobile Android Strategy | Accettato |
+| [ADR-003-bidirectional-sync](./ADR-003-bidirectional-sync.md) | Sync bidirezionale | Accettato |
+| [ADR-003-database-architecture-processes-analysis](./ADR-003-database-architecture-processes-analysis.md) | Database Architecture / Processi | Accettato |
+| [ADR-004-mobile-auth-localstorage](./ADR-004-mobile-auth-localstorage.md) | Auth mobile (localStorage JWT) | Accettato |
+| [ADR-005-attachment-storage-strategy](./ADR-005-attachment-storage-strategy.md) | Strategia storage allegati | Accettato |
 
 ## Convenzioni
 

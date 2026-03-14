@@ -284,7 +284,7 @@ Frontend filtra + rimuove da IndexedDB
 - **ADR-001:** Multi-Agent Workflow
 - **ADR-002:** Offline-First Architecture (integrato)
 - **DATABASE_SCHEMA.md:** v1.11 (audit table structure)
-- **CLEANUP_ROADMAP.md:** Piano pulizia post-implementazione
+- **docs/archive/CLEANUP_ROADMAP.md:** Piano pulizia post-implementazione
 
 ---
 

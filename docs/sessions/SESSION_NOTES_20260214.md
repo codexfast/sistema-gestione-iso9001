@@ -620,7 +620,7 @@ FROM attachments WHERE audit_id = @audit_id;
 
 **Documentazione correlata:**
 - [ADR-003: Bidirectional Sync](./adr/ADR-003-bidirectional-sync.md)
-- [CLEANUP_ROADMAP.md](./CLEANUP_ROADMAP.md)
+- [CLEANUP_ROADMAP.md](../archive/CLEANUP_ROADMAP.md)
 - [SESSION_NOTES_20260208.md](./SESSION_NOTES_20260208.md) (sync unidirezionale)
 - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)
 - [MOBILE_DEBUG_UTILS.md](./MOBILE_DEBUG_UTILS.md)
