@@ -238,7 +238,8 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     const templateUrl = getTemplateUrl(normKey || Object.keys(checklistFiltered)[0]);
     let arrayBuffer;
     try {
-        const resp = await fetch(templateUrl);
+        // cache: 'no-store' così le modifiche ai template in app/public/templates/ si vedono subito
+        const resp = await fetch(templateUrl, { cache: 'no-store' });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         arrayBuffer = await resp.arrayBuffer();
     } catch (e) {

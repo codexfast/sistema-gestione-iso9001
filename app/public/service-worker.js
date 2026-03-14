@@ -3,7 +3,7 @@
 
 // Versione cache: aggiornare BUILD_DATE ad ogni deploy per invalidare cache vecchie
 // Netlify inietta automaticamente hash nei bundle JS/CSS — questo invalida l'app shell
-const BUILD_DATE = '2026-03-07T18:32:31.991Z';
+const BUILD_DATE = '2026-03-08T19:11:09.159Z';
 const CACHE_NAME = `sgq-iso9001-${BUILD_DATE}`;
 const API_CACHE = 'sgq-api-v1';
 
@@ -63,6 +63,11 @@ self.addEventListener('fetch', (event) => {
     // API requests: BYPASS totale — non intercettare, lascia passare al browser
     // (evita problemi con proxy Vite in dev e CORS)
     if (url.pathname.startsWith('/api/')) {
+        return;
+    }
+
+    // Template Word: mai in cache — modifiche in app/public/templates/ devono riflettersi subito
+    if (url.pathname.startsWith('/templates/') && url.pathname.endsWith('.docx')) {
         return;
     }
 
