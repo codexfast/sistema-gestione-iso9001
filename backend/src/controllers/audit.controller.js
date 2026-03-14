@@ -37,10 +37,15 @@ async function listAudits(req, res) {
         let whereConditions = ['a.organization_id = @organization_id', 'a.is_deleted = 0'];
         let params = { organization_id, limit: parseInt(limit), offset };
 
-        // Filtro RBAC: auditor vede solo audit delle aziende del proprio studio
+        // Filtro RBAC: auditor vede solo audit delle aziende del proprio studio o propri audit senza company
         if (!isSuperadmin && auditor_org_id) {
-            whereConditions.push(`a.company_id IN (SELECT id FROM companies WHERE auditor_org_id = @auditor_org_id)`);
+            const { user_id } = req.user;
+            whereConditions.push(`(
+                a.company_id IN (SELECT id FROM companies WHERE auditor_org_id = @auditor_org_id)
+                OR (a.company_id IS NULL AND a.created_by = @user_id)
+            )`);
             params.auditor_org_id = auditor_org_id;
+            params.user_id = user_id;
         }
 
         if (status) {
@@ -155,8 +160,10 @@ async function getAuditById(req, res) {
         let whereExtra = '';
         const params = { id: parseInt(id), organization_id };
         if (!isSuperadmin && auditor_org_id) {
-            whereExtra = ' AND (a.company_id IN (SELECT id FROM companies WHERE auditor_org_id = @auditor_org_id))';
+            const { user_id } = req.user;
+            whereExtra = ' AND (a.company_id IN (SELECT id FROM companies WHERE auditor_org_id = @auditor_org_id) OR (a.company_id IS NULL AND a.created_by = @user_id))';
             params.auditor_org_id = auditor_org_id;
+            params.user_id = user_id;
         }
 
         const result = await query(`

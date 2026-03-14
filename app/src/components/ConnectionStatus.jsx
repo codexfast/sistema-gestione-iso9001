@@ -1,24 +1,48 @@
 /**
  * Connection Status Component
- * Indicatore visuale stato connessione (Online/Offline)
+ * Indicatore visuale stato connessione (Online/Offline).
+ * Usa l'URL del backend reale (stesso di apiService) per non confondere
+ * "rete locale attiva" con "server raggiungibile" (importante da mobile e su Netlify).
  * Sistema Gestione ISO 9001 - QS Studio
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import apiService from '../services/apiService';
+import { syncService } from '../services/syncService';
 import './ConnectionStatus.css';
+
+// Timeout health check: più lungo da mobile (connessioni spesso lente/instabili)
+const HEALTH_TIMEOUT_MS = typeof window !== 'undefined' && window.innerWidth < 768 ? 8000 : 5000;
+const PING_INTERVAL_MS = 30000;
 
 function ConnectionStatus() {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [lastSync, setLastSync] = useState(null);
     const [showIndicator, setShowIndicator] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
+
+    const checkHealth = useCallback(async () => {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+            const url = `${apiService.baseUrl.replace(/\/$/, '')}/health`;
+            const response = await fetch(url, {
+                method: 'GET',
+                cache: 'no-cache',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }, []);
 
     useEffect(() => {
         const handleOnline = () => {
             setIsOnline(true);
             setShowIndicator(true);
             console.log('🟢 Connessione ripristinata');
-            
-            // Nascondi dopo 3 secondi quando torna online
             setTimeout(() => setShowIndicator(false), 3000);
         };
 
@@ -31,51 +55,50 @@ function ConnectionStatus() {
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
-        // Verifica periodica backend (ogni 30s)
         const pingInterval = setInterval(async () => {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-                const response = await fetch('/api/v1/health', {
-                    method: 'GET',
-                    cache: 'no-cache',
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    if (!isOnline) {
-                        setIsOnline(true);
-                        setShowIndicator(true);
-                        setTimeout(() => setShowIndicator(false), 3000);
-                    }
-                    setLastSync(new Date());
-                } else {
-                    setIsOnline(false);
-                    setShowIndicator(true);
-                }
-            } catch (error) {
-                // Timeout o network error
+            const ok = await checkHealth();
+            if (ok) {
+                setLastSync(new Date());
                 if (!isOnline) {
-                    // Già offline, non mostrare nuovamente
-                } else {
-                    setIsOnline(false);
+                    setIsOnline(true);
                     setShowIndicator(true);
+                    setTimeout(() => setShowIndicator(false), 3000);
                 }
+            } else {
+                setIsOnline(false);
+                setShowIndicator(true);
             }
-        }, 30000); // 30 secondi
+        }, PING_INTERVAL_MS);
 
-        // Mostra inizialmente solo se offline
-        if (!navigator.onLine) {
-            setShowIndicator(true);
-        }
+        if (!navigator.onLine) setShowIndicator(true);
 
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
             clearInterval(pingInterval);
+        };
+    }, [isOnline, checkHealth]);
+
+    // Quando siamo offline, aggiorna il numero di operazioni in coda per la sync
+    useEffect(() => {
+        if (isOnline) {
+            setPendingCount(0);
+            return;
+        }
+        let cancelled = false;
+        const refresh = async () => {
+            try {
+                const n = await syncService.getQueueSize();
+                if (!cancelled) setPendingCount(n);
+            } catch {
+                if (!cancelled) setPendingCount(0);
+            }
+        };
+        refresh();
+        const t = setInterval(refresh, 5000);
+        return () => {
+            cancelled = true;
+            clearInterval(t);
         };
     }, [isOnline]);
 
@@ -103,7 +126,11 @@ function ConnectionStatus() {
                 <>
                     <span className="status-icon">🔴</span>
                     <span className="status-text">Offline</span>
-                    <span className="offline-hint">Modifiche salvate localmente</span>
+                    {pendingCount > 0 ? (
+                        <span className="offline-hint">{pendingCount} in attesa di sync</span>
+                    ) : (
+                        <span className="offline-hint">Modifiche salvate localmente</span>
+                    )}
                 </>
             )}
         </div>

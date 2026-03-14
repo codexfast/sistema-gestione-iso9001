@@ -29,8 +29,9 @@ const ATTACHMENTS_BLOB_STORE = 'attachments_offline'; // Store blob per upload o
  */
 
 export class SyncService {
-    constructor(apiBaseUrl = '/api/v1') {
-        this.apiBaseUrl = apiBaseUrl;
+    constructor(apiBaseUrl = null) {
+        // Usa lo stesso base URL del backend delle API (critico su Netlify: frontend e API su domini diversi)
+        this.apiBaseUrl = apiBaseUrl ?? (typeof apiService !== 'undefined' ? apiService.baseUrl : null) ?? '/api/v1';
         this.isOnline = navigator.onLine;
         this.isSyncing = false;
         this.syncInterval = null;
@@ -739,8 +740,8 @@ export class SyncService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
-            const response = await fetch(`${this.apiBaseUrl}/../health`, {
-                method: 'HEAD',
+            const response = await fetch(`${this.apiBaseUrl.replace(/\/$/, '')}/health`, {
+                method: 'GET',
                 signal: controller.signal
             });
 
