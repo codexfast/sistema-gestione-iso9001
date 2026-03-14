@@ -5,6 +5,7 @@
 
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
+const { getAllowedStandardIds } = require('./auth.controller');
 
 /**
  * GET /api/v1/audits
@@ -262,6 +263,20 @@ async function createAudit(req, res) {
                 error: 'Almeno uno standard ISO deve essere selezionato',
                 code: 'VALIDATION_ERROR'
             });
+        }
+
+        // Verifica standard consentiti per l'utente (user_standards)
+        const allowedStd = await getAllowedStandardIds(user_id);
+        if (allowedStd) {
+            const requested = standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+            const forbidden = requested.filter(id => !allowedStd.includes(id));
+            if (forbidden.length > 0) {
+                return res.status(403).json({
+                    error: 'Non sei autorizzato a creare audit per uno o più standard selezionati',
+                    code: 'STANDARDS_NOT_ALLOWED',
+                    forbidden_standard_ids: forbidden
+                });
+            }
         }
 
         // Verifica unicità audit_number per organizzazione
@@ -714,6 +729,19 @@ async function upsertAudit(req, res) {
                 code: 'VALIDATION_ERROR',
                 required: ['audit_uuid', 'audit_number', 'client_name']
             });
+        }
+
+        // Verifica standard consentiti per l'utente (user_standards)
+        const allowedStd = await getAllowedStandardIds(user_id);
+        if (allowedStd) {
+            const forbidden = standardIdsToSync.filter(id => !allowedStd.includes(id));
+            if (forbidden.length > 0) {
+                return res.status(403).json({
+                    error: 'Non sei autorizzato a usare uno o più standard selezionati',
+                    code: 'STANDARDS_NOT_ALLOWED',
+                    forbidden_standard_ids: forbidden
+                });
+            }
         }
 
         // ⚠️ BLACKLIST UUID temporanea - rimuovere dopo cleanup completo cache client

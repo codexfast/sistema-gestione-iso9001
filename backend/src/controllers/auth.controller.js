@@ -182,6 +182,8 @@ async function login(req, res) {
             organization_id: user.organization_id
         });
 
+        const allowed_standard_ids = await getAllowedStandardIds(user.user_id);
+
         logger.info(`✅ Login: ${user.email} (org: ${user.organization_name})`);
 
         res.json({
@@ -193,7 +195,8 @@ async function login(req, res) {
                 role: user.role,
                 organization_id: user.organization_id,
                 organization_name: user.organization_name,
-                auditor_org_id: user.auditor_org_id ?? null
+                auditor_org_id: user.auditor_org_id ?? null,
+                allowed_standard_ids
             },
             token,
             refreshToken
@@ -273,8 +276,25 @@ async function refreshToken(req, res) {
 }
 
 /**
+ * Recupera gli standard_id consentiti per un utente (tabella user_standards).
+ * Se non ci sono righe → null (tutti gli standard consentiti, retrocompatibilità).
+ */
+async function getAllowedStandardIds(userId) {
+    try {
+        const r = await query(`
+            SELECT standard_id FROM user_standards WHERE user_id = @user_id ORDER BY standard_id
+        `, { user_id: userId });
+        const ids = (r.recordset || []).map(row => row.standard_id);
+        return ids.length > 0 ? ids : null;
+    } catch (_) {
+        return null; // tabella inesistente o errore → tutti consentiti
+    }
+}
+
+/**
  * GET /api/v1/auth/me
  * Ottieni dati utente corrente (richiede auth)
+ * Include allowed_standard_ids: se null/assente = tutti gli standard; altrimenti array di standard_id consentiti.
  */
 async function getCurrentUser(req, res) {
     try {
@@ -297,9 +317,13 @@ async function getCurrentUser(req, res) {
             });
         }
 
+        const userRow = result.recordset[0];
+        const allowed_standard_ids = await getAllowedStandardIds(userId);
+        const user = { ...userRow, allowed_standard_ids };
+
         res.json({
             success: true,
-            user: result.recordset[0]
+            user
         });
 
     } catch (error) {
@@ -333,5 +357,6 @@ module.exports = {
     register,
     login,
     refreshToken,
-    getCurrentUser
+    getCurrentUser,
+    getAllowedStandardIds
 };

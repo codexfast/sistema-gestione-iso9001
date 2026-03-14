@@ -16,11 +16,11 @@ import "./AuditSelector.css";
  * Per aggiungere un nuovo standard: inserire una nuova riga qui.
  */
 const AVAILABLE_STANDARDS = [
-  { code: "ISO_9001",   label: "ISO 9001:2015 \u2014 Qualit\u00e0" },
-  { code: "ISO_14001",  label: "ISO 14001:2015 \u2014 Ambiente" },
-  { code: "ISO_45001",  label: "ISO 45001:2018 \u2014 Salute e Sicurezza" },
-  { code: "ISO_3834_2", label: "ISO 3834-2 \u2014 Audit Fornitori in Campo" },
-  { code: "RDP_MSN",    label: "RDP Mason \u2014 Audit di Sistema Saldatura (ISO 3834-2)" },
+  { code: "ISO_9001",   label: "ISO 9001:2015 \u2014 Qualit\u00e0", standardId: 1 },
+  { code: "ISO_14001",  label: "ISO 14001:2015 \u2014 Ambiente", standardId: 2 },
+  { code: "ISO_45001",  label: "ISO 45001:2018 \u2014 Salute e Sicurezza", standardId: 3 },
+  { code: "ISO_3834_2", label: "ISO 3834-2 \u2014 Audit Fornitori in Campo", standardId: 6 },
+  { code: "RDP_MSN",    label: "RDP Mason \u2014 Audit di Sistema Saldatura (ISO 3834-2)", standardId: 7 },
 ];
 
 function AuditSelector() {
@@ -218,6 +218,12 @@ function AuditSelector() {
 function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }) {
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
+  // Standard visibili in base a user_standards: se allowed_standard_ids presente, solo quelli
+  const standardsForUser = !user?.allowed_standard_ids
+    ? AVAILABLE_STANDARDS
+    : user.allowed_standard_ids.length === 0
+      ? []
+      : AVAILABLE_STANDARDS.filter((s) => user.allowed_standard_ids.includes(s.standardId));
   const nextNumber = getNextAuditNumber(audits, currentYear);
 
   // Pre-popola clientName, companyId, tipologia e fornitore se re-audit
@@ -590,7 +596,10 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
           <div className="form-group">
             <label>Norme Applicabili *</label>
             <div className="checkbox-group">
-              {AVAILABLE_STANDARDS.map(({ code, label }) => (
+              {standardsForUser.length === 0 && user?.allowed_standard_ids ? (
+                <p className="form-hint">Nessuno standard assegnato. Contatta l'amministratore.</p>
+              ) : null}
+              {standardsForUser.map(({ code, label }) => (
                 <label key={code} className="checkbox-label">
                   <input
                     type="checkbox"

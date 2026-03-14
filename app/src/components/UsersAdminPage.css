@@ -1,0 +1,112 @@
+.users-admin-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem 0;
+}
+
+.users-admin-header {
+  margin-bottom: 1.5rem;
+}
+
+.users-admin-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+}
+
+.users-admin-desc {
+  color: #555;
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+}
+
+.users-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fafafa;
+}
+
+.user-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.user-card-header strong {
+  font-size: 1.05rem;
+}
+
+.user-email {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.user-role-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #e0e0e0;
+}
+
+.user-role-badge.role-admin {
+  background: #d4edda;
+  color: #155724;
+}
+
+.user-role-badge.role-auditor {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.user-standards-section {
+  margin-top: 0.5rem;
+}
+
+.standards-label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.standards-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.standards-checkboxes .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-save-standards {
+  margin-top: 0.75rem;
+}
+
+.admin-access-denied {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.loading-message,
+.error-message,
+.no-data {
+  margin: 1rem 0;
+}
+
+.error-message {
+  color: #c00;
+}

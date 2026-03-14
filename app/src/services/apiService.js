@@ -419,6 +419,23 @@ class ApiService {
         return this.get(`/auditor-orgs/${id}`);
     }
 
+    /**
+     * Lista utenti organizzazione (solo admin)
+     * @returns {Promise<{ success: boolean, data: Array }>}
+     */
+    async getAdminUsers() {
+        return this.get('/admin/users');
+    }
+
+    /**
+     * Aggiorna standard consentiti per utente (solo admin)
+     * @param {number} userId
+     * @param {number[]} standardIds - array di standard_id (es. [1,2,3] per 9001, 14001, 45001)
+     */
+    async updateUserStandards(userId, standardIds) {
+        return this.put(`/admin/users/${userId}/standards`, { standard_ids: standardIds });
+    }
+
     // ==========================================
     // CHECKLIST ENDPOINTS
     // ==========================================
