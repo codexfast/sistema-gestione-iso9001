@@ -6,6 +6,7 @@ import Dashboard from "./components/Dashboard";
 import CompaniesPage from "./components/CompaniesPage";
 import ChecklistAdminPage from "./components/ChecklistAdminPage";
 import UsersAdminPage from "./components/UsersAdminPage";
+import ReportTemplatesAdminPage from "./components/ReportTemplatesAdminPage";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -22,6 +23,7 @@ function AppContent() {
   const [settingsExpanded, setSettingsExpanded] = React.useState(false);
   const [viewMode, setViewMode] = React.useState("audit"); // 'audit' | 'companies' | 'checklist-admin' | 'users-admin'
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const canManageTemplates = ["admin", "auditor", "superadmin"].includes(user?.role);
 
   // Auto-save checkpoint ogni 30 secondi quando workspace collegato
   const checkpoint = useCheckpointSaver(currentAudit, fsProvider, {
@@ -59,6 +61,32 @@ function AppContent() {
         </header>
         <main className="container">
           <UsersAdminPage onBack={() => setViewMode("audit")} />
+        </main>
+        <footer className="app-footer">
+          <div className="container">
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Vista Template report (admin/auditor)
+  if (viewMode === "report-templates") {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="container header-flex">
+            <h1>SGQ — Sistema di Gestione</h1>
+            <div className="user-info">
+              <span className="user-name">👤 {user.full_name || user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
+            </div>
+          </div>
+        </header>
+        <main className="container">
+          <ReportTemplatesAdminPage onBack={() => setViewMode("audit")} />
         </main>
         <footer className="app-footer">
           <div className="container">
@@ -143,6 +171,11 @@ function AppContent() {
                     </button>
                   </>
                 )}
+                {canManageTemplates && (
+                  <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
+                    📄 Template report
+                  </button>
+                )}
               </nav>
               <div className="user-info">
               <span className="user-name">
@@ -194,6 +227,11 @@ function AppContent() {
                     📋 Checklist
                   </button>
                 </>
+              )}
+              {canManageTemplates && (
+                <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
+                  📄 Template report
+                </button>
               )}
             </nav>
             {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}

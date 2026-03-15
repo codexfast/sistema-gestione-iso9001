@@ -706,6 +706,47 @@ class ApiService {
     }
 
     // ==========================================
+    // REPORT TEMPLATES (Phase 3 - Roadmap)
+    // ==========================================
+
+    /**
+     * Risolve quale template usare per standard_id.
+     * Usato da wordExport prima di generare report.
+     * @param {number} standardId - ID standard (1=9001, 2=14001, 3=45001, 6=3834)
+     * @returns {Promise<{url: string, file_path: string, name: string}|null>} URL assoluto per fetch, o null se API non disponibile
+     */
+    async getReportTemplate(standardId) {
+        try {
+            const res = await this.get(`/report-templates/resolve?standardId=${standardId}`);
+            if (!res?.success || !res?.data?.file_path) return null;
+            const fp = res.data.file_path;
+            // Template di sistema: /templates/xxx → path relativo, fetch usa origin dell'app
+            if (fp.startsWith('/templates/')) {
+                return { url: fp, file_path: fp, name: res.data.name };
+            }
+            // Template org: /uploads/xxx → URL assoluto backend
+            const backendBase = this.baseUrl.replace(/\/api\/v1\/?$/, '');
+            return { url: backendBase + (fp.startsWith('/') ? fp : '/' + fp), file_path: fp, name: res.data.name };
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Lista template disponibili (sistema + org)
+     */
+    async getReportTemplates(scope = 'audit') {
+        return this.get(`/report-templates?scope=${scope}`);
+    }
+
+    /**
+     * Assegna template a standard per l'org
+     */
+    async assignReportTemplateToStandard(standardId, reportTemplateId) {
+        return this.put(`/report-template-assignments/standard/${standardId}`, { report_template_id: reportTemplateId });
+    }
+
+    // ==========================================
     // HEALTH CHECK
     // ==========================================
 

@@ -192,6 +192,7 @@ const ExportPanel = () => {
         const fileName = await exportAuditToWord(auditForExport, getViewUrl, {
           standardKey: stdKey,
           photoMode: isPhotoPreview ? 'preview' : undefined,
+          getTemplateResolver: (stdId) => apiService.getReportTemplate(stdId),
         });
         fileNames.push(fileName);
         console.log(`✅ [EXPORT] Generato: ${fileName}`);
@@ -219,7 +220,10 @@ const ExportPanel = () => {
 
       const stds = auditForExport.metadata?.selectedStandards || [];
       const hasPhotoStd = stds.some(s => String(s).includes('3834') || s === 'RDP_MSN');
-      const exportOpts = hasPhotoStd ? { photoMode: 'preview' } : {};
+      const exportOpts = {
+        ...(hasPhotoStd ? { photoMode: 'preview' } : {}),
+        getTemplateResolver: (stdId) => apiService.getReportTemplate(stdId),
+      };
 
       if (fsProvider?.ready()) {
         const result = await exportAuditToWorkspace(auditForExport, fsProvider, getViewUrl, exportOpts);

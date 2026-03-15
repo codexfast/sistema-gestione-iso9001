@@ -1,0 +1,62 @@
+.report-templates-admin {
+  padding: 1rem 0;
+}
+
+.rt-header {
+  margin-bottom: 1.5rem;
+}
+
+.rt-header .btn-back {
+  margin-bottom: 0.5rem;
+  background: none;
+  border: none;
+  color: #0066cc;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.rt-header .btn-back:hover {
+  text-decoration: underline;
+}
+
+.rt-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.rt-desc {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.rt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rt-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.rt-std-label {
+  min-width: 120px;
+  font-weight: 500;
+}
+
+.rt-select {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.rt-saving {
+  font-size: 0.85rem;
+  color: #666;
+}

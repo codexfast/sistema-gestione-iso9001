@@ -69,6 +69,13 @@ function getTemplateUrl(standardKey) {
     return TEMPLATE_MAP[normalizeStdKey(standardKey)] || TEMPLATE_MAP['default'];
 }
 
+/** Mappa standardKey -> standard_id per API resolve */
+const STANDARD_KEY_TO_ID = {
+    'ISO_9001': 1, 'ISO_14001': 2, 'ISO_45001': 3,
+    'ISO_3834_2': 6, 'RDP_MSN': 7,
+    'default': 1,
+};
+
 function formatDate(dateStr) {
     if (!dateStr) return 'N/D';
     try {
@@ -247,10 +254,25 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     }
 
     const auditForGen = { ...audit, checklist: checklistFiltered };
-    const templateUrl = getTemplateUrl(normKey || Object.keys(checklistFiltered)[0]);
+    const stdKey = normKey || Object.keys(checklistFiltered)[0];
+    let templateUrl = getTemplateUrl(stdKey);
+    const getTemplateResolver = options.getTemplateResolver;
+    if (getTemplateResolver && typeof getTemplateResolver === 'function') {
+        const stdId = STANDARD_KEY_TO_ID[stdKey] ?? STANDARD_KEY_TO_ID[normalizeStdKey(stdKey)];
+        if (stdId) {
+            try {
+                const resolved = await getTemplateResolver(stdId);
+                if (resolved?.url) {
+                    templateUrl = resolved.url;
+                    console.log('[wordExport] Template risolto da API:', resolved.name || templateUrl);
+                }
+            } catch (e) {
+                console.warn('[wordExport] Risoluzione template API fallita, uso TEMPLATE_MAP:', e.message);
+            }
+        }
+    }
     let arrayBuffer;
     try {
-        // cache: 'no-store' così le modifiche ai template in app/public/templates/ si vedono subito
         const resp = await fetch(templateUrl, { cache: 'no-store' });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         arrayBuffer = await resp.arrayBuffer();
