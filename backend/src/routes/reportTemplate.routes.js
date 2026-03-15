@@ -23,4 +23,7 @@ router.post('/report-templates', authorize('admin', 'auditor'), uploadTemplate.s
 // PUT /api/v1/report-template-assignments/standard/:standardId
 router.put('/report-template-assignments/standard/:standardId', reportTemplateController.assignTemplateToStandard);
 
+// PUT /api/v1/report-template-assignments/custom-checklist/:customChecklistId
+router.put('/report-template-assignments/custom-checklist/:customChecklistId', reportTemplateController.assignTemplateToCustomChecklist);
+
 module.exports = router;

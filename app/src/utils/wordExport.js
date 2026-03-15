@@ -34,6 +34,8 @@ import { saveAs } from 'file-saver';
 import {
     buildChecklistSectionOoxml,
     buildRileviSummaryOoxml,
+    buildCustomChecklistSectionOoxml,
+    buildCustomRileviSummaryOoxml,
     calculateMetrics,
 } from './wordExportHelpers.js';
 
@@ -46,6 +48,7 @@ const TEMPLATE_MAP = {
     'ISO_45001':  '/templates/ISO45001-audit-report.docx',
     'ISO_3834_2': '/templates/ISO3834-audit-report.docx',
     'default':    '/templates/ISO9001-audit-report.docx',
+    'custom_checklist': '/templates/VerbaleVisita-generic.docx',
 };
 
 /**
@@ -174,26 +177,48 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
     const imageRegistry = options.photoMode === 'preview' ? [] : null;
     let xml = zip.files['word/document.xml'].asText();
 
-    xml = replaceMarker(
-        xml,
-        'CHECKLIST_MARKER',
-        buildChecklistSectionOoxml(
-            audit.checklist,
-            audit.attachments           || [],
-            audit.pendingIssues         || [],
-            getViewUrl,
-            options,
-            imageRegistry,
-            audit.certificationFindings || [],
-            audit.normExcerpts          || {}
-        )
-    );
+    const customChecklistId = audit?.metadata?.customChecklistId ?? audit?.custom_checklist_id;
+    const isCustomChecklist = customChecklistId && audit?.customChecklist;
 
-    xml = replaceMarker(
-        xml,
-        'RILIEVI_MARKER',
-        buildRileviSummaryOoxml(audit.checklist)
-    );
+    if (isCustomChecklist) {
+        xml = replaceMarker(
+            xml,
+            'CHECKLIST_MARKER',
+            buildCustomChecklistSectionOoxml(
+                audit.customChecklist,
+                audit.customResponses || {},
+                audit.attachments || [],
+                getViewUrl,
+                options,
+                imageRegistry
+            )
+        );
+        xml = replaceMarker(
+            xml,
+            'RILIEVI_MARKER',
+            buildCustomRileviSummaryOoxml(audit.customChecklist, audit.customResponses || {})
+        );
+    } else {
+        xml = replaceMarker(
+            xml,
+            'CHECKLIST_MARKER',
+            buildChecklistSectionOoxml(
+                audit.checklist,
+                audit.attachments           || [],
+                audit.pendingIssues         || [],
+                getViewUrl,
+                options,
+                imageRegistry,
+                audit.certificationFindings || [],
+                audit.normExcerpts          || {}
+            )
+        );
+        xml = replaceMarker(
+            xml,
+            'RILIEVI_MARKER',
+            buildRileviSummaryOoxml(audit.checklist)
+        );
+    }
 
     // Margini stretti (1.27 cm = 720 DXA) — sostituisce i margini del template
     // senza toccare il file .docx sorgente (evita manipolazione binaria)
@@ -238,39 +263,69 @@ function embedImagesInZip(zip, imageRegistry) {
 }
 
 async function generateDocxBlob(audit, getViewUrl, options = {}) {
-    const rawKey    = options.standardKey || null;
-    const normKey   = rawKey ? normalizeStdKey(rawKey) : null;
+    const customChecklistId = options.customChecklistId ?? audit?.metadata?.customChecklistId ?? audit?.custom_checklist_id;
+    const isCustomChecklist = customChecklistId && (audit?.customChecklist || audit?.customResponses);
 
-    // Filtra la checklist alla sola norma richiesta.
-    // La chiave nella checklist può essere 'ISO_9001' o 'ISO_9001_2015':
-    // cerca la prima chiave che si normalizza al valore atteso.
-    let checklistFiltered = audit.checklist || {};
-    if (normKey) {
-        const matchKey = Object.keys(checklistFiltered)
-            .find(k => normalizeStdKey(k) === normKey);
-        checklistFiltered = matchKey
-            ? { [matchKey]: checklistFiltered[matchKey] }
-            : { [normKey]: {} };
+    let templateUrl;
+    const getTemplateResolver = options.getTemplateResolver;
+
+    if (isCustomChecklist && getTemplateResolver && typeof getTemplateResolver === 'function') {
+        try {
+            const resolved = await getTemplateResolver();
+            if (resolved?.url) {
+                templateUrl = resolved.url;
+                console.log('[wordExport] Template risolto da API (checklist custom):', resolved.name || templateUrl);
+            }
+        } catch (e) {
+            console.warn('[wordExport] Risoluzione template custom fallita:', e.message);
+        }
+        if (!templateUrl) templateUrl = TEMPLATE_MAP.custom_checklist || TEMPLATE_MAP.default;
     }
 
-    const auditForGen = { ...audit, checklist: checklistFiltered };
-    const stdKey = normKey || Object.keys(checklistFiltered)[0];
-    let templateUrl = getTemplateUrl(stdKey);
-    const getTemplateResolver = options.getTemplateResolver;
-    if (getTemplateResolver && typeof getTemplateResolver === 'function') {
-        const stdId = STANDARD_KEY_TO_ID[stdKey] ?? STANDARD_KEY_TO_ID[normalizeStdKey(stdKey)];
-        if (stdId) {
-            try {
-                const resolved = await getTemplateResolver(stdId);
-                if (resolved?.url) {
-                    templateUrl = resolved.url;
-                    console.log('[wordExport] Template risolto da API:', resolved.name || templateUrl);
+    if (!templateUrl) {
+        const rawKey    = options.standardKey || null;
+        const normKey   = rawKey ? normalizeStdKey(rawKey) : null;
+
+        // Filtra la checklist alla sola norma richiesta.
+        let checklistFiltered = audit.checklist || {};
+        if (normKey) {
+            const matchKey = Object.keys(checklistFiltered)
+                .find(k => normalizeStdKey(k) === normKey);
+            checklistFiltered = matchKey
+                ? { [matchKey]: checklistFiltered[matchKey] }
+                : { [normKey]: {} };
+        }
+
+        const stdKey = normKey || Object.keys(checklistFiltered)[0];
+        templateUrl = getTemplateUrl(stdKey || 'default');
+        if (getTemplateResolver && typeof getTemplateResolver === 'function') {
+            const stdId = STANDARD_KEY_TO_ID[stdKey] ?? STANDARD_KEY_TO_ID[normalizeStdKey(stdKey)];
+            if (stdId) {
+                try {
+                    const resolved = await getTemplateResolver(stdId);
+                    if (resolved?.url) {
+                        templateUrl = resolved.url;
+                        console.log('[wordExport] Template risolto da API:', resolved.name || templateUrl);
+                    }
+                } catch (e) {
+                    console.warn('[wordExport] Risoluzione template API fallita, uso TEMPLATE_MAP:', e.message);
                 }
-            } catch (e) {
-                console.warn('[wordExport] Risoluzione template API fallita, uso TEMPLATE_MAP:', e.message);
             }
         }
     }
+
+    const auditForGen = isCustomChecklist
+        ? { ...audit, checklist: audit.checklist || {} }
+        : (() => {
+            const rawKey = options.standardKey || null;
+            const normKey = rawKey ? normalizeStdKey(rawKey) : null;
+            let checklistFiltered = audit.checklist || {};
+            if (normKey) {
+                const matchKey = Object.keys(checklistFiltered).find(k => normalizeStdKey(k) === normKey);
+                checklistFiltered = matchKey ? { [matchKey]: checklistFiltered[matchKey] } : { [normKey]: {} };
+            }
+            return { ...audit, checklist: checklistFiltered };
+        })();
     let arrayBuffer;
     try {
         const resp = await fetch(templateUrl, { cache: 'no-store' });

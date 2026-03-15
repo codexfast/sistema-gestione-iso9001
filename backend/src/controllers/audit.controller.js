@@ -85,6 +85,7 @@ async function listAudits(req, res) {
         a.completion_percentage,
         a.notes,
         a.audit_extra_data,
+        a.custom_checklist_id,
         a.created_at,
         a.updated_at,
         u.full_name AS created_by_name,
@@ -249,6 +250,7 @@ async function createAudit(req, res) {
             auditor_name,
             audit_type,
             standard_ids,
+            custom_checklist_id,
             notes,
             audit_party_type,
             fornitore_name,
@@ -264,25 +266,29 @@ async function createAudit(req, res) {
             });
         }
 
-        // Verifica standard_ids non vuoto
-        if (!standard_ids || !Array.isArray(standard_ids) || standard_ids.length === 0) {
+        // Verifica: almeno standard_ids O custom_checklist_id
+        const hasStandards = standard_ids && Array.isArray(standard_ids) && standard_ids.length > 0;
+        const hasCustomChecklist = custom_checklist_id && parseInt(custom_checklist_id, 10) > 0;
+        if (!hasStandards && !hasCustomChecklist) {
             return res.status(400).json({
-                error: 'Almeno uno standard ISO deve essere selezionato',
+                error: 'Selezionare almeno una norma ISO oppure una checklist personalizzata',
                 code: 'VALIDATION_ERROR'
             });
         }
 
-        // Verifica standard consentiti per l'utente (user_standards)
-        const allowedStd = await getAllowedStandardIds(user_id);
-        if (allowedStd) {
-            const requested = standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id));
-            const forbidden = requested.filter(id => !allowedStd.includes(id));
-            if (forbidden.length > 0) {
-                return res.status(403).json({
-                    error: 'Non sei autorizzato a creare audit per uno o più standard selezionati',
-                    code: 'STANDARDS_NOT_ALLOWED',
-                    forbidden_standard_ids: forbidden
-                });
+        // Verifica standard consentiti per l'utente (user_standards) - solo se standard_ids forniti
+        if (hasStandards) {
+            const allowedStd = await getAllowedStandardIds(user_id);
+            if (allowedStd) {
+                const requested = standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+                const forbidden = requested.filter(id => !allowedStd.includes(id));
+                if (forbidden.length > 0) {
+                    return res.status(403).json({
+                        error: 'Non sei autorizzato a creare audit per uno o più standard selezionati',
+                        code: 'STANDARDS_NOT_ALLOWED',
+                        forbidden_standard_ids: forbidden
+                    });
+                }
             }
         }
 
@@ -314,6 +320,7 @@ async function createAudit(req, res) {
         notes,
         organization_id,
         created_by,
+        custom_checklist_id,
         created_at,
         updated_at
       )
@@ -329,6 +336,7 @@ async function createAudit(req, res) {
         @notes,
         @organization_id,
         @user_id,
+        @custom_checklist_id,
         GETDATE(),
         GETDATE()
       )
@@ -341,7 +349,8 @@ async function createAudit(req, res) {
             audit_type,
             notes: notes || null,
             organization_id,
-            user_id
+            user_id,
+            custom_checklist_id: hasCustomChecklist ? parseInt(custom_checklist_id, 10) : null
         });
 
         const newAudit = result.recordset[0];
@@ -360,12 +369,14 @@ async function createAudit(req, res) {
             company_id: company_id || null
         });
 
-        // Associa standard
-        for (const standard_id of standard_ids) {
-            await query(`
-        INSERT INTO audit_standards (audit_id, standard_id)
-        VALUES (@audit_id, @standard_id)
-      `, { audit_id: newAudit.audit_id, standard_id: parseInt(standard_id) });
+        // Associa standard (se forniti)
+        if (hasStandards) {
+            for (const standard_id of standard_ids) {
+                await query(`
+          INSERT INTO audit_standards (audit_id, standard_id)
+          VALUES (@audit_id, @standard_id)
+        `, { audit_id: newAudit.audit_id, standard_id: parseInt(standard_id) });
+            }
         }
 
         logger.info('Audit created', {
@@ -417,6 +428,7 @@ async function updateAudit(req, res) {
             non_conformities_count,
             completion_percentage,
             standard_ids,
+            custom_checklist_id,
             audit_party_type,
             fornitore_name
         } = req.body;
@@ -517,6 +529,10 @@ async function updateAudit(req, res) {
             updates.push('completion_percentage = @completion_percentage');
             params.completion_percentage = parseFloat(completion_percentage);
         }
+        if (custom_checklist_id !== undefined) {
+            updates.push('custom_checklist_id = @custom_checklist_id');
+            params.custom_checklist_id = custom_checklist_id ? parseInt(custom_checklist_id) : null;
+        }
         // Merge tipologia audit e fornitore in audit_extra_data
         if (audit_party_type !== undefined || fornitore_name !== undefined) {
             let extra = existingAudit.recordset[0].audit_extra_data;
@@ -530,7 +546,7 @@ async function updateAudit(req, res) {
             params.audit_extra_data = JSON.stringify(extra);
         }
 
-        if (updates.length === 0 && !standard_ids) {
+        if (updates.length === 0 && !standard_ids && custom_checklist_id === undefined) {
             return res.status(400).json({
                 error: 'Nessun campo da aggiornare',
                 code: 'VALIDATION_ERROR'
@@ -589,13 +605,16 @@ async function deleteAudit(req, res) {
         const { id } = req.params;
         const { organization_id } = req.user;
 
-        // Verifica esistenza e ownership
-        const existingAudit = await query(`
-      SELECT audit_id FROM audits
-      WHERE audit_id = @id 
-        AND organization_id = @organization_id
-        AND is_deleted = 0
-    `, { id: parseInt(id), organization_id });
+        const numericId = parseInt(id, 10);
+        const isUuid = isNaN(numericId) && typeof id === 'string' && id.length > 10;
+
+        // Verifica esistenza e ownership (per id numerico o UUID)
+        const existingAudit = await query(
+            isUuid
+                ? `SELECT audit_id FROM audits WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0`
+                : `SELECT audit_id FROM audits WHERE audit_id = @id AND organization_id = @organization_id AND is_deleted = 0`,
+            isUuid ? { audit_uuid: id, organization_id } : { id: numericId, organization_id }
+        );
 
         if (existingAudit.recordset.length === 0) {
             return res.status(404).json({
@@ -604,14 +623,16 @@ async function deleteAudit(req, res) {
             });
         }
 
+        const auditIdToDelete = existingAudit.recordset[0].audit_id;
+
         // Soft delete
         await query(`
       UPDATE audits
       SET is_deleted = 1, deleted_at = GETDATE(), updated_at = GETDATE()
-      WHERE audit_id = @id AND organization_id = @organization_id
-    `, { id: parseInt(id), organization_id });
+      WHERE audit_id = @audit_id AND organization_id = @organization_id
+    `, { audit_id: auditIdToDelete, organization_id });
 
-        logger.info('Audit deleted (soft)', { audit_id: id, organization_id });
+        logger.info('Audit deleted (soft)', { audit_id: auditIdToDelete, organization_id });
 
         res.json({
             success: true,
@@ -709,6 +730,7 @@ async function upsertAudit(req, res) {
             completion_percentage,
             standard_id,
             standard_ids,   // array [1, 2] da syncService — aggiorna audit_standards completo
+            custom_checklist_id,
             updated_at,
             audit_extra_data: bodyExtra, // JSON con generalData, auditObjective, auditOutcome, auditPartyType, fornitoreName
             audit_party_type,
@@ -724,10 +746,11 @@ async function upsertAudit(req, res) {
         })();
 
         // Risolve la lista di standard_id da registrare in audit_standards
-        // Priorità: standard_ids array (nuovo) > standard_id scalare (legacy) > default ISO 9001
+        // Priorità: standard_ids array (nuovo) > standard_id scalare (legacy) > default ISO 9001 (se no custom_checklist_id)
+        const hasCustomChecklist = custom_checklist_id && parseInt(custom_checklist_id, 10) > 0;
         const standardIdsToSync = Array.isArray(standard_ids) && standard_ids.length > 0
             ? standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0)
-            : [parseInt(standard_id) || 1];
+            : (hasCustomChecklist ? [] : [parseInt(standard_id) || 1]);
 
         // Validazione campi obbligatori
         if (!audit_uuid || !audit_number || !client_name) {
@@ -738,16 +761,18 @@ async function upsertAudit(req, res) {
             });
         }
 
-        // Verifica standard consentiti per l'utente (user_standards)
-        const allowedStd = await getAllowedStandardIds(user_id);
-        if (allowedStd) {
-            const forbidden = standardIdsToSync.filter(id => !allowedStd.includes(id));
-            if (forbidden.length > 0) {
-                return res.status(403).json({
-                    error: 'Non sei autorizzato a usare uno o più standard selezionati',
-                    code: 'STANDARDS_NOT_ALLOWED',
-                    forbidden_standard_ids: forbidden
-                });
+        // Verifica standard consentiti per l'utente (user_standards) — solo se standard presenti
+        if (standardIdsToSync.length > 0) {
+            const allowedStd = await getAllowedStandardIds(user_id);
+            if (allowedStd) {
+                const forbidden = standardIdsToSync.filter(id => !allowedStd.includes(id));
+                if (forbidden.length > 0) {
+                    return res.status(403).json({
+                        error: 'Non sei autorizzato a usare uno o più standard selezionati',
+                        code: 'STANDARDS_NOT_ALLOWED',
+                        forbidden_standard_ids: forbidden
+                    });
+                }
             }
         }
 
@@ -818,6 +843,7 @@ async function upsertAudit(req, res) {
           non_conformities_count = @non_conformities_count,
           completion_percentage = @completion_percentage,
           standard_id = @standard_id,
+          custom_checklist_id = @custom_checklist_id,
           audit_extra_data = COALESCE(@audit_extra_data, audit_extra_data),
           updated_at = GETDATE()
         OUTPUT INSERTED.updated_at INTO @out
@@ -840,6 +866,7 @@ async function upsertAudit(req, res) {
                 non_conformities_count: non_conformities_count || 0,
                 completion_percentage: completion_percentage || 0,
                 standard_id: standard_id || 1,
+                custom_checklist_id: hasCustomChecklist ? parseInt(custom_checklist_id, 10) : null,
                 audit_extra_data: audit_extra_data ? JSON.stringify(audit_extra_data) : null,
                 organization_id
             });
@@ -873,6 +900,14 @@ async function upsertAudit(req, res) {
 
         } else {
             // ========== INSERT NUOVO ==========
+            // audit_uuid: da frontend arriva come stringa; SQL Server UNIQUEIDENTIFIER accetta CONVERT da NVARCHAR
+            const auditUuidStr = (audit_uuid != null && String(audit_uuid).trim()) ? String(audit_uuid).trim() : null;
+            if (!auditUuidStr) {
+                return res.status(400).json({
+                    error: 'audit_uuid obbligatorio per creare un audit',
+                    code: 'VALIDATION_ERROR'
+                });
+            }
             // Usiamo table variable per OUTPUT (compatibilità trigger SQL Server)
             const result = await query(`
         DECLARE @out TABLE (audit_id INT, audit_uuid UNIQUEIDENTIFIER, updated_at DATETIME2);
@@ -893,6 +928,7 @@ async function upsertAudit(req, res) {
           non_conformities_count,
           completion_percentage,
           standard_id,
+          custom_checklist_id,
           audit_extra_data,
           organization_id,
           created_by,
@@ -902,7 +938,7 @@ async function upsertAudit(req, res) {
         )
         OUTPUT INSERTED.audit_id, INSERTED.audit_uuid, INSERTED.updated_at INTO @out
         VALUES (
-          @audit_uuid,
+          CONVERT(UNIQUEIDENTIFIER, @audit_uuid),
           @audit_number,
           @client_name,
           @company_id,
@@ -918,6 +954,7 @@ async function upsertAudit(req, res) {
           @non_conformities_count,
           @completion_percentage,
           @standard_id,
+          @custom_checklist_id,
           @audit_extra_data,
           @organization_id,
           @user_id,
@@ -927,7 +964,7 @@ async function upsertAudit(req, res) {
         );
         SELECT audit_id, audit_uuid, updated_at FROM @out;
       `, {
-                audit_uuid,
+                audit_uuid: auditUuidStr,
                 audit_number,
                 client_name,
                 company_id: company_id || null,
@@ -943,6 +980,7 @@ async function upsertAudit(req, res) {
                 non_conformities_count: non_conformities_count || 0,
                 completion_percentage: completion_percentage || 0,
                 standard_id: standard_id || 1,
+                custom_checklist_id: hasCustomChecklist ? parseInt(custom_checklist_id, 10) : null,
                 audit_extra_data: audit_extra_data ? JSON.stringify(audit_extra_data) : null,
                 organization_id,
                 user_id
@@ -973,11 +1011,12 @@ async function upsertAudit(req, res) {
         }
 
     } catch (error) {
-        logger.error('[UPSERT] Errore upsert audit:', error);
+        logger.error('[UPSERT] Errore upsert audit:', { message: error.message, stack: error.stack });
         return res.status(500).json({
             error: 'Errore server durante upsert audit',
             code: 'SERVER_ERROR',
-            details: error.message
+            details: error.message,
+            hint: 'Verifica i log del backend per lo stack trace completo.'
         });
     }
 }

@@ -17,6 +17,9 @@ router.post('/auth/login', authController.login);
 // POST /api/v1/auth/refresh - Rinnova token JWT
 router.post('/auth/refresh', authController.refreshToken);
 
+// POST /api/v1/auth/logout - No-op (JWT stateless, client rimuove token)
+router.post('/auth/logout', authController.logout);
+
 // GET /api/v1/auth/me - Dati utente corrente (protetto)
 router.get('/auth/me', authenticate, authController.getCurrentUser);
 

@@ -56,6 +56,44 @@ async function getReportTemplate(organizationId, standardId, customChecklistId) 
       const r = assign.recordset[0];
       return { id: r.report_template_id, file_path: r.file_path, name: r.name };
     }
+
+    // Fallback: default_report_template_id sulla checklist custom
+    const cc = await query(
+      `SELECT default_report_template_id FROM custom_checklists WHERE id = @id AND organization_id = @organization_id`,
+      { id: customChecklistId, organization_id: organizationId }
+    );
+    if (cc.recordset.length > 0 && cc.recordset[0].default_report_template_id) {
+      const tpl = await query(
+        `SELECT id, file_path, name FROM report_templates WHERE id = @id`,
+        { id: cc.recordset[0].default_report_template_id }
+      );
+      if (tpl.recordset.length > 0) {
+        const r = tpl.recordset[0];
+        return { id: r.id, file_path: r.file_path, name: r.name };
+      }
+    }
+
+    // Fallback: template "Verbale visita" di sistema (standard_key = 'custom_checklist')
+    const verbale = await query(
+      `SELECT TOP 1 id, file_path, name FROM report_templates
+       WHERE organization_id IS NULL AND scope = 'audit'
+         AND (standard_key = 'custom_checklist' OR standard_key = 'verbale_visita')
+       ORDER BY CASE WHEN standard_key = 'custom_checklist' THEN 0 ELSE 1 END`
+    );
+    if (verbale.recordset.length > 0) {
+      const r = verbale.recordset[0];
+      return { id: r.id, file_path: r.file_path, name: r.name };
+    }
+
+    // Ultimo fallback: template default (ISO 9001)
+    const def = await query(
+      `SELECT TOP 1 id, file_path, name FROM report_templates
+       WHERE organization_id IS NULL AND scope = 'audit' AND standard_key = 'default'`
+    );
+    if (def.recordset.length > 0) {
+      const r = def.recordset[0];
+      return { id: r.id, file_path: r.file_path, name: r.name };
+    }
   }
 
   // 2. Template di sistema per standard

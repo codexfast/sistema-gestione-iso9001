@@ -13,6 +13,7 @@ import AuditObjectiveSection from "./AuditObjectiveSection";
 import PendingIssuesCascade from "./PendingIssuesCascade";
 import CertificationFindingsSection from "./CertificationFindingsSection";
 import ChecklistModule from "./ChecklistModule";
+import CustomChecklistAuditView from "./CustomChecklistAuditView";
 import AuditOutcomeSection from "./AuditOutcomeSection";
 import ExportPanel from "./ExportPanel";
 
@@ -88,6 +89,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
     objective: false,
     "pending-issues": false,
     "cert-findings": false,
+    "custom-checklist": false,
     ...Object.fromEntries(STANDARDS_CONFIG.map(({ subsId }) => [subsId, false])),
   }));
 
@@ -323,6 +325,7 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
                       generalData={currentAudit.metadata.generalData}
                       selectedStandards={selectedStandards}
                       standardsWithData={standardsWithData}
+                      customChecklistId={currentAudit?.metadata?.customChecklistId ?? currentAudit?.custom_checklist_id}
                       onUpdate={handleGeneralDataUpdate}
                       onStandardsUpdate={handleStandardsUpdate}
                     />
@@ -421,6 +424,29 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
           {openSections["checklist"] && (
             <div className="accordion-content">
               {/* Sezioni checklist generate dinamicamente da STANDARDS_CONFIG */}
+              {/* Checklist personalizzata (Phase 6) */}
+              {(currentAudit?.metadata?.customChecklistId || currentAudit?.custom_checklist_id) && (
+                <div className="accordion-subsection standard-section custom-checklist-section">
+                  <button
+                    className={`accordion-subheader standard-header ${
+                      openSubSections["custom-checklist"] ? "open" : ""
+                    }`}
+                    onClick={() => toggleSubSection("custom-checklist")}
+                  >
+                    <span className="standard-icon">📋</span>
+                    <span className="subsection-title">Checklist personalizzata</span>
+                    <span className="subsection-arrow">
+                      {openSubSections["custom-checklist"] ? "\u25BC" : "\u25B6"}
+                    </span>
+                  </button>
+                  {openSubSections["custom-checklist"] && (
+                    <div className="subsection-content">
+                      <CustomChecklistAuditView audit={currentAudit} />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {STANDARDS_CONFIG.map(({ key, codes, label, icon, subsId }) => {
                 const isSelected = selectedStandards.some((s) => codes.includes(s));
                 if (!isSelected) return null;
@@ -447,13 +473,14 @@ function AuditAccordionLayout({ currentAudit, onUpdate, onBack, isSaving, allSav
                 );
               })}
 
-              {/* Messaggio se nessuno standard selezionato */}
-              {selectedStandards.length === 0 && (
+              {/* Messaggio se nessuno standard né checklist custom selezionato */}
+              {selectedStandards.length === 0 &&
+                !(currentAudit?.metadata?.customChecklistId ?? currentAudit?.custom_checklist_id) && (
                 <div className="no-standards-message">
                   <p>⚠️ Nessuno standard selezionato</p>
                   <p className="hint">
                     Vai su <strong>Dati Generali → 1.1 Dati Generali</strong>{" "}
-                    per selezionare gli standard da auditare
+                    per selezionare gli standard da auditare, oppure crea un audit con checklist personalizzata.
                   </p>
                 </div>
               )}

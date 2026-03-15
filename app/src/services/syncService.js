@@ -319,6 +319,8 @@ export class SyncService {
                 standard_ids: resolvedIds,
                 // company_id da metadata (Fase 1 multi-tenant)
                 company_id: auditData.metadata?.companyId ?? auditData.company_id ?? null,
+                // custom_checklist_id (Phase 6)
+                custom_checklist_id: auditData.custom_checklist_id ?? auditData.metadata?.customChecklistId ?? null,
                 // Persistenza campi ricchi (generalData, auditObjective, auditOutcome, auditPartyType, fornitoreName)
                 audit_extra_data: Object.keys(auditExtraData).length > 0 ? auditExtraData : null,
             };
@@ -623,6 +625,33 @@ export class SyncService {
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
+        }
+    }
+
+    /**
+     * Restituisce l'audit_id numerico (server) per un audit locale (uuid), se già sincronizzato.
+     * Usato al caricamento per ripristinare metadata.auditId e far scomparire il banner "non sincronizzato".
+     * @param {string} uuid - metadata.id dell'audit (UUID)
+     * @returns {Promise<number|null>}
+     */
+    async getAuditIdForUuid(uuid) {
+        if (!uuid) return null;
+        try {
+            const db = await this.init();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_SYNC_METADATA], 'readonly');
+                const store = transaction.objectStore(STORE_SYNC_METADATA);
+                const index = store.index('by_entity');
+                const request = index.get(['audit', uuid]);
+                request.onsuccess = () => {
+                    const rec = request.result;
+                    const id = rec?.serverId;
+                    resolve(id != null ? Number(id) : null);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        } catch (e) {
+            return null;
         }
     }
 

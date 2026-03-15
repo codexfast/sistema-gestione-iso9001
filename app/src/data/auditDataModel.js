@@ -252,7 +252,8 @@ export function createNewAudit(metadata) {
             projectYear: metadata.projectYear || new Date().getFullYear(),
             auditNumber: metadata.auditNumber || '',
             status: AUDIT_STATUS.DRAFT,
-            selectedStandards: metadata.selectedStandards || [ISO_STANDARDS.ISO_9001],
+            selectedStandards: metadata.selectedStandards || (metadata.customChecklistId ? [] : [ISO_STANDARDS.ISO_9001]),
+            customChecklistId: metadata.customChecklistId ?? null,
             auditor: metadata.auditor || '',
             areaAuditata: metadata.areaAuditata || '',
             createdAt: new Date().toISOString(),
@@ -440,7 +441,9 @@ export function validateAuditSchema(audit) {
     if (!auditId) errors.push('Missing id (metadata.id or root id)');
     if (!audit.metadata?.clientName) errors.push('Missing metadata.clientName');
     if (!audit.metadata?.projectYear) errors.push('Missing metadata.projectYear');
-    if (!audit.metadata?.selectedStandards?.length) errors.push('Missing selectedStandards');
+    const hasStandards = audit.metadata?.selectedStandards?.length > 0;
+    const hasCustomChecklist = audit.metadata?.customChecklistId != null;
+    if (!hasStandards && !hasCustomChecklist) errors.push('Missing selectedStandards or customChecklistId');
 
     // Valida checklist
     if (!audit.checklist || typeof audit.checklist !== 'object') {

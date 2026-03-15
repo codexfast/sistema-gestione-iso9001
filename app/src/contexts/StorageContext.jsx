@@ -323,6 +323,19 @@ export function StorageProvider({ children, useMockData = false }) {
                 auditsToUploadRichData.push(merged);
               }
               
+              // Preserva customChecklistId e selectedStandards dalla versione locale se l'audit
+              // è "solo checklist custom" (evita che server con standard_id default sovrascriva e perda dati)
+              const localCustomId = localAudit?.metadata?.customChecklistId ?? localAudit?.custom_checklist_id;
+              const serverCustomId = serverAudit?.metadata?.customChecklistId ?? serverAudit?.custom_checklist_id;
+              if (localCustomId != null && localCustomId !== '' && (serverCustomId == null || serverCustomId === '')) {
+                merged.metadata = {
+                  ...merged.metadata,
+                  customChecklistId: localCustomId,
+                  selectedStandards: localAudit?.metadata?.selectedStandards ?? [],
+                };
+                merged.checklist = localAudit?.checklist ?? {};
+              }
+
               // Preserva selectedStandards dalla versione locale se è più completa di quella server
               // (es: sync precedente incompleta, oppure standard aggiunti offline)
               const localStds = localAudit?.metadata?.selectedStandards;
@@ -351,6 +364,34 @@ export function StorageProvider({ children, useMockData = false }) {
               return merged;
             })
           : localAudits;
+
+        // Includi audit solo locali (non ancora sul server) nella lista finale
+        let finalAudits = mergedAudits;
+        if (serverAudits.length > 0 && mergedAudits.length > 0) {
+          const mergedIds = new Set(mergedAudits.map((a) => a.metadata?.id || a.id));
+          const localOnly = localAudits.filter(
+            (la) => !mergedIds.has(la.metadata?.id || la.id)
+          );
+          if (localOnly.length > 0) {
+            finalAudits = [...mergedAudits, ...localOnly];
+            console.log(`📋 [MERGE] Aggiunti ${localOnly.length} audit solo locali alla lista`);
+          }
+        }
+
+        // Ripristina metadata.auditId da sync_metadata per audit che non ce l'hanno
+        // (così il banner "non sincronizzato" scompare dopo una sync riuscita, anche dopo ricarica)
+        for (let i = 0; i < finalAudits.length; i++) {
+          const a = finalAudits[i];
+          if (a.metadata?.auditId != null) continue;
+          const uuid = a.metadata?.id || a.id;
+          const serverId = await syncService.getAuditIdForUuid(uuid);
+          if (serverId != null) {
+            finalAudits[i] = {
+              ...a,
+              metadata: { ...a.metadata, auditId: serverId },
+            };
+          }
+        }
         
         // Carica i campi ricchi sul server per gli audit che lo richiedono (migrazione dati)
         if (auditsToUploadRichData.length > 0) {
@@ -376,7 +417,7 @@ export function StorageProvider({ children, useMockData = false }) {
           }
         }
 
-        if (mergedAudits && mergedAudits.length > 0) {
+        if (finalAudits && finalAudits.length > 0) {
           // Server come fonte di verità: sostituisci completamente la cache locale
           // (evita dati obsoleti quando si cambia device o dopo problemi di rete)
           if (serverAudits.length > 0) {
@@ -384,16 +425,16 @@ export function StorageProvider({ children, useMockData = false }) {
               await fsProvider.clearAuditsStore();
             }
             console.log("💾 [MERGE] Aggiorno IndexedDB con dati mergiati (server + preserva locale)...");
-            for (const frontendAudit of mergedAudits) {
+            for (const frontendAudit of finalAudits) {
               await fsProvider.saveAudit(frontendAudit);
             }
-            console.log(`✅ [MERGE] ${mergedAudits.length} audit mergiati salvati in IndexedDB`);
+            console.log(`✅ [MERGE] ${finalAudits.length} audit mergiati salvati in IndexedDB`);
           }
 
-          setAudits(mergedAudits);
+          setAudits(finalAudits);
           setCurrentAuditId(null); // Mostra sempre selector all'avvio
           console.log(
-            `✅ Caricati ${mergedAudits.length} audit (${serverAudits.length} server, ${localAudits.length} cache)`,
+            `✅ Caricati ${finalAudits.length} audit (${serverAudits.length} server, ${localAudits.length} cache)`,
           );
         } else if (useMockData) {
           // Prima inizializzazione: salva mock data in IndexedDB + ENQUEUE SYNC
@@ -730,6 +771,7 @@ export function StorageProvider({ children, useMockData = false }) {
           audit_type:       m.auditType,
           status:           m.status || 'draft',
           selectedStandards: m.selectedStandards || [],
+          custom_checklist_id: m.customChecklistId ?? null,
           generalData:      m.generalData,
           auditObjective:   m.auditObjective,
           auditOutcome:     m.auditOutcome,

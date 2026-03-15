@@ -4,10 +4,10 @@
  */
 
 const { query } = require('../config/database');
+const { getReportTemplate } = require('../services/reportTemplate.service');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs').promises;
-const { getReportTemplate } = require('../services/reportTemplate.service');
 
 /**
  * GET /api/v1/report-templates?scope=audit
@@ -133,16 +133,18 @@ async function assignTemplateToStandard(req, res) {
 
 /**
  * GET /api/v1/report-templates/resolve?standardId=1
- * Risolve quale template usare per standard_id + organization_id
+ * GET /api/v1/report-templates/resolve?customChecklistId=5
+ * Risolve quale template usare per standard_id O custom_checklist_id + organization_id
  * Usato dal frontend prima di generare report
  */
 async function resolveTemplate(req, res) {
   try {
-    const { standardId } = req.query;
+    const { standardId, customChecklistId } = req.query;
     const organizationId = req.user.organization_id;
 
     const stdId = standardId ? parseInt(standardId, 10) : null;
-    const template = await getReportTemplate(organizationId, stdId, null);
+    const customId = customChecklistId ? parseInt(customChecklistId, 10) : null;
+    const template = await getReportTemplate(organizationId, stdId, customId);
 
     res.json({ success: true, data: template });
   } catch (err) {
@@ -151,9 +153,62 @@ async function resolveTemplate(req, res) {
   }
 }
 
+/**
+ * PUT /api/v1/report-template-assignments/custom-checklist/:customChecklistId
+ * Assegna template a checklist custom per l'org
+ * Body: { report_template_id }
+ */
+async function assignTemplateToCustomChecklist(req, res) {
+  try {
+    const { customChecklistId } = req.params;
+    const { report_template_id } = req.body;
+    const organizationId = req.user.organization_id;
+
+    if (!report_template_id) {
+      return res.status(400).json({ error: 'report_template_id richiesto', code: 'MISSING_TEMPLATE_ID' });
+    }
+
+    const ccId = parseInt(customChecklistId, 10);
+    const templateId = parseInt(report_template_id, 10);
+    if (isNaN(ccId) || isNaN(templateId)) {
+      return res.status(400).json({ error: 'customChecklistId e report_template_id devono essere numeri', code: 'INVALID_ID' });
+    }
+
+    // Verifica che la checklist appartenga all'org
+    const ccCheck = await query(
+      'SELECT 1 FROM custom_checklists WHERE id = @id AND organization_id = @organization_id',
+      { id: ccId, organization_id: organizationId }
+    );
+    if (ccCheck.recordset.length === 0) {
+      return res.status(404).json({ error: 'Checklist non trovata', code: 'CHECKLIST_NOT_FOUND' });
+    }
+
+    // Rimuovi assegnazioni esistenti per questa checklist
+    await query(
+      `DELETE FROM report_template_assignments
+       WHERE organization_id = @organization_id AND custom_checklist_id = @custom_checklist_id`,
+      { organization_id: organizationId, custom_checklist_id: ccId }
+    );
+    // Inserisci nuova assegnazione
+    await query(
+      `INSERT INTO report_template_assignments (organization_id, standard_id, custom_checklist_id, report_template_id)
+       VALUES (@organization_id, NULL, @custom_checklist_id, @report_template_id)`,
+      { organization_id: organizationId, custom_checklist_id: ccId, report_template_id: templateId }
+    );
+
+    logger.info('Template assigned to custom checklist', { org: organizationId, customChecklistId: ccId, templateId });
+
+    res.json({ success: true, message: 'Assegnazione salvata' });
+  } catch (err) {
+    logger.error('assignTemplateToCustomChecklist error', { error: err.message });
+    res.status(500).json({ error: 'Errore assegnazione template', code: 'ASSIGN_TEMPLATE_ERROR' });
+  }
+}
+
 module.exports = {
   listTemplates,
   uploadTemplate,
   assignTemplateToStandard,
+  assignTemplateToCustomChecklist,
   resolveTemplate,
 };

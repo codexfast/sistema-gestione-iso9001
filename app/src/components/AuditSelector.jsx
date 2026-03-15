@@ -171,7 +171,10 @@ function AuditSelector() {
                 const declared = currentAudit.metadata.selectedStandards || [];
                 const ckKeys = Object.keys(currentAudit.checklist || {});
                 const display = declared.length > 0 ? declared : ckKeys;
-                return display.map((std) => {
+                const hasCustom = currentAudit.metadata?.customChecklistId ?? currentAudit.custom_checklist_id;
+                return (
+                  <>
+                    {display.map((std) => {
                   const s = String(std);
                   const category = s.includes("9001")
                     ? "quality"
@@ -186,7 +189,14 @@ function AuditSelector() {
                       {displayName}
                     </span>
                   );
-                });
+                })}
+                    {hasCustom && (
+                      <span key="custom" className="standard-badge-small category-other">
+                        Checklist personalizzata
+                      </span>
+                    )}
+                  </>
+                );
               })()}
             </div>
           </div>
@@ -249,7 +259,15 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     auditDate: new Date().toISOString().split("T")[0],
     auditorName: "",
     norms: [],
+    customChecklistId: null,
   });
+
+  const [customChecklists, setCustomChecklists] = useState([]);
+  useEffect(() => {
+    apiService.getCustomChecklists().then((res) => {
+      setCustomChecklists(res?.data ?? []);
+    }).catch(() => setCustomChecklists([]));
+  }, []);
 
   // Carica aziende dall'anagrafica (Fase 1)
   const [companies, setCompanies] = useState([]);
@@ -338,14 +356,20 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     }
   };
 
-  // Seleziona azienda dall'anagrafica → auto-compila clientName
+  const MANUAL_COMPANY_VALUE = "__manual__";
+
+  // Menu a tendina Azienda committente: selezione da Anagrafica o inserimento manuale
   const handleCompanySelect = (e) => {
-    const id = e.target.value;
-    if (!id) {
+    const value = e.target.value;
+    if (!value) {
       setFormData((prev) => ({ ...prev, companyId: null, clientName: "" }));
       return;
     }
-    const company = companies.find((c) => String(c.id) === id);
+    if (value === MANUAL_COMPANY_VALUE) {
+      setFormData((prev) => ({ ...prev, companyId: null, clientName: prev.clientName || "" }));
+      return;
+    }
+    const company = companies.find((c) => String(c.id) === value);
     if (company) {
       setFormData((prev) => ({
         ...prev,
@@ -354,6 +378,11 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
       }));
     }
   };
+
+  // Valore del dropdown: companyId, MANUAL_COMPANY_VALUE, o ""
+  const companySelectValue = formData.companyId != null && formData.companyId !== ""
+    ? String(formData.companyId)
+    : (formData.clientName && !formData.companyId ? MANUAL_COMPANY_VALUE : "");
 
   const handleNormToggle = (norm) => {
     setFormData((prev) => ({
@@ -375,8 +404,8 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
       newErrors.auditorName = "Nome auditor obbligatorio";
     }
 
-    if (formData.norms.length === 0) {
-      newErrors.norms = "Selezionare almeno una norma";
+    if (formData.norms.length === 0 && !formData.customChecklistId) {
+      newErrors.norms = "Selezionare almeno una norma oppure una checklist personalizzata";
     }
 
     setErrors(newErrors);
@@ -395,6 +424,7 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
     // Mappa norms → selectedStandards (atteso da createNewAudit in auditDataModel.js)
     submitData.selectedStandards = formData.norms;
     submitData.companyId = formData.companyId || null;
+    submitData.customChecklistId = formData.customChecklistId || null;
     if (pendingInfo?.issues?.length > 0) {
       submitData.pendingIssues = pendingInfo.issues
         .filter((issue) => issue.conformity_status !== 'OM')
@@ -481,43 +511,63 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
             <small className="form-hint">Generato automaticamente</small>
           </div>
 
-          {companies.length > 0 && !isReaudit && (
-            <div className="form-group">
-              <label htmlFor="companySelect">Azienda committente (da anagrafica)</label>
-              <select
-                id="companySelect"
-                value={formData.companyId ?? ""}
-                onChange={handleCompanySelect}
-                className="form-control"
-                disabled={companiesLoading}
-              >
-                <option value="">— Nuova azienda / Inserimento manuale —</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.vat_number ? ` (P.IVA ${c.vat_number})` : ""}
-                  </option>
-                ))}
-              </select>
-              <small className="form-hint">Seleziona un&apos;azienda esistente per compilare il nome committente</small>
-            </div>
-          )}
-
           <div className="form-group">
-            <label htmlFor="clientName">Azienda committente *</label>
-            <input
-              type="text"
-              id="clientName"
-              name="clientName"
-              value={formData.clientName}
-              onChange={handleChange}
-              onBlur={handleClientNameBlur}
-              disabled={isReaudit}
-              className={`form-control ${errors.clientName ? "error" : ""} ${isReaudit ? "readonly" : ""}`}
-              placeholder={isReaudit ? "Azienda committente (non modificabile)" : "es. Acme Industries SpA"}
-            />
-            {isReaudit && (
-              <small className="form-hint">📌 Azienda committente selezionata (non modificabile)</small>
+            <label htmlFor="companySelect">Azienda committente *</label>
+            {isReaudit ? (
+              <input
+                type="text"
+                id="clientName"
+                readOnly
+                value={formData.clientName || "—"}
+                className="form-control readonly"
+              />
+            ) : companies.length > 0 ? (
+              <>
+                <select
+                  id="companySelect"
+                  value={companySelectValue}
+                  onChange={handleCompanySelect}
+                  className={`form-control ${errors.clientName ? "error" : ""}`}
+                  disabled={companiesLoading}
+                >
+                  <option value="">— Seleziona azienda —</option>
+                  <option value={MANUAL_COMPANY_VALUE}>— Nuova azienda / Inserimento manuale —</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.vat_number ? ` (P.IVA ${c.vat_number})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {companySelectValue === MANUAL_COMPANY_VALUE && (
+                  <input
+                    type="text"
+                    id="clientName"
+                    name="clientName"
+                    value={formData.clientName}
+                    onChange={handleChange}
+                    onBlur={handleClientNameBlur}
+                    className={`form-control ${errors.clientName ? "error" : ""}`}
+                    placeholder="es. Acme Industries SpA"
+                    style={{ marginTop: "0.5rem" }}
+                  />
+                )}
+                <small className="form-hint">Scegli dall&apos;anagrafica aziende oppure inserimento manuale per una nuova.</small>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  id="clientName"
+                  name="clientName"
+                  value={formData.clientName}
+                  onChange={handleChange}
+                  onBlur={handleClientNameBlur}
+                  className={`form-control ${errors.clientName ? "error" : ""}`}
+                  placeholder="es. Acme Industries SpA"
+                />
+                <small className="form-hint">Anagrafica vuota: inserisci il nome azienda. Aggiungi aziende da 🏢 Anagrafica Aziende.</small>
+              </>
             )}
             {errors.clientName && (
               <span className="error-message">{errors.clientName}</span>
@@ -593,8 +643,15 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
             )}
           </div>
 
+          <div className="form-group audit-type-section">
+            <label className="section-label">Tipo di audit</label>
+            <small className="form-hint block-hint">
+              Seleziona <strong>almeno uno</strong> tra norme ISO e checklist personalizzata. Puoi scegliere entrambi per un audit ibrido.
+            </small>
+          </div>
+
           <div className="form-group">
-            <label>Norme Applicabili *</label>
+            <label>Norme ISO</label>
             <div className="checkbox-group">
               {standardsForUser.length === 0 && user?.allowed_standard_ids ? (
                 <p className="form-hint">Nessuno standard assegnato. Contatta l'amministratore.</p>
@@ -610,10 +667,38 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
                 </label>
               ))}
             </div>
+            <small className="form-hint">Opzionale se usi una checklist personalizzata.</small>
             {errors.norms && (
               <span className="error-message">{errors.norms}</span>
             )}
           </div>
+
+          {customChecklists.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="customChecklist">Checklist personalizzata</label>
+              <select
+                id="customChecklist"
+                value={formData.customChecklistId ?? ""}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    customChecklistId: e.target.value ? parseInt(e.target.value, 10) : null,
+                  }))
+                }
+                className="form-control"
+              >
+                <option value="">— Nessuna —</option>
+                {customChecklists.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <small className="form-hint">
+                Verbale visita, checklist dinamica: sezioni e voci aggiunte durante l'audit. Nessuna norma ISO richiesta.
+              </small>
+            </div>
+          )}
         </form>
 
         <div className="modal-footer">

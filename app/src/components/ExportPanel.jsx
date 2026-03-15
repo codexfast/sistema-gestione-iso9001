@@ -104,6 +104,33 @@ const ExportPanel = () => {
       auditForExport.certificationFindings = [];
     }
 
+    // Fetch checklist custom + risposte (per audit con customChecklistId)
+    const customChecklistId = currentAudit?.metadata?.customChecklistId ?? currentAudit?.custom_checklist_id;
+    if (customChecklistId) {
+      try {
+        const [clRes, respRes] = await Promise.all([
+          apiService.getCustomChecklist(customChecklistId),
+          apiService.getCustomChecklistResponses(auditId),
+        ]);
+        auditForExport.customChecklist = clRes?.data ?? null;
+        const byItem = {};
+        (respRes?.data ?? []).forEach((r) => {
+          try {
+            byItem[r.custom_item_id] = typeof r.evidence_blocks === "string"
+              ? JSON.parse(r.evidence_blocks || "[]")
+              : (r.evidence_blocks || []);
+          } catch {
+            byItem[r.custom_item_id] = [];
+          }
+        });
+        auditForExport.customResponses = byItem;
+        console.log(`📋 [EXPORT] Checklist custom + ${Object.keys(byItem).length} voci con risposte`);
+      } catch (err) {
+        console.warn('[EXPORT] Checklist custom non disp.:', err.message);
+        auditForExport.customResponses = auditForExport.customResponses ?? {};
+      }
+    }
+
     // Fetch allegati dal server e normalizza in formato wordExport (camelCase)
     try {
       const rawAtts = await apiService.getAttachments(auditId);
@@ -112,6 +139,7 @@ const ExportPanel = () => {
         const normalized = serverAtts.map(att => ({
           id:                 att.attachment_id,
           questionId:         att.question_id,
+          customItemId:       att.custom_item_id ?? null,
           name:               att.file_name,
           fileName:           att.file_name,
           fileSize:           att.file_size,
@@ -169,6 +197,18 @@ const ExportPanel = () => {
       setIsExporting(true);
       const { auditForExport, getViewUrl } = await prepareAuditForExport();
 
+      // Audit con checklist custom (senza standard ISO) → un solo report Word
+      const customChecklistId = auditForExport.metadata?.customChecklistId ?? auditForExport.custom_checklist_id;
+      if (customChecklistId && (!auditForExport.metadata?.selectedStandards?.length) && !Object.keys(auditForExport.checklist || {}).length) {
+        const fileName = await exportAuditToWord(auditForExport, getViewUrl, {
+          customChecklistId,
+          photoMode: 'preview',
+          getTemplateResolver: () => apiService.getReportTemplate(null, customChecklistId),
+        });
+        showMessage(`✅ Report Word generato: ${fileName}`, "success");
+        return;
+      }
+
       // selectedStandards = flags attivi → un file Word per ogni flag.
       // Fallback alle chiavi della checklist se il campo non è compilato.
       const activeStandards = (auditForExport.metadata?.selectedStandards?.length > 0)
@@ -218,11 +258,14 @@ const ExportPanel = () => {
       setIsExporting(true);
       const { auditForExport, getViewUrl } = await prepareAuditForExport();
 
+      const customChecklistId = auditForExport.metadata?.customChecklistId ?? auditForExport.custom_checklist_id;
+      const hasCustomOnly = customChecklistId && !auditForExport.metadata?.selectedStandards?.length && !Object.keys(auditForExport.checklist || {}).length;
+
       const stds = auditForExport.metadata?.selectedStandards || [];
       const hasPhotoStd = stds.some(s => String(s).includes('3834') || s === 'RDP_MSN');
       const exportOpts = {
-        ...(hasPhotoStd ? { photoMode: 'preview' } : {}),
-        getTemplateResolver: (stdId) => apiService.getReportTemplate(stdId),
+        ...(hasPhotoStd || hasCustomOnly ? { photoMode: 'preview' } : {}),
+        ...(hasCustomOnly ? { customChecklistId, getTemplateResolver: () => apiService.getReportTemplate(null, customChecklistId) } : { getTemplateResolver: (stdId) => apiService.getReportTemplate(stdId) }),
       };
 
       if (fsProvider?.ready()) {

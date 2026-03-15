@@ -39,9 +39,7 @@ export function backendToFrontend(backendAudit) {
             conformitiesCount: backendAudit.conformities_count || 0,
             nonConformitiesCount: backendAudit.non_conformities_count || 0,
             completionPercentage: backendAudit.completion_percentage || 0,
-            // selectedStandards: formato canonico senza suffisso anno (es 'ISO_9001', non 'ISO_9001_2015')
-            // Usa il campo 'standards' (comma-separated da audit_standards JOIN) se disponibile,
-            // altrimenti cade su standard_id singolo per retrocompatibilità
+            // selectedStandards: da backend (standards/audit_standards). Se audit ha solo checklist custom, restare [].
             selectedStandards: (() => {
                 const NORMALIZE = {
                     ISO_9001_2015: 'ISO_9001',   ISO_9001: 'ISO_9001',
@@ -50,14 +48,15 @@ export function backendToFrontend(backendAudit) {
                     ISO_3834_2: 'ISO_3834_2',    ISO_3834_2_2021: 'ISO_3834_2', ISO_3834: 'ISO_3834_2',
                     RDP_MSN: 'RDP_MSN',
                 };
+                const hasCustomChecklist = backendAudit.custom_checklist_id != null && backendAudit.custom_checklist_id > 0;
                 if (backendAudit.standards) {
-                    // GET /audits/:id  → standards è un array di oggetti [{standard_code,...}]
-                    // GET /audits      → standards è una stringa CSV "ISO_9001_2015,ISO_14001_2015"
                     const codes = Array.isArray(backendAudit.standards)
                         ? backendAudit.standards.map(s => s.standard_code || String(s))
-                        : String(backendAudit.standards).split(',').map(s => s.trim());
-                    return codes.map(s => NORMALIZE[s] || s).filter(Boolean);
+                        : String(backendAudit.standards).split(',').map(s => s.trim()).filter(Boolean);
+                    if (codes.length > 0) return codes.map(s => NORMALIZE[s] || s).filter(Boolean);
                 }
+                // Audit solo checklist custom: nessuno standard
+                if (hasCustomChecklist) return [];
                 const id = backendAudit.standard_id;
                 if (id === 2) return ['ISO_14001'];
                 if (id === 3) return ['ISO_45001'];
@@ -67,14 +66,28 @@ export function backendToFrontend(backendAudit) {
             })(),
             createdAt: backendAudit.created_at,
             updatedAt: backendAudit.updated_at,
+            customChecklistId: backendAudit.custom_checklist_id ?? null,
             // Campi ricchi: ripristinati da audit_extra_data dove Dashboard li aspetta
             ...(extraData.generalData    ? { generalData:    extraData.generalData    } : {}),
             ...(extraData.auditObjective ? { auditObjective: extraData.auditObjective } : {}),
             ...(extraData.auditOutcome   ? { auditOutcome:   extraData.auditOutcome   } : {}),
         },
-        checklist: {
-            ISO_9001: {} // Vuoto, verrà popolato al primo accesso
-        },
+        checklist: (() => {
+            const fromExtra = extraData.checklist;
+            if (fromExtra && typeof fromExtra === 'object') return fromExtra;
+            const stds = (() => {
+                const NORMALIZE = { ISO_9001_2015: 'ISO_9001', ISO_9001: 'ISO_9001', ISO_14001_2015: 'ISO_14001', ISO_14001: 'ISO_14001', ISO_45001_2018: 'ISO_45001', ISO_45001: 'ISO_45001', ISO_3834_2: 'ISO_3834_2', ISO_3834_2_2021: 'ISO_3834_2', RDP_MSN: 'RDP_MSN' };
+                if (backendAudit.standards) {
+                    const codes = Array.isArray(backendAudit.standards) ? backendAudit.standards.map(s => s.standard_code || String(s)) : String(backendAudit.standards).split(',').map(s => s.trim()).filter(Boolean);
+                    return codes.length ? codes.map(s => NORMALIZE[s] || s) : [];
+                }
+                if (backendAudit.custom_checklist_id) return [];
+                return ['ISO_9001'];
+            })();
+            const obj = {};
+            stds.forEach(s => { obj[s] = {}; });
+            return obj;
+        })(),
         nonConformities: [],
         pendingIssues: [],       // Richiesto da schema validation (auditDataModel.js:446)
         reportChapters: [],      // Richiesto da schema validation (auditDataModel.js:447)

@@ -353,9 +353,19 @@ function generateRefreshToken(payload) {
     });
 }
 
+/**
+ * POST /api/v1/auth/logout
+ * No-op: JWT è stateless, il client rimuove il token.
+ * Endpoint per compatibilità con il frontend.
+ */
+async function logout(req, res) {
+    res.json({ success: true, message: 'Logout effettuato' });
+}
+
 module.exports = {
     register,
     login,
+    logout,
     refreshToken,
     getCurrentUser,
     getAllowedStandardIds

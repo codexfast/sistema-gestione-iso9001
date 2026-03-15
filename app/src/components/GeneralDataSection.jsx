@@ -51,6 +51,7 @@ function GeneralDataSection({
   generalData,
   selectedStandards = [],
   standardsWithData = [],
+  customChecklistId = null,
   onUpdate,
   onStandardsUpdate,
 }) {
@@ -131,8 +132,9 @@ function GeneralDataSection({
         <div className="form-field standards-selection">
           <label className="field-label">Standard Applicabili</label>
           <p className="field-hint">
-            Seleziona i sistemi di gestione da auditare. Solo gli standard
-            selezionati appariranno nella sezione Checklist.
+            {customChecklistId
+              ? "Opzionale: per audit con checklist personalizzata gli standard non sono richiesti. Puoi comunque aggiungerli per un audit ibrido."
+              : "Seleziona i sistemi di gestione da auditare. Solo gli standard selezionati appariranno nella sezione Checklist."}
           </p>
           {loadingStandards ? (
             <div className="loading-standards">Caricamento standard...</div>

@@ -572,13 +572,14 @@ class ApiService {
      * Upload allegato (usa FormData, non JSON)
      */
     async uploadAttachment(file, options = {}) {
-        const { auditId, ncId, questionId, category = 'evidence', description } = options;
+        const { auditId, ncId, questionId, customItemId, category = 'evidence', description } = options;
 
         const formData = new FormData();
         formData.append('file', file);
         if (auditId) formData.append('audit_id', auditId);
         if (ncId) formData.append('nc_id', ncId);
         if (questionId) formData.append('question_id', questionId);
+        if (customItemId) formData.append('custom_item_id', customItemId);
         formData.append('category', category);
         if (description) formData.append('description', description);
 
@@ -710,23 +711,29 @@ class ApiService {
     // ==========================================
 
     /**
-     * Risolve quale template usare per standard_id.
+     * Risolve quale template usare per standard_id o custom_checklist_id.
      * Usato da wordExport prima di generare report.
-     * @param {number} standardId - ID standard (1=9001, 2=14001, 3=45001, 6=3834)
+     * @param {number|null} standardId - ID standard (1=9001, 2=14001, ...)
+     * @param {number|null} customChecklistId - ID checklist custom (per audit solo-checklist)
      * @returns {Promise<{url: string, file_path: string, name: string}|null>} URL assoluto per fetch, o null se API non disponibile
      */
-    async getReportTemplate(standardId) {
+    async getReportTemplate(standardId, customChecklistId = null) {
         try {
-            const res = await this.get(`/report-templates/resolve?standardId=${standardId}`);
+            const params = new URLSearchParams();
+            if (standardId != null) params.set('standardId', standardId);
+            if (customChecklistId != null) params.set('customChecklistId', customChecklistId);
+            const res = await this.get(`/report-templates/resolve?${params.toString()}`);
             if (!res?.success || !res?.data?.file_path) return null;
             const fp = res.data.file_path;
+            const name = res.data.name;
+            const id = res.data.id;
             // Template di sistema: /templates/xxx → path relativo, fetch usa origin dell'app
             if (fp.startsWith('/templates/')) {
-                return { url: fp, file_path: fp, name: res.data.name };
+                return { id, url: fp, file_path: fp, name };
             }
             // Template org: /uploads/xxx → URL assoluto backend
             const backendBase = this.baseUrl.replace(/\/api\/v1\/?$/, '');
-            return { url: backendBase + (fp.startsWith('/') ? fp : '/' + fp), file_path: fp, name: res.data.name };
+            return { id, url: backendBase + (fp.startsWith('/') ? fp : '/' + fp), file_path: fp, name };
         } catch {
             return null;
         }
@@ -744,6 +751,61 @@ class ApiService {
      */
     async assignReportTemplateToStandard(standardId, reportTemplateId) {
         return this.put(`/report-template-assignments/standard/${standardId}`, { report_template_id: reportTemplateId });
+    }
+
+    /**
+     * Assegna template a checklist custom per l'org (Phase 7)
+     */
+    async assignReportTemplateToCustomChecklist(customChecklistId, reportTemplateId) {
+        return this.put(`/report-template-assignments/custom-checklist/${customChecklistId}`, { report_template_id: reportTemplateId });
+    }
+
+    // ==========================================
+    // CUSTOM CHECKLISTS (Phase 5/6)
+    // ==========================================
+
+    async getCustomChecklists() {
+        return this.get('/custom-checklists');
+    }
+
+    async getCustomChecklist(id) {
+        return this.get(`/custom-checklists/${id}`);
+    }
+
+    async createCustomChecklist(data) {
+        return this.post('/custom-checklists', data);
+    }
+
+    async updateCustomChecklist(id, data) {
+        return this.put(`/custom-checklists/${id}`, data);
+    }
+
+    async deleteCustomChecklist(id) {
+        return this.delete(`/custom-checklists/${id}`);
+    }
+
+    async createCustomChecklistSection(checklistId, data) {
+        return this.post(`/custom-checklists/${checklistId}/sections`, data);
+    }
+
+    async deleteCustomChecklistSection(checklistId, sectionId) {
+        return this.delete(`/custom-checklists/${checklistId}/sections/${sectionId}`);
+    }
+
+    async createCustomChecklistItem(checklistId, data) {
+        return this.post(`/custom-checklists/${checklistId}/items`, data);
+    }
+
+    async deleteCustomChecklistItem(checklistId, itemId) {
+        return this.delete(`/custom-checklists/${checklistId}/items/${itemId}`);
+    }
+
+    async getCustomChecklistResponses(auditId) {
+        return this.get(`/audits/${auditId}/custom-checklist-responses`);
+    }
+
+    async saveCustomChecklistResponses(auditId, responses) {
+        return this.put(`/audits/${auditId}/custom-checklist-responses`, { responses });
     }
 
     // ==========================================

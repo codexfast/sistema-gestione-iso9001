@@ -128,7 +128,20 @@ export function useAttachmentManager(audit, onUpdate) {
      */
     const addAttachments = useCallback(
         async (questionId, category, fileList) => {
-            if (!storage.fsProvider?.ready()) {
+            if (questionId == null || questionId === '') {
+                return {
+                    success: false,
+                    error: "ID domanda non disponibile. Attendi il caricamento della checklist o ricarica la pagina.",
+                };
+            }
+
+            if (!storage.fsProvider) {
+                return {
+                    success: false,
+                    error: "Storage non inizializzato. Ricarica la pagina e riprova.",
+                };
+            }
+            if (!storage.fsProvider.ready()) {
                 const isIndexedDB = storage.fsProvider?.constructor?.name === 'IndexedDBProvider';
                 return {
                     success: false,
@@ -199,7 +212,7 @@ export function useAttachmentManager(audit, onUpdate) {
                             try {
                                 const serverResult = await apiService.uploadAttachment(file, {
                                     auditId,
-                                    questionId,
+                                    questionId: typeof questionId === 'number' ? questionId : undefined,
                                     category: serverCategory,
                                     description: `${category} - ${questionId}`,
                                 });
@@ -238,18 +251,12 @@ export function useAttachmentManager(audit, onUpdate) {
                     }
                 }
 
-                // Aggiorna audit con nuovi allegati
-                if (results.length > 0) {
-                    const updatedAttachments = [...(audit.attachments || []), ...results];
-                    const updatedAudit = {
-                        ...audit,
-                        attachments: updatedAttachments,
-                    };
-
-                    // Callback per aggiornare stato globale
-                    if (onUpdate) {
-                        await onUpdate(updatedAudit);
-                    }
+                // Aggiorna audit con nuovi allegati (usa funzione per merge con stato più recente)
+                if (results.length > 0 && onUpdate) {
+                    await onUpdate((prev) => ({
+                        ...prev,
+                        attachments: [...(prev.attachments || []), ...results],
+                    }));
                 }
 
                 setIsUploading(false);
@@ -302,19 +309,15 @@ export function useAttachmentManager(audit, onUpdate) {
 
             try {
                 // Rimuovi da metadata audit (file fisico rimane su disco per tracciabilità)
-                const updatedAttachments = audit.attachments.filter(
-                    (att) =>
-                        !(att.questionId === questionId && att.storedName === attachment.storedName)
-                );
-
-                const updatedAudit = {
-                    ...audit,
-                    attachments: updatedAttachments,
-                };
-
-                // Callback aggiornamento
                 if (onUpdate) {
-                    await onUpdate(updatedAudit);
+                    await onUpdate((prev) => {
+                        const updatedAttachments = (prev.attachments || []).filter(
+                            (att) =>
+                                !((att.questionId == questionId || att.questionRef === questionId) &&
+                                  (att.storedName === attachment.storedName || att.name === attachment.name))
+                        );
+                        return { ...prev, attachments: updatedAttachments };
+                    });
                 }
 
                 // Copia percorso in clipboard per riferimento (pattern ESG)
@@ -334,7 +337,7 @@ export function useAttachmentManager(audit, onUpdate) {
                 };
             }
         },
-        [audit, listAttachments, onUpdate]
+        [listAttachments, onUpdate]
     );
 
     /**

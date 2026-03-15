@@ -69,6 +69,11 @@ async function listAttachments(req, res) {
             params.question_id = parseInt(question_id);
         }
 
+        if (req.query.custom_item_id) {
+            whereConditions.push('att.custom_item_id = @custom_item_id');
+            params.custom_item_id = parseInt(req.query.custom_item_id);
+        }
+
         if (category) {
             whereConditions.push('att.category = @category');
             params.category = category;
@@ -199,7 +204,7 @@ async function getAttachmentById(req, res) {
 async function uploadAttachment(req, res) {
     try {
         const { user_id, organization_id } = req.user;
-        const { audit_id, nc_id, question_id, category = 'evidence', description } = req.body;
+        const { audit_id, nc_id, question_id, custom_item_id, category = 'evidence', description } = req.body;
 
         // Validazione: deve avere file
         if (!req.file) {
@@ -234,15 +239,25 @@ async function uploadAttachment(req, res) {
             });
         }
 
+        // Validazione: question_id e custom_item_id mutualmente esclusivi
+        if (question_id && custom_item_id) {
+            await fs.unlink(req.file.path).catch(() => { });
+            return res.status(400).json({
+                error: 'Specificare question_id O custom_item_id (non entrambi)',
+                code: 'VALIDATION_ERROR'
+            });
+        }
+
         // Verifica ownership audit o NC
         if (audit_id) {
             // Supporta sia audit_id INT che audit_uuid (UUID)
             const numericAuditId = parseInt(audit_id);
             let resolvedAuditId;
+            let auditCustomChecklistId = null;
 
             if (!isNaN(numericAuditId)) {
                 const auditCheck = await query(`
-        SELECT audit_id FROM audits
+        SELECT audit_id, custom_checklist_id FROM audits
         WHERE audit_id = @audit_id AND organization_id = @organization_id AND is_deleted = 0
       `, { audit_id: numericAuditId, organization_id });
                 if (auditCheck.recordset.length === 0) {
@@ -251,10 +266,11 @@ async function uploadAttachment(req, res) {
                     return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
                 }
                 resolvedAuditId = numericAuditId;
+                auditCustomChecklistId = auditCheck.recordset[0].custom_checklist_id;
             } else {
                 // UUID: risolvi a numeric audit_id
                 const auditCheck = await query(`
-        SELECT audit_id FROM audits
+        SELECT audit_id, custom_checklist_id FROM audits
         WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0
       `, { audit_uuid: audit_id, organization_id });
                 if (auditCheck.recordset.length === 0) {
@@ -263,9 +279,33 @@ async function uploadAttachment(req, res) {
                     return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
                 }
                 resolvedAuditId = auditCheck.recordset[0].audit_id;
+                auditCustomChecklistId = auditCheck.recordset[0].custom_checklist_id;
             }
             // Sostituisci audit_id con il valore numerico risolto (usato nell'INSERT)
             req.body.audit_id = resolvedAuditId;
+
+            // Se custom_item_id: verifica che l'audit abbia checklist custom e che l'item appartenga a quella checklist
+            if (custom_item_id) {
+                if (!auditCustomChecklistId) {
+                    await fs.unlink(req.file.path).catch(() => { });
+                    return res.status(400).json({
+                        error: 'custom_item_id richiede un audit con checklist personalizzata',
+                        code: 'VALIDATION_ERROR'
+                    });
+                }
+                const itemCheck = await query(`
+          SELECT 1 FROM custom_checklist_items cci
+          INNER JOIN custom_checklist_sections ccs ON cci.section_id = ccs.id
+          WHERE cci.id = @custom_item_id AND ccs.custom_checklist_id = @custom_checklist_id
+        `, { custom_item_id: parseInt(custom_item_id), custom_checklist_id: auditCustomChecklistId });
+                if (itemCheck.recordset.length === 0) {
+                    await fs.unlink(req.file.path).catch(() => { });
+                    return res.status(400).json({
+                        error: 'custom_item_id non valido per questa checklist',
+                        code: 'VALIDATION_ERROR'
+                    });
+                }
+            }
         }
 
         if (nc_id) {
@@ -293,6 +333,7 @@ async function uploadAttachment(req, res) {
         audit_id,
         nc_id,
         question_id,
+        custom_item_id,
         file_name,
         file_type,
         file_size,
@@ -308,6 +349,7 @@ async function uploadAttachment(req, res) {
         @audit_id,
         @nc_id,
         @question_id,
+        @custom_item_id,
         @file_name,
         @file_type,
         @file_size,
@@ -322,6 +364,7 @@ async function uploadAttachment(req, res) {
             audit_id: req.body.audit_id ? parseInt(req.body.audit_id) : null,
             nc_id: nc_id ? parseInt(nc_id) : null,
             question_id: question_id ? parseInt(question_id) : null,
+            custom_item_id: custom_item_id ? parseInt(custom_item_id) : null,
             file_name: req.file.originalname,
             file_type: path.extname(req.file.originalname).toLowerCase(),
             file_size: req.file.size,

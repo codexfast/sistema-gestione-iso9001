@@ -608,6 +608,22 @@
   color: #666;
 }
 
+.form-hint.block-hint {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #f0f7ff;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.audit-type-section .section-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
 .error-message {
   display: block;
   margin-top: 5px;

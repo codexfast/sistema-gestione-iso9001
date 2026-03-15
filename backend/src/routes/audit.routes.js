@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const auditController = require('../controllers/audit.controller');
+const customChecklistController = require('../controllers/customChecklist.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
 // Tutti gli endpoint richiedono autenticazione
@@ -15,6 +16,10 @@ router.get('/audits', auditController.listAudits);
 
 // GET /api/v1/audits/:id - Dettagli audit singolo
 router.get('/audits/:id', auditController.getAuditById);
+
+// Custom checklist responses (Phase 5) - prima di altre route con :id
+router.get('/audits/:auditId/custom-checklist-responses', customChecklistController.getCustomChecklistResponses);
+router.put('/audits/:auditId/custom-checklist-responses', customChecklistController.saveCustomChecklistResponses);
 
 // GET /api/v1/audits/:id/statistics - Statistiche audit (conformità per sezione)
 router.get('/audits/:id/statistics', auditController.getAuditStatistics);

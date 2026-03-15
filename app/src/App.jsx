@@ -7,6 +7,7 @@ import CompaniesPage from "./components/CompaniesPage";
 import ChecklistAdminPage from "./components/ChecklistAdminPage";
 import UsersAdminPage from "./components/UsersAdminPage";
 import ReportTemplatesAdminPage from "./components/ReportTemplatesAdminPage";
+import CustomChecklistsPage from "./components/CustomChecklistsPage";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -61,6 +62,32 @@ function AppContent() {
         </header>
         <main className="container">
           <UsersAdminPage onBack={() => setViewMode("audit")} />
+        </main>
+        <footer className="app-footer">
+          <div className="container">
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Vista Checklist personalizzate (admin/auditor)
+  if (viewMode === "custom-checklists") {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="container header-flex">
+            <h1>SGQ — Sistema di Gestione</h1>
+            <div className="user-info">
+              <span className="user-name">👤 {user.full_name || user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
+            </div>
+          </div>
+        </header>
+        <main className="container">
+          <CustomChecklistsPage onBack={() => setViewMode("audit")} />
         </main>
         <footer className="app-footer">
           <div className="container">
@@ -172,9 +199,14 @@ function AppContent() {
                   </>
                 )}
                 {canManageTemplates && (
-                  <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
-                    📄 Template report
-                  </button>
+                  <>
+                    <button type="button" className="nav-link" onClick={() => setViewMode("custom-checklists")}>
+                      📋 Checklist personalizzate
+                    </button>
+                    <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
+                      📄 Template report
+                    </button>
+                  </>
                 )}
               </nav>
               <div className="user-info">
@@ -229,9 +261,14 @@ function AppContent() {
                 </>
               )}
               {canManageTemplates && (
-                <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
-                  📄 Template report
-                </button>
+                <>
+                  <button type="button" className="nav-link" onClick={() => setViewMode("custom-checklists")}>
+                    📋 Checklist personalizzate
+                  </button>
+                  <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
+                    📄 Template report
+                  </button>
+                </>
               )}
             </nav>
             {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}

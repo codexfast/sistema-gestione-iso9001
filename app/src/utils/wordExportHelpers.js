@@ -708,3 +708,104 @@ export function buildRileviSummaryOoxml(checklist) {
 
     return xmlTable(rows, PCT);
 }
+
+// ─── Checklist custom (Phase 7) ─────────────────────────────────────────────────
+/**
+ * Costruisce OOXML per checklist personalizzata: sezioni, voci, evidence_blocks.
+ * @param {Object} customChecklist - { sections: [{ id, code, title, items: [{ id, code, title }] }] }
+ * @param {Object} customResponses - { custom_item_id: evidence_blocks[] }
+ * @param {Array} auditAttachments - allegati con custom_item_id
+ * @param {Function} getViewUrl
+ * @param {Object} options
+ * @param {Array|null} imageRegistry
+ */
+export function buildCustomChecklistSectionOoxml(customChecklist, customResponses = {}, auditAttachments = [], getViewUrl = null, options = {}, imageRegistry = null) {
+    let xml = '';
+
+    if (!customChecklist?.sections?.length) {
+        xml += xmlPara(xmlRun('Nessuna sezione nella checklist.', { ital: true }), { sa: 160 });
+        return xml;
+    }
+
+    const usePreview = options.photoMode === 'preview';
+    const attById = new Map();
+    (auditAttachments || []).forEach(a => {
+        const id = a.serverAttachmentId ?? a.id;
+        if (id) attById.set(id, a);
+    });
+
+    customChecklist.sections
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .forEach((sec) => {
+            xml += xmlPara(
+                xmlRun((sec.code || '') + ' \u2014 ' + (sec.title || '').toUpperCase(), { bold: true, size: 24, color: '1D4ED8' }),
+                { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
+            );
+
+            (sec.items || [])
+                .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                .forEach((item) => {
+                    const blocks = customResponses[item.id] || [];
+                    const itemTitle = (item.code || '') + ' \u2014 ' + (item.title || '');
+
+                    if (blocks.length === 0) {
+                        xml += xmlPara(xmlRun(itemTitle, { bold: true, size: 20 }), { sb: 120, sa: 80 });
+                        xml += xmlPara('\u2014 Nessuna evidenza compilata.', { ital: true, sa: 160 });
+                        return;
+                    }
+
+                    xml += xmlPara(xmlRun(itemTitle, { bold: true, size: 20 }), { sb: 120, sa: 80 });
+
+                    blocks.forEach((blk, i) => {
+                        const text = (blk.text || '').trim();
+                        const attId = blk.attachment_id;
+
+                        if (text) {
+                            const parts = text.split(/\*\*(.*?)\*\*/g);
+                            const content = parts.map((p, j) =>
+                                j % 2 === 0
+                                    ? xmlRun(escXml(p), { size: 18 })
+                                    : xmlRun(escXml(p), { bold: true, size: 18 })
+                            ).join('');
+                            xml += xmlPara(content, { sa: 60 });
+                        }
+
+                        if (attId && getViewUrl) {
+                            const att = attById.get(attId);
+                            const mimeType = att?.mimeType || att?.imageMimeType;
+                            if (IMAGE_MIME_TYPES.has(mimeType) && usePreview && imageRegistry) {
+                                const imgId = attId + 10000 + i;
+                                const rId = 'rId' + imgId;
+                                const ext = IMAGE_EXTS[mimeType] || 'png';
+                                if (att?.imageBase64) {
+                                    imageRegistry.push({ rId, imgId, base64: att.imageBase64, mimeType, ext });
+                                    xml += xmlPara('', { sa: 40 });
+                                    xml += xmlPara(xmlImageOoxml(rId, imgId), { sa: 80 });
+                                }
+                            } else if (getViewUrl) {
+                                xml += xmlPara('', { sa: 40 });
+                                xml += xmlHyperlinkPara(getViewUrl(attId), '\uD83D\uDCCE Allegato', { size: 18 });
+                            }
+                        }
+                    });
+
+                    xml += xmlPara('', { sa: 200 });
+                });
+        });
+
+    return xml;
+}
+
+/**
+ * Riepilogo per checklist custom (sostituisce RILIEVI_MARKER quando non c'è CONF/NC/OSS/OM)
+ */
+export function buildCustomRileviSummaryOoxml(customChecklist, customResponses = {}) {
+    const totalItems = (customChecklist?.sections || []).reduce((s, sec) => s + (sec.items?.length || 0), 0);
+    const filledItems = Object.keys(customResponses).filter(k => (customResponses[k] || []).length > 0).length;
+    const totalBlocks = Object.values(customResponses).reduce((s, arr) => s + (arr || []).length, 0);
+
+    return xmlPara(
+        xmlRun('Checklist personalizzata: ' + totalItems + ' voci, ' + filledItems + ' compilate, ' + totalBlocks + ' evidenze.', { ital: true, size: 18 }),
+        { sa: 160 }
+    );
+}

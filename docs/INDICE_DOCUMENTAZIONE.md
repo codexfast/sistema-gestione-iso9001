@@ -15,6 +15,7 @@
 | **Quick-ref DB e API** | [DATABASE.md](DATABASE.md), [BACKEND_API.md](BACKEND_API.md) | Riferimento rapido (spostati da root) |
 | **Deploy Netlify** | [NETLIFY_DEPLOYMENT.md](NETLIFY_DEPLOYMENT.md) | Build, deploy, convenzioni Git |
 | **Perdita connessione (offline/mobile)** | [GESTIONE_PERDITA_CONNESSIONE.md](GESTIONE_PERDITA_CONNESSIONE.md) | Comportamento offline, sync, health check, mobile |
+| **Utenti, checklist, sistemi, report** | [SCHEMA_UTENTI_CHECKLIST_SISTEMI_REPORT.md](SCHEMA_UTENTI_CHECKLIST_SISTEMI_REPORT.md) | Organization/user, ruoli, checklist ISO e custom, template report, self-assessment |
 | **Decisioni architetturali** | [adr/README.md](adr/README.md) | Indice ADR; dettaglio in `adr/ADR-*.md` |
 | **Manuali** | [MANUALE_UTENTE.md](MANUALE_UTENTE.md), [MANUALE_OPERATIVO_FASE1.md](MANUALE_OPERATIVO_FASE1.md) | Uso applicazione e procedure |
 | **Riferimenti tecnici** | [REFERENCE.md](REFERENCE.md), [DATABASE_MAPPING.md](DATABASE_MAPPING.md) | Mapping, sync, dettagli |
