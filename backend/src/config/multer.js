@@ -94,4 +94,38 @@ const upload = multer({
     }
 });
 
-module.exports = { upload };
+// Storage per report template (.docx) - uploads/templates/{org_id}/
+const templateStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const orgId = req.user?.organization_id || 'unknown';
+        const templatePath = path.join(UPLOAD_DIR, 'templates', String(orgId));
+        if (!fs.existsSync(templatePath)) {
+            fs.mkdirSync(templatePath, { recursive: true });
+        }
+        cb(null, templatePath);
+    },
+    filename: function (req, file, cb) {
+        const timestamp = Date.now();
+        const randomString = crypto.randomBytes(6).toString('hex');
+        const ext = path.extname(file.originalname).toLowerCase() || '.docx';
+        const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+        cb(null, `${timestamp}_${randomString}_${basename}${ext}`);
+    }
+});
+
+const templateFileFilter = (req, file, cb) => {
+    const allowed = ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (allowed.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Solo file .docx consentiti'), false);
+    }
+};
+
+const uploadTemplate = multer({
+    storage: templateStorage,
+    fileFilter: templateFileFilter,
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 } // 5MB
+});
+
+module.exports = { upload, uploadTemplate };
