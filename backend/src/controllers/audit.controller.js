@@ -5,6 +5,7 @@
 
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
+const { hardDeleteAudit } = require('../services/auditMaintenance.service');
 const { getAllowedStandardIds } = require('./auth.controller');
 
 /**
@@ -598,21 +599,25 @@ async function updateAudit(req, res) {
 
 /**
  * DELETE /api/v1/audits/:id
- * Soft delete di un audit (is_deleted = 1)
+ * Hard delete per admin/draft, soft delete per il resto.
  */
 async function deleteAudit(req, res) {
     try {
         const { id } = req.params;
-        const { organization_id } = req.user;
+        const { organization_id, role } = req.user;
 
         const numericId = parseInt(id, 10);
         const isUuid = isNaN(numericId) && typeof id === 'string' && id.length > 10;
 
-        // Verifica esistenza e ownership (per id numerico o UUID)
+        // Recupera audit (id numerico, status) per UUID o ID
         const existingAudit = await query(
             isUuid
-                ? `SELECT audit_id FROM audits WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0`
-                : `SELECT audit_id FROM audits WHERE audit_id = @id AND organization_id = @organization_id AND is_deleted = 0`,
+                ? `SELECT audit_id, audit_number, status 
+                   FROM audits 
+                   WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0`
+                : `SELECT audit_id, audit_number, status 
+                   FROM audits 
+                   WHERE audit_id = @id AND organization_id = @organization_id AND is_deleted = 0`,
             isUuid ? { audit_uuid: id, organization_id } : { id: numericId, organization_id }
         );
 
@@ -623,9 +628,26 @@ async function deleteAudit(req, res) {
             });
         }
 
-        const auditIdToDelete = existingAudit.recordset[0].audit_id;
+        const auditRow = existingAudit.recordset[0];
+        const auditIdToDelete = auditRow.audit_id;
+        const canHardDelete = role === 'admin' || auditRow.status === 'draft';
 
-        // Soft delete
+        if (canHardDelete) {
+            const ok = await hardDeleteAudit(auditIdToDelete, organization_id);
+            if (!ok) {
+                return res.status(500).json({
+                    error: 'Hard delete fallito',
+                    code: 'HARD_DELETE_FAILED'
+                });
+            }
+            logger.info('Audit deleted (hard)', { audit_id: auditIdToDelete, organization_id });
+            return res.json({
+                success: true,
+                message: 'Audit eliminato definitivamente'
+            });
+        }
+
+        // Soft delete per audit non draft / non admin
         await query(`
       UPDATE audits
       SET is_deleted = 1, deleted_at = GETDATE(), updated_at = GETDATE()
@@ -636,7 +658,7 @@ async function deleteAudit(req, res) {
 
         res.json({
             success: true,
-            message: 'Audit eliminato con successo'
+            message: 'Audit eliminato (soft delete)'
         });
 
     } catch (error) {
