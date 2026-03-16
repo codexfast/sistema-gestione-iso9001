@@ -216,16 +216,16 @@ git push origin main
 # Netlify deploy automatico — ~2 minuti
 ```
 
-### Backend (manuale SCP)
+### Backend (manuale SCP / script)
+Da PowerShell, dalla root del repo: `backend/scripts/deploy-controllers-to-vps.ps1` (usa pscp; richiede PuTTY). In alternativa, copia manualmente i controller modificati (es. `audit.controller.js`, `customChecklist.controller.js`) e riavvia Node sul VPS. Dettaglio: [docs/DEPLOY_CHECKLIST_RELEASE.md](docs/DEPLOY_CHECKLIST_RELEASE.md).
 ```bash
-# 1. Copia il/i file modificato/i
-scp -P 1122 backend/src/controllers/audit.controller.js \
+# 1. Copia i file (es. audit + customChecklist controller)
+scp -P 1122 backend/src/controllers/audit.controller.js backend/src/controllers/customChecklist.controller.js \
   spascarella@www.fr-busato.it:/var/www/sgq-backend/src/controllers/
 
-# 2. Restart server
-fuser -k 3000/tcp
-sleep 2 && cd /var/www/sgq-backend && nohup node src/server.js > /var/www/sgq-backend/app.log 2>&1 &
-sleep 4 && cat /var/www/sgq-backend/app.log
+# 2. SSH sul server e restart
+ssh -p 1122 spascarella@www.fr-busato.it
+# Sul server: fuser -k 3000/tcp; sleep 2; cd /var/www/sgq-backend && nohup node src/server.js > app.log 2>&1 &
 ```
 
 ### Template Word (richiede commit)
@@ -238,4 +238,4 @@ git push origin main
 
 ---
 
-*Aggiornato: 2026-03-02 — Sessione fix standard (4 bug), ISO 14001 frontend, ADR-004/005, handoff Cursor*
+*Aggiornato: 2026-03-15 — Release checklist custom, azienda anagrafica, sync UUID; deploy checklist e script VPS*

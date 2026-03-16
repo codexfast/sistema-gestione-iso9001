@@ -1,6 +1,6 @@
 # Indice e convenzioni documentazione
 
-> Punto di ingresso per capire dove si trova cosa. Aggiornato: 2026-03.
+> Punto di ingresso per capire dove si trova cosa. Aggiornato: 2026-03-15.
 
 ---
 
@@ -14,6 +14,7 @@
 | **Schema DB** | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | Leggere prima di modificare il DB |
 | **Quick-ref DB e API** | [DATABASE.md](DATABASE.md), [BACKEND_API.md](BACKEND_API.md) | Riferimento rapido (spostati da root) |
 | **Deploy Netlify** | [NETLIFY_DEPLOYMENT.md](NETLIFY_DEPLOYMENT.md) | Build, deploy, convenzioni Git |
+| **Checklist deploy release** | [DEPLOY_CHECKLIST_RELEASE.md](DEPLOY_CHECKLIST_RELEASE.md) | Passi per release (build, backend VPS, push, smoke test) |
 | **Perdita connessione (offline/mobile)** | [GESTIONE_PERDITA_CONNESSIONE.md](GESTIONE_PERDITA_CONNESSIONE.md) | Comportamento offline, sync, health check, mobile |
 | **Utenti, checklist, sistemi, report** | [SCHEMA_UTENTI_CHECKLIST_SISTEMI_REPORT.md](SCHEMA_UTENTI_CHECKLIST_SISTEMI_REPORT.md) | Organization/user, ruoli, checklist ISO e custom, template report, self-assessment |
 | **Decisioni architetturali** | [adr/README.md](adr/README.md) | Indice ADR; dettaglio in `adr/ADR-*.md` |

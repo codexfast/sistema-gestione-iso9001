@@ -1,10 +1,10 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 08 marzo 2026
-> **Prossimo Step**: Test end-to-end su ISO 3834-2 e RDP_MSN → Template Word per nuovi standard
+> **Ultimo Aggiornamento**: 15 marzo 2026
+> **Prossimo Step**: Smoke test su Netlify; eventuali fix impaginazione report Word per checklist custom
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
-> **Riferimenti**: [docs/sessions/SESSION_NOTES_20260308.md](sessions/SESSION_NOTES_20260308.md) (stato aggiornato) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
+> **Riferimenti**: [docs/sessions/SESSION_NOTES_20260315.md](sessions/SESSION_NOTES_20260315.md) (stato aggiornato) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 
 ---
 
@@ -84,7 +84,7 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 
 ---
 
-## Stato Avanzamento al 08/03/2026
+## Stato Avanzamento al 15/03/2026
 
 | Area | Descrizione | Status |
 |---|---|---|
@@ -113,6 +113,11 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 | **Fix backend paths** | require() corretti in certificationFindings | ✅ Completato (07/03) |
 | **Fix colonne Word fisse** | tblLayout fixed + ordine OOXML corretto | ✅ Completato (08/03) |
 | **Fix allegati in Word** | auditId numerico, hyperlink fldSimple cliccabili | ✅ Completato (08/03) |
+| **Checklist personalizzate** | Sezioni/items dinamici, evidenze, template report assegnabile, migrazioni 025-026 | ✅ Completato (15/03) |
+| **Report template per custom** | Risoluzione template, VerbaleVisita-generic, assegnazione in CustomChecklistsPage | ✅ Completato (15/03) |
+| **Azienda committente da anagrafica** | Menu a tendina da companies (AuditSelector) | ✅ Completato (15/03) |
+| **Sync/API con UUID** | create/delete audit e custom-checklist-responses accettano UUID; merge preserva customChecklistId | ✅ Completato (15/03) |
+| **Deploy backend VPS** | pscp/plink per controller, script deploy-controllers-to-vps.ps1 | ✅ Completato (15/03) |
 | Export Word ISO 3834 | Da testare su produzione | 🔲 Da testare |
 | **Foto embedded in Word** | pic:cNvPr id duplicati → doc corrotto; da reimplementare | 🔲 Backlog tecnico |
 | Pagina Admin utenti | UI gestione utenti e abbonamenti | 🔲 Backlog |

@@ -275,11 +275,10 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
   const effectiveOrgId = user?.auditor_org_id ?? null;
 
   const loadCompanies = useCallback(async () => {
-    const orgId = effectiveOrgId;
-    if (!orgId) return;
     setCompaniesLoading(true);
     try {
-      const res = await apiService.getCompanies({ auditor_org_id: orgId });
+      const params = effectiveOrgId ? { auditor_org_id: effectiveOrgId } : {};
+      const res = await apiService.getCompanies(params);
       setCompanies(res.data || []);
     } catch (err) {
       console.warn("Caricamento aziende:", err.message);
@@ -290,9 +289,8 @@ function CreateAuditModal({ audits, currentAudit, isReaudit, onClose, onCreate }
   }, [effectiveOrgId]);
 
   useEffect(() => {
-    if (effectiveOrgId) loadCompanies();
-    else setCompanies([]);
-  }, [effectiveOrgId, loadCompanies]);
+    loadCompanies();
+  }, [loadCompanies]);
 
   const [errors, setErrors] = useState({});
   const [pendingInfo, setPendingInfo] = useState(null); // { count, lastAuditId, issues }

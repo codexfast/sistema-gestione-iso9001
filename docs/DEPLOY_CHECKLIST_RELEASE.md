@@ -2,6 +2,8 @@
 
 Usa questa lista per mettere in produzione la nuova versione in modo ordinato e verificabile.
 
+**Ultimo deploy completato**: 15/03/2026 — release checklist custom, azienda da anagrafica, sync UUID; frontend su Netlify (main), backend VPS aggiornato con pscp/plink. Riferimento: [SESSION_NOTES_20260315.md](sessions/SESSION_NOTES_20260315.md).
+
 ---
 
 ## 1. Pre-deploy (locale)

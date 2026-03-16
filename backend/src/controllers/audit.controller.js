@@ -908,6 +908,16 @@ async function upsertAudit(req, res) {
                     code: 'VALIDATION_ERROR'
                 });
             }
+
+            // Determina lo standard principale da salvare nella colonna standard_id:
+            // - se ci sono standard selezionati (solo ISO o audit ibrido), usa il primo di standardIdsToSync
+            // - se NON ci sono standard ma esiste una checklist personalizzata, lascia NULL (solo checklist custom)
+            // - altrimenti (nessuno standard e nessuna checklist custom), fallback a 1 (ISO 9001)
+            const hasAnyStandard = Array.isArray(standardIdsToSync) && standardIdsToSync.length > 0;
+            const stdIdForMainColumn = hasAnyStandard
+                ? standardIdsToSync[0]
+                : (hasCustomChecklist ? null : 1);
+
             // Usiamo table variable per OUTPUT (compatibilità trigger SQL Server)
             const result = await query(`
         DECLARE @out TABLE (audit_id INT, audit_uuid UNIQUEIDENTIFIER, updated_at DATETIME2);
@@ -979,7 +989,7 @@ async function upsertAudit(req, res) {
                 conformities_count: conformities_count || 0,
                 non_conformities_count: non_conformities_count || 0,
                 completion_percentage: completion_percentage || 0,
-                standard_id: standard_id || 1,
+                standard_id: stdIdForMainColumn,
                 custom_checklist_id: hasCustomChecklist ? parseInt(custom_checklist_id, 10) : null,
                 audit_extra_data: audit_extra_data ? JSON.stringify(audit_extra_data) : null,
                 organization_id,
