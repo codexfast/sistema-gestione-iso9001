@@ -723,74 +723,124 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
     let xml = '';
 
     if (!customChecklist?.sections?.length) {
-        xml += xmlPara(xmlRun('Nessuna sezione nella checklist.', { ital: true }), { sa: 160 });
-        return xml;
+        return xmlPara(xmlRun('Nessuna sezione nella checklist.', { ital: true }), { sa: 160 });
     }
 
+    // Layout tabellare richiesto:
+    // - 4 colonne
+    // - Riga sezione: col1 numero sezione, col2+3+4 unite (descrizione sezione)
+    // - Riga evidenza: col1 numero sotto-sezione, col2 commenti/foto, col3-4 vuote
+    const C = [900, 6400, 1400, 1400]; // DXA
+    const secSpanDxa = C[1] + C[2] + C[3];
     const usePreview = options.photoMode === 'preview';
+
     const attById = new Map();
     (auditAttachments || []).forEach(a => {
         const id = a.serverAttachmentId ?? a.id;
-        if (id) attById.set(id, a);
+        if (id != null) attById.set(Number(id), a);
     });
+
+    const toRichTextRuns = (text) => {
+        const parts = String(text || '').split(/\*\*(.*?)\*\*/g);
+        return parts.map((p, i) =>
+            i % 2 === 0
+                ? xmlRun(escXml(p), { size: 18 })
+                : xmlRun(escXml(p), { bold: true, size: 18 })
+        ).join('');
+    };
+
+    const sectionHeaderRow = (sec) => xmlRow([
+        xmlCell(
+            xmlPara(xmlRun(String(sec.code || '').trim() || '\u2014', { bold: true, size: 20 }), { align: 'center' }),
+            { dxa: C[0], fill: 'D9D9D9', va: 'center' }
+        ),
+        xmlCell(
+            xmlPara(xmlRun(String(sec.title || '').trim() || 'SEZIONE', { bold: true, size: 20 }), { align: 'left' }),
+            { span: 3, dxa: secSpanDxa, fill: 'D9D9D9', va: 'center', ml: 120 }
+        ),
+    ]);
+
+    const emptyCell = (idx) => xmlCell(xmlPara(''), { dxa: C[idx], va: 'top' });
 
     customChecklist.sections
         .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
         .forEach((sec) => {
-            xml += xmlPara(
-                xmlRun((sec.code || '') + ' \u2014 ' + (sec.title || '').toUpperCase(), { bold: true, size: 24, color: '1D4ED8' }),
-                { style: 'Titolo1', pageBreak: true, sb: 0, sa: 200 }
-            );
+            const rows = [sectionHeaderRow(sec)];
+            const items = (sec.items || []).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
-            (sec.items || [])
-                .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
-                .forEach((item) => {
-                    const blocks = customResponses[item.id] || [];
-                    const itemTitle = (item.code || '') + ' \u2014 ' + (item.title || '');
+            if (!items.length) {
+                rows.push(xmlRow([
+                    xmlCell(xmlPara('\u2014', { align: 'center' }), { dxa: C[0] }),
+                    xmlCell(xmlPara(xmlRun('Nessuna sotto-sezione disponibile.', { ital: true })), { dxa: C[1] }),
+                    emptyCell(2),
+                    emptyCell(3),
+                ]));
+            }
 
-                    if (blocks.length === 0) {
-                        xml += xmlPara(xmlRun(itemTitle, { bold: true, size: 20 }), { sb: 120, sa: 80 });
-                        xml += xmlPara('\u2014 Nessuna evidenza compilata.', { ital: true, sa: 160 });
-                        return;
+            items.forEach((item) => {
+                const blocks = Array.isArray(customResponses[item.id]) ? customResponses[item.id] : [];
+                const itemCode = String(item.code || '').trim() || '\u2014';
+                const itemTitle = String(item.title || '').trim();
+
+                if (blocks.length === 0) {
+                    rows.push(xmlRow([
+                        xmlCell(xmlPara(itemCode, { align: 'center' }), { dxa: C[0], va: 'top' }),
+                        xmlCell(
+                            xmlPara([
+                                xmlRun(itemTitle || 'Voce checklist', { bold: true, size: 18 }),
+                                xmlRun('\n\u2014 Nessuna evidenza compilata.', { ital: true, size: 18 }),
+                            ].join('')),
+                            { dxa: C[1], va: 'top', ml: 120 }
+                        ),
+                        emptyCell(2),
+                        emptyCell(3),
+                    ]));
+                    return;
+                }
+
+                blocks.forEach((blk, i) => {
+                    const text = String(blk?.text || '').trim();
+                    const attId = blk?.attachment_id ? Number(blk.attachment_id) : null;
+                    const att = attId != null ? attById.get(attId) : null;
+                    const mimeType = att?.imageMimeType || att?.mimeType || '';
+                    const rowCode = i === 0 ? itemCode : `${itemCode}.${i + 1}`;
+
+                    let detail = '';
+                    if (i === 0 && itemTitle) {
+                        detail += xmlPara(xmlRun(itemTitle, { bold: true, size: 18 }), { sa: 50, sb: 40 });
+                    }
+                    if (text) {
+                        detail += xmlPara(toRichTextRuns(text), { sa: 40, sb: 40 });
                     }
 
-                    xml += xmlPara(xmlRun(itemTitle, { bold: true, size: 20 }), { sb: 120, sa: 80 });
-
-                    blocks.forEach((blk, i) => {
-                        const text = (blk.text || '').trim();
-                        const attId = blk.attachment_id;
-
-                        if (text) {
-                            const parts = text.split(/\*\*(.*?)\*\*/g);
-                            const content = parts.map((p, j) =>
-                                j % 2 === 0
-                                    ? xmlRun(escXml(p), { size: 18 })
-                                    : xmlRun(escXml(p), { bold: true, size: 18 })
-                            ).join('');
-                            xml += xmlPara(content, { sa: 60 });
+                    if (attId != null && getViewUrl) {
+                        if (usePreview && imageRegistry && IMAGE_MIME_TYPES.has(mimeType) && att?.imageBase64?.startsWith('data:image/')) {
+                            const imgId = 20000 + attId + i;
+                            const rId = `rId${imgId}`;
+                            const ext = IMAGE_EXTS[mimeType] || 'jpg';
+                            imageRegistry.push({ rId, imgId, base64: att.imageBase64, mimeType, ext });
+                            detail += xmlPara(xmlImageOoxml(rId, imgId), { sa: 60, sb: 60 });
+                            detail += xmlHyperlinkPara(getViewUrl(attId), '\uD83D\uDD17 Apri allegato', { size: 18 });
+                        } else {
+                            detail += xmlHyperlinkPara(getViewUrl(attId), '\uD83D\uDCCE Allegato', { size: 18 });
                         }
+                    }
 
-                        if (attId && getViewUrl) {
-                            const att = attById.get(attId);
-                            const mimeType = att?.mimeType || att?.imageMimeType;
-                            if (IMAGE_MIME_TYPES.has(mimeType) && usePreview && imageRegistry) {
-                                const imgId = attId + 10000 + i;
-                                const rId = 'rId' + imgId;
-                                const ext = IMAGE_EXTS[mimeType] || 'png';
-                                if (att?.imageBase64) {
-                                    imageRegistry.push({ rId, imgId, base64: att.imageBase64, mimeType, ext });
-                                    xml += xmlPara('', { sa: 40 });
-                                    xml += xmlPara(xmlImageOoxml(rId, imgId), { sa: 80 });
-                                }
-                            } else if (getViewUrl) {
-                                xml += xmlPara('', { sa: 40 });
-                                xml += xmlHyperlinkPara(getViewUrl(attId), '\uD83D\uDCCE Allegato', { size: 18 });
-                            }
-                        }
-                    });
+                    if (!detail) {
+                        detail = xmlPara(xmlRun('\u2014 Evidenza senza contenuto testuale.', { ital: true, size: 18 }));
+                    }
 
-                    xml += xmlPara('', { sa: 200 });
+                    rows.push(xmlRow([
+                        xmlCell(xmlPara(rowCode, { align: 'center' }), { dxa: C[0], va: 'top' }),
+                        xmlCell(detail, { dxa: C[1], va: 'top', ml: 120 }),
+                        emptyCell(2),
+                        emptyCell(3),
+                    ]));
                 });
+            });
+
+            xml += xmlTable(rows, C, 100, true);
+            xml += xmlPara('', { sa: 180 });
         });
 
     return xml;

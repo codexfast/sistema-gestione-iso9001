@@ -48,7 +48,7 @@ const TEMPLATE_MAP = {
     'ISO_45001':  '/templates/ISO45001-audit-report.docx',
     'ISO_3834_2': '/templates/ISO3834-audit-report.docx',
     'default':    '/templates/ISO9001-audit-report.docx',
-    'custom_checklist': '/templates/VerbaleVisita-generic.docx',
+    'custom_checklist': '/templates/Verbale_di_riunione_QTAFI_VIS001.docx',
 };
 
 /**
