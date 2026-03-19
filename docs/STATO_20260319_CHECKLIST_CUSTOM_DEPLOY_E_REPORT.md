@@ -54,3 +54,34 @@ Documento di **memoria operativa**: problemi risolti, cause radice e strategie p
 Dopo verifica build locale: `npm run build` in `app/`, poi commit messaggio tipo:
 
 `fix(export): merge customResponses IndexedDB + server per report Word checklist custom`
+
+---
+
+## 5. Aggiornamento serale (19/03/2026)
+
+### Fix consolidati in produzione (push su `main`)
+- `0ce98bb` — export Word checklist custom con layout tabellare dinamico e template QTAFI.
+- `ac5d981` — fix strutturale sync frontend/backend:
+  - preserva `custom_checklist_id` negli update
+  - evita fallback implicito ISO 9001 su audit custom-only
+  - rende l'upsert non distruttivo quando alcuni campi non sono esplicitamente inviati
+
+### Diagnosi dati audit `2026-06`
+- audit trovato con `custom_checklist_id = NULL` e associazione standard legacy presente.
+- tabella `audit_custom_checklist_responses` senza righe per l'audit (e vuota nel DB al momento del controllo).
+- allegati presenti ma non agganciati a `custom_item_id`.
+
+### Azione eseguita: hard cleanup completo audit test
+- eliminazione definitiva audit `2026-06` e di tutti i dati correlati:
+  - `audits`, `attachments`, `audit_custom_checklist_responses`, `audit_responses`,
+    `pending_issues`, `audit_standards`, `non_conformities`
+- verifica finale residui: `0`.
+
+### Decisione architetturale per evitare recidive
+- creata mini ADR: `docs/adr/ADR-006-auto-reconcile-cache-sync.md`
+- obiettivo: auto-riallineamento cache locale/server senza intervento utente nei casi ordinari.
+
+### Punto di ripresa immediato
+- ricreare audit `2026-06` da zero come custom checklist e validare:
+  - save -> reload -> relogin -> export Word.
+- avviare implementazione Step 1 ADR-006 (`autoReconcileOnStartup`).

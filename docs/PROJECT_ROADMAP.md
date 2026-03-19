@@ -1,10 +1,10 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 15 marzo 2026
-> **Prossimo Step**: Smoke test su Netlify; eventuali fix impaginazione report Word per checklist custom
+> **Ultimo Aggiornamento**: 19 marzo 2026
+> **Prossimo Step**: Ricreazione audit custom `2026-06` + validazione save/reload/relogin/export; avvio ADR-006 auto-reconcile cache/sync
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
-> **Riferimenti**: [docs/sessions/SESSION_NOTES_20260315.md](sessions/SESSION_NOTES_20260315.md) (stato aggiornato) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
+> **Riferimenti**: [docs/sessions/SESSION_NOTES_20260319.md](sessions/SESSION_NOTES_20260319.md) (stato aggiornato) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 
 ---
 
