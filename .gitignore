@@ -48,3 +48,6 @@ coverage/
 
 # Local Netlify folder
 .netlify
+
+# Database backups (contengono dati sensibili)
+database/backups/

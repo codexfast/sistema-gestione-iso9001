@@ -4,20 +4,27 @@
 
 ---
 
+## Aggiornamento 19/03/2026
+
+- **Persistenza checklist custom**: backend VPS allineato (inclusi `src/services/*.js` richiesti da `audit.controller.js`); `sgq-backend.service` deve essere `active (running)` dopo `sudo systemctl restart`.
+- **Report Word**: in `ExportPanel.jsx` le risposte checklist custom per l’export sono **merge** tra server e `currentAudit.customResponses` (IndexedDB), così il report non risulta vuoto se i dati sono solo locali o in transito.
+- **Memoria operativa**: `docs/STATO_20260319_CHECKLIST_CUSTOM_DEPLOY_E_REPORT.md` (problemi risolti, strategie deploy, diagnosi 401/404).
+
+---
+
 ## PUNTO DI RIPRESA — PROSSIMA SESSIONE
 
-**Stato**: ✅ Release in produzione. Frontend su Netlify (push su `main`), backend su VPS aggiornato con pscp/plink.
+**Stato**: ✅ Release in produzione stabile. Frontend su Netlify (push su `main`), backend su VPS allineato (custom-checklists, report-templates, hard delete audit).
 
-**Cosa verificare domani:**
+**Cosa riprendere alla prossima sessione:**
 
-1. **Smoke test** su `https://systemgest.netlify.app`:
-   - Login, menu **Azienda committente** (dropdown da anagrafica)
-   - Nuovo audit con **checklist personalizzata** (sezioni/items dinamici, evidenze)
-   - Sincronizzazione, export Word, eventuale delete audit
-
-2. **Report Word**: impaginazione da rivedere se necessario (segnalato in sessione precedente)
-
-3. **Documentazione**: `docs/DEPLOY_CHECKLIST_RELEASE.md` e `docs/ASSEGNAZIONE_REPORT_E_CHECKLIST.md` per deploy e assegnazione template
+1. **Test operativo completo** audit con checklist personalizzata:
+   - Creazione audit solo checklist custom con utente reale (Camellini / Mason)
+   - Verifica sync immediata (assegnazione `audit_id`), upload allegati, export Word (usa VerbaleVisita-generic o template assegnato)
+2. **Pulizia audit di test**:
+   - Uso consapevole di `cleanup_db.sql` parametrico per rimuovere eventuali nuovi test (hard delete per numero)
+   - Verifica che il pulsante **Elimina** esegua hard delete per `draft` (admin) e soft delete per audit ufficiali
+3. **Report Word**: eventuali fix di impaginazione per Verbale visita (checklist personalizzata)
 
 ---
 

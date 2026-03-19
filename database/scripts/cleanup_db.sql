@@ -63,10 +63,11 @@ BEGIN TRY
     WHERE audit_id IN (SELECT audit_id FROM @AuditIds);
     PRINT '  OK - ' + CAST(@@ROWCOUNT AS NVARCHAR) + ' audit_custom_checklist_responses eliminati';
 
-    -- Rilievi pendenti
+    -- Rilievi pendenti (usano target_audit_id / source_audit_id, non audit_id)
     PRINT 'STEP D: DELETE pending_issues...';
     DELETE FROM pending_issues
-    WHERE audit_id IN (SELECT audit_id FROM @AuditIds);
+    WHERE target_audit_id IN (SELECT audit_id FROM @AuditIds)
+       OR source_audit_id IN (SELECT audit_id FROM @AuditIds);
     PRINT '  OK - ' + CAST(@@ROWCOUNT AS NVARCHAR) + ' pending_issues eliminati';
 
     -- Non conformità

@@ -12,34 +12,34 @@ param(
     [string]$OutputFile = "..\schema.sql"
 )
 
-Write-Host "🔧 Export Schema Database: $Database" -ForegroundColor Cyan
+Write-Host ">> Export Schema Database: $Database" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 
 # Connessione SQL
 $connectionString = "Server=$ServerInstance;Database=$Database;User Id=$Username;Password=$Password;TrustServerCertificate=True;"
 
-# Output header
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-$header = @"
--- =============================================
--- Schema Completo Database: $Database
--- Generato: $timestamp
--- Server: $ServerInstance
--- ATTENZIONE: File generato automaticamente
--- NON modificare manualmente, usa migration SQL
--- =============================================
-
-USE [$Database];
-GO
-
-"@
+# Output header (evitiamo here-string per compatibilita encoding/parsing)
+$timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+$header = @(
+    "-- =============================================",
+    "-- Schema Completo Database: $Database",
+    "-- Generato: $timestamp",
+    "-- Server: $ServerInstance",
+    "-- ATTENZIONE: File generato automaticamente",
+    "-- NON modificare manualmente, usa migration SQL",
+    "-- =============================================",
+    "",
+    "USE [$Database];",
+    'GO',
+    ''
+) -join [Environment]::NewLine
 
 $header | Out-File -FilePath $OutputFile -Encoding UTF8
 
-Write-Host "📋 Esportazione tabelle..." -ForegroundColor Yellow
+Write-Host ">> Esportazione tabelle..." -ForegroundColor Yellow
 
-# Query per ottenere script CREATE TABLE di tutte le tabelle
-$query = @"
+# Query per ottenere script CREATE TABLE di tutte le tabelle (here-string singolo @' '@ evita problemi encoding)
+$query = @'
 SELECT 
     'CREATE TABLE [' + t.name + '] (' + CHAR(13) + CHAR(10) +
     STUFF((
@@ -63,7 +63,7 @@ SELECT
 FROM sys.tables t
 WHERE t.is_ms_shipped = 0
 ORDER BY t.name;
-"@
+'@
 
 try {
     $connection = New-Object System.Data.SqlClient.SqlConnection($connectionString)
@@ -82,9 +82,9 @@ try {
     $reader.Close()
     $connection.Close()
     
-    Write-Host "✅ Schema esportato in: $OutputFile" -ForegroundColor Green
+    Write-Host "OK Schema esportato in: $OutputFile" -ForegroundColor Green
     Write-Host ""
-    Write-Host "📊 Statistiche:" -ForegroundColor Cyan
+    Write-Host ">> Statistiche:" -ForegroundColor Cyan
     
     # Conta righe file
     $lines = (Get-Content $OutputFile).Count
@@ -95,9 +95,9 @@ try {
     Write-Host "   - Tabelle: $tables" -ForegroundColor White
     
 } catch {
-    Write-Host "❌ Errore durante export: $_" -ForegroundColor Red
+    Write-Host "ERRORE durante export: $_" -ForegroundColor Red
     exit 1
 }
 
 Write-Host ""
-Write-Host "✅ Export completato!" -ForegroundColor Green
+Write-Host "OK Export completato!" -ForegroundColor Green

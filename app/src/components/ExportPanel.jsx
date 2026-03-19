@@ -105,6 +105,28 @@ const ExportPanel = () => {
     }
 
     // Fetch checklist custom + risposte (per audit con customChecklistId)
+    // Merge server + IndexedDB: il report deve usare i dati più completi (offline-first).
+    const localCustomResponses = currentAudit?.customResponses && typeof currentAudit.customResponses === "object"
+      ? { ...currentAudit.customResponses }
+      : {};
+    const mergeCustomResponsesForExport = (serverByItem) => {
+      const merged = { ...localCustomResponses };
+      const normalizeBlocks = (b) => (Array.isArray(b) ? b : []);
+      Object.entries(serverByItem || {}).forEach(([idStr, serverBlocks]) => {
+        const idNum = Number(idStr);
+        const key = Number.isFinite(idNum) ? idNum : idStr;
+        const srv = normalizeBlocks(
+          typeof serverBlocks === "string"
+            ? (() => { try { return JSON.parse(serverBlocks || "[]"); } catch { return []; } })()
+            : serverBlocks
+        );
+        const loc = normalizeBlocks(merged[key] ?? merged[idStr]);
+        // Server vince se ha blocchi; altrimenti restano i dati locali (salvati prima del sync)
+        merged[key] = srv.length > 0 ? srv : (loc.length > 0 ? loc : srv);
+      });
+      return merged;
+    };
+
     const customChecklistId = currentAudit?.metadata?.customChecklistId ?? currentAudit?.custom_checklist_id;
     if (customChecklistId) {
       try {
@@ -123,11 +145,15 @@ const ExportPanel = () => {
             byItem[r.custom_item_id] = [];
           }
         });
-        auditForExport.customResponses = byItem;
-        console.log(`📋 [EXPORT] Checklist custom + ${Object.keys(byItem).length} voci con risposte`);
+        auditForExport.customResponses = mergeCustomResponsesForExport(byItem);
+        console.log(
+          `📋 [EXPORT] Checklist custom + server ${Object.keys(byItem).length} righe, merge con locale (${Object.keys(localCustomResponses).length} chiavi)`
+        );
       } catch (err) {
         console.warn('[EXPORT] Checklist custom non disp.:', err.message);
-        auditForExport.customResponses = auditForExport.customResponses ?? {};
+        auditForExport.customResponses = Object.keys(localCustomResponses).length
+          ? localCustomResponses
+          : (auditForExport.customResponses ?? {});
       }
     }
 
