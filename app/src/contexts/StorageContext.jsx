@@ -695,6 +695,10 @@ export function StorageProvider({ children, useMockData = false }) {
                   notes: updated.metadata?.notes,
                   ...calculatedMetrics, // Metriche calcolate da checklist
                   selectedStandards: updated.metadata?.selectedStandards || [],
+                  custom_checklist_id:
+                    updated.metadata?.customChecklistId ??
+                    updated.custom_checklist_id ??
+                    null,
                   updated_at: syncUpdatedAt,
                   // Campi ricchi: persistenza multi-device
                   // Nota: Dashboard li salva dentro metadata (handleMetadataUpdate)

@@ -769,10 +769,13 @@ async function upsertAudit(req, res) {
 
         // Risolve la lista di standard_id da registrare in audit_standards
         // Priorità: standard_ids array (nuovo) > standard_id scalare (legacy) > default ISO 9001 (se no custom_checklist_id)
-        const hasCustomChecklist = custom_checklist_id && parseInt(custom_checklist_id, 10) > 0;
-        const standardIdsToSync = Array.isArray(standard_ids) && standard_ids.length > 0
+        const bodyHasCustomChecklistField = Object.prototype.hasOwnProperty.call(req.body, 'custom_checklist_id');
+        const bodyHasStandardField = Object.prototype.hasOwnProperty.call(req.body, 'standard_id');
+        const bodyHasStandardsArray = Array.isArray(standard_ids);
+        // Standard richiesti esplicitamente dal payload corrente (usati per controllo permessi)
+        const requestedStandardIds = bodyHasStandardsArray
             ? standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0)
-            : (hasCustomChecklist ? [] : [parseInt(standard_id) || 1]);
+            : (bodyHasStandardField ? [parseInt(standard_id) || 1] : []);
 
         // Validazione campi obbligatori
         if (!audit_uuid || !audit_number || !client_name) {
@@ -784,10 +787,10 @@ async function upsertAudit(req, res) {
         }
 
         // Verifica standard consentiti per l'utente (user_standards) — solo se standard presenti
-        if (standardIdsToSync.length > 0) {
+        if (requestedStandardIds.length > 0) {
             const allowedStd = await getAllowedStandardIds(user_id);
             if (allowedStd) {
-                const forbidden = standardIdsToSync.filter(id => !allowedStd.includes(id));
+                const forbidden = requestedStandardIds.filter(id => !allowedStd.includes(id));
                 if (forbidden.length > 0) {
                     return res.status(403).json({
                         error: 'Non sei autorizzato a usare uno o più standard selezionati',
@@ -816,7 +819,7 @@ async function upsertAudit(req, res) {
 
         // Check esistenza per audit_uuid
         const existing = await query(`
-      SELECT audit_id, updated_at, status
+      SELECT audit_id, updated_at, status, standard_id, custom_checklist_id
       FROM audits
       WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id
     `, { audit_uuid, organization_id });
@@ -825,6 +828,21 @@ async function upsertAudit(req, res) {
             // ========== UPDATE ESISTENTE ==========
             const existingAudit = existing.recordset[0];
             const audit_id = existingAudit.audit_id;
+            // Determina il custom checklist effettivo:
+            // - se payload include custom_checklist_id, usa quel valore (anche null per "stacco")
+            // - altrimenti preserva valore esistente in DB
+            const effectiveCustomChecklistId = bodyHasCustomChecklistField
+                ? ((custom_checklist_id && parseInt(custom_checklist_id, 10) > 0) ? parseInt(custom_checklist_id, 10) : null)
+                : (existingAudit.custom_checklist_id ?? null);
+            const hasCustomChecklist = effectiveCustomChecklistId != null;
+
+            // standard_ids da sincronizzare in junction table:
+            // - se array esplicito presente, usa quello
+            // - se custom checklist effettiva presente e nessun array standard, lista vuota
+            // - altrimenti, usa standard_id payload se presente, altrimenti preserva standard_id esistente
+            const standardIdsToSync = bodyHasStandardsArray
+                ? standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0)
+                : (hasCustomChecklist ? [] : [bodyHasStandardField ? (parseInt(standard_id) || 1) : (existingAudit.standard_id || 1)]);
 
             // Conflict detection: se server updated_at > client updated_at
             const serverTime = new Date(existingAudit.updated_at).getTime();
@@ -887,8 +905,8 @@ async function upsertAudit(req, res) {
                 conformities_count: conformities_count || 0,
                 non_conformities_count: non_conformities_count || 0,
                 completion_percentage: completion_percentage || 0,
-                standard_id: standard_id || 1,
-                custom_checklist_id: hasCustomChecklist ? parseInt(custom_checklist_id, 10) : null,
+                standard_id: standardIdsToSync.length > 0 ? standardIdsToSync[0] : null,
+                custom_checklist_id: effectiveCustomChecklistId,
                 audit_extra_data: audit_extra_data ? JSON.stringify(audit_extra_data) : null,
                 organization_id
             });
@@ -935,6 +953,10 @@ async function upsertAudit(req, res) {
             // - se ci sono standard selezionati (solo ISO o audit ibrido), usa il primo di standardIdsToSync
             // - se NON ci sono standard ma esiste una checklist personalizzata, lascia NULL (solo checklist custom)
             // - altrimenti (nessuno standard e nessuna checklist custom), fallback a 1 (ISO 9001)
+            const hasCustomChecklist = custom_checklist_id && parseInt(custom_checklist_id, 10) > 0;
+            const standardIdsToSync = Array.isArray(standard_ids) && standard_ids.length > 0
+                ? standard_ids.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0)
+                : (hasCustomChecklist ? [] : [parseInt(standard_id) || 1]);
             const hasAnyStandard = Array.isArray(standardIdsToSync) && standardIdsToSync.length > 0;
             const stdIdForMainColumn = hasAnyStandard
                 ? standardIdsToSync[0]

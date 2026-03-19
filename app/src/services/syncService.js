@@ -291,8 +291,8 @@ export class SyncService {
          * Ricava il primo standard_id numerico dalla lista selectedStandards.
          * Il backend /audits/sync accetta standard_id singolo (non array).
          */
-        const resolveStandardId = (codes) => {
-            if (!Array.isArray(codes) || codes.length === 0) return 1;
+        const resolveStandardId = (codes, hasCustomChecklist = false) => {
+            if (!Array.isArray(codes) || codes.length === 0) return hasCustomChecklist ? null : 1;
             const first = codes[0];
             return typeof first === 'number' ? first : (STANDARD_CODE_TO_ID[first] ?? 1);
         };
@@ -300,11 +300,16 @@ export class SyncService {
         try {
             // Mappa campi frontend→backend per multi-standard support
             // selectedStandards può essere al top-level (payload piatto) oppure dentro metadata (oggetto audit completo)
+            const customChecklistId = auditData.custom_checklist_id
+                ?? auditData.metadata?.customChecklistId
+                ?? null;
+            const hasCustomChecklist = customChecklistId != null && Number(customChecklistId) > 0;
+
             const rawCodes = auditData.selectedStandards
                 || auditData.metadata?.selectedStandards
                 || auditData.standard_ids
                 || auditData.standardIds
-                || (auditData.standardId ? [auditData.standardId] : ['ISO_9001']);
+                || (auditData.standardId ? [auditData.standardId] : []);
 
             // Converti ogni codice stringa → ID numerico (es. "ISO_14001" → 2)
             const resolvedIds = rawCodes.map(c =>
@@ -323,13 +328,13 @@ export class SyncService {
             const mappedAudit = {
                 ...auditData,
                 // standard_id scalare (retrocompatibilità campo legacy audits.standard_id)
-                standard_id: resolveStandardId(rawCodes),
+                standard_id: resolveStandardId(rawCodes, hasCustomChecklist),
                 // standard_ids array → aggiorna audit_standards junction table con TUTTI gli standard
                 standard_ids: resolvedIds,
                 // company_id da metadata (Fase 1 multi-tenant)
                 company_id: auditData.metadata?.companyId ?? auditData.company_id ?? null,
                 // custom_checklist_id (Phase 6)
-                custom_checklist_id: auditData.custom_checklist_id ?? auditData.metadata?.customChecklistId ?? null,
+                custom_checklist_id: customChecklistId,
                 // Persistenza campi ricchi (generalData, auditObjective, auditOutcome, auditPartyType, fornitoreName)
                 audit_extra_data: Object.keys(auditExtraData).length > 0 ? auditExtraData : null,
             };
