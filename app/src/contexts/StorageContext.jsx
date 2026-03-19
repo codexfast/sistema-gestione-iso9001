@@ -360,6 +360,15 @@ export function StorageProvider({ children, useMockData = false }) {
               if (localAudit?.attachments?.length > 0 && !(serverAudit?.attachments?.length > 0)) {
                 merged.attachments = localAudit.attachments;
               }
+
+              // Preserva evidenze checklist custom se il server non le include
+              // (server->frontend via getAudits non carica customResponses; quindi se esistono in locale vanno mantenute)
+              const localCustomResponses = localAudit?.customResponses;
+              const hasLocalCustomResponses = localCustomResponses && Object.keys(localCustomResponses).length > 0;
+              const serverHasCustomResponses = merged?.customResponses && Object.keys(merged.customResponses).length > 0;
+              if (hasLocalCustomResponses && !serverHasCustomResponses) {
+                merged.customResponses = localCustomResponses;
+              }
               
               return merged;
             })

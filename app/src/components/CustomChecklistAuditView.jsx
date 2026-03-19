@@ -3,18 +3,23 @@
  * Mostra sezioni/voci con blocchi evidenza (testo + allegato).
  * Permette di aggiungere sezioni e voci durante l'audit.
  */
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import apiService from "../services/apiService";
+import { syncService } from "../services/syncService";
+import { useStorage } from "../contexts/StorageContext";
 import "./CustomChecklistAuditView.css";
 
 function CustomChecklistAuditView({ audit, onUpdate }) {
   const customChecklistId = audit?.metadata?.customChecklistId ?? audit?.custom_checklist_id;
   const auditId = audit?.metadata?.auditId ?? audit?.audit_id;
+  const { updateCurrentAudit } = useStorage();
 
   const [checklist, setChecklist] = useState(null);
   const [responses, setResponses] = useState({}); // custom_item_id -> evidence_blocks
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const enqueuedBlobKeysRef = useRef(new Set());
+  const lastFlushedAuditIdRef = useRef(null);
   const [addingSection, setAddingSection] = useState(false);
   const [addingItemBySection, setAddingItemBySection] = useState({}); // sectionId -> true
   const [newSectionCode, setNewSectionCode] = useState("");
@@ -26,26 +31,36 @@ function CustomChecklistAuditView({ audit, onUpdate }) {
     try {
       const clRes = await apiService.getCustomChecklist(customChecklistId);
       setChecklist(clRes?.data ?? null);
-      if (auditId) {
-        const respRes = await apiService.getCustomChecklistResponses(auditId);
-        const byItem = {};
-        (respRes?.data ?? []).forEach((r) => {
-          try {
-            byItem[r.custom_item_id] = typeof r.evidence_blocks === "string"
-              ? JSON.parse(r.evidence_blocks || "[]")
-              : (r.evidence_blocks || []);
-          } catch {
-            byItem[r.custom_item_id] = [];
-          }
-        });
-        setResponses(byItem);
-      } else {
-        setResponses({});
+      const localResponses = audit?.customResponses ?? {};
+
+      if (!auditId) {
+        setResponses(localResponses);
+        return;
       }
+
+      const respRes = await apiService.getCustomChecklistResponses(auditId);
+      const serverByItem = {};
+      (respRes?.data ?? []).forEach((r) => {
+        try {
+          serverByItem[r.custom_item_id] = typeof r.evidence_blocks === "string"
+            ? JSON.parse(r.evidence_blocks || "[]")
+            : (r.evidence_blocks || []);
+        } catch {
+          serverByItem[r.custom_item_id] = [];
+        }
+      });
+
+      // Merge: preserva localResponses per gli item che il server non ha (tipico durante offline)
+      const merged = { ...(localResponses || {}) };
+      Object.entries(serverByItem).forEach(([itemId, blocks]) => {
+        if ((blocks || []).length > 0) merged[itemId] = blocks;
+      });
+
+      setResponses(merged);
     } catch (err) {
       console.error("Errore caricamento checklist custom:", err);
     }
-  }, [customChecklistId, auditId]);
+  }, [customChecklistId, auditId, audit?.customResponses]);
 
   useEffect(() => {
     if (!customChecklistId) return;
@@ -64,22 +79,112 @@ function CustomChecklistAuditView({ audit, onUpdate }) {
     return () => { cancelled = true; };
   }, [customChecklistId, auditId, loadChecklist]);
 
+  // Quando auditId diventa disponibile, "flush" delle risposte locali su server
+  // e avvio upload+patch per eventuali allegati pending_blobKey.
+  useEffect(() => {
+    if (!auditId) return;
+    if (!customChecklistId) return;
+
+    (async () => {
+      try {
+        const responseEntries = Object.entries(responses || {});
+        if (!responseEntries.length) return;
+
+        // Flush solo una volta per ogni auditId (le modifiche successive vengono gestite da saveResponses/enqueue)
+        if (lastFlushedAuditIdRef.current === auditId) return;
+        lastFlushedAuditIdRef.current = auditId;
+
+        // 1) Salva su server tutte le evidence (attachment_id può essere null se pending)
+        const payload = responseEntries.map(([customItemId, evidenceBlocks]) => ({
+          custom_item_id: Number(customItemId),
+          evidence_blocks: evidenceBlocks,
+        }));
+        try {
+          await apiService.saveCustomChecklistResponses(auditId, payload);
+        } catch (err) {
+          // Se non riesce, mettiamo in queue l'update in modo che parta quando torna online
+          await syncService.enqueue("save_custom_checklist_responses", {
+            auditId,
+            responses: payload,
+          });
+        }
+
+        // 2) Queue patch per blocchi con pending_blobKey
+        for (const [customItemId, evidenceBlocks] of responseEntries) {
+          for (const blk of evidenceBlocks || []) {
+            if (!blk?.pending_blobKey) continue;
+            if (blk?.attachment_id) continue; // già risolto
+
+            const blobKey = blk.pending_blobKey;
+            if (enqueuedBlobKeysRef.current.has(blobKey)) continue;
+            enqueuedBlobKeysRef.current.add(blobKey);
+
+            await syncService.enqueue("upload_custom_attachment_and_patch_custom_response", {
+              auditId,
+              customItemId: Number(customItemId),
+              blobKey,
+              blockText: blk?.text || "",
+              category: "evidence",
+              description: "custom checklist evidence (flush)",
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[CustomChecklistAuditView] flush custom checklist fallito:", err?.message || err);
+      }
+    })();
+  }, [auditId, customChecklistId, responses]);
+
   const saveResponses = useCallback(
     async (itemId, blocks) => {
-      if (!auditId) return;
       try {
         setSaving(true);
-        await apiService.saveCustomChecklistResponses(auditId, [
-          { custom_item_id: itemId, evidence_blocks: blocks },
-        ]);
         setResponses((prev) => ({ ...prev, [itemId]: blocks }));
+
+        // Persistenza locale per evitare perdita dati su reload/offline
+        updateCurrentAudit((prevAudit) => ({
+          ...prevAudit,
+          customResponses: {
+            ...(prevAudit.customResponses || {}),
+            [itemId]: blocks,
+          },
+          metadata: {
+            ...prevAudit.metadata,
+            lastModified: new Date().toISOString(),
+          },
+        }));
+
+        // Se auditId esiste, prova a salvare anche su server
+        if (auditId) {
+          try {
+            await apiService.saveCustomChecklistResponses(auditId, [
+              { custom_item_id: itemId, evidence_blocks: blocks },
+            ]);
+          } catch (err) {
+            console.warn(
+              "[CustomChecklistAuditView] save CustomChecklistResponses fallito, enqueue sync:",
+              err?.message || err
+            );
+            try {
+              await syncService.enqueue("save_custom_checklist_responses", {
+                auditId,
+                responses: [{ custom_item_id: itemId, evidence_blocks: blocks }],
+              });
+            } catch (enqueueErr) {
+              console.error(
+                "[CustomChecklistAuditView] enqueue save_custom_checklist_responses fallito:",
+                enqueueErr
+              );
+            }
+          }
+        }
       } catch (err) {
         console.error("Errore salvataggio risposte:", err);
       } finally {
         setSaving(false);
       }
     },
-    [auditId]
+    [auditId, updateCurrentAudit]
   );
 
   const updateBlock = (itemId, blockIndex, field, value) => {
@@ -102,7 +207,33 @@ function CustomChecklistAuditView({ audit, onUpdate }) {
   };
 
   const handleFileSelect = async (itemId, blockIndex, file) => {
-    if (!file || !auditId) return;
+    if (!file) return;
+
+    // Sempre manteniamo una copia locale dei blocchi su cui lavorare
+    const blocks = [...(responses[itemId] || [])];
+    if (!blocks[blockIndex]) blocks[blockIndex] = { text: "", attachment_id: null };
+
+    // Caso offline: auditId mancante → salva blob in IDB e marca pending_blobKey
+    if (!auditId) {
+      try {
+        const buffer = await file.arrayBuffer();
+        const blobKey = `customAtt_${Date.now()}_${file.name}`;
+        await syncService.storeFileBlob(blobKey, buffer, {
+          mimeType: file.type,
+          fileName: file.name,
+        });
+
+        blocks[blockIndex].pending_blobKey = blobKey;
+        blocks[blockIndex].attachment_id = null;
+
+        setResponses((prev) => ({ ...prev, [itemId]: blocks }));
+        await saveResponses(itemId, blocks);
+      } catch (err) {
+        console.error("Errore preparazione allegato offline:", err);
+      }
+      return;
+    }
+
     try {
       const res = await apiService.uploadAttachment(file, {
         auditId,
@@ -111,14 +242,41 @@ function CustomChecklistAuditView({ audit, onUpdate }) {
       });
       const attId = res?.data?.attachment_id ?? res?.attachment_id;
       if (attId) {
-        const blocks = [...(responses[itemId] || [])];
-        if (!blocks[blockIndex]) blocks[blockIndex] = { text: "", attachment_id: null };
         blocks[blockIndex].attachment_id = attId;
+        delete blocks[blockIndex].pending_blobKey;
         setResponses((prev) => ({ ...prev, [itemId]: blocks }));
         await saveResponses(itemId, blocks);
       }
     } catch (err) {
-      console.error("Errore upload allegato:", err);
+      // Offline o errore server: salva blob e queue per patch custom_response
+      try {
+        const buffer = await file.arrayBuffer();
+        const blobKey = `customAtt_${Date.now()}_${file.name}`;
+        await syncService.storeFileBlob(blobKey, buffer, {
+          mimeType: file.type,
+          fileName: file.name,
+        });
+
+        blocks[blockIndex].pending_blobKey = blobKey;
+        blocks[blockIndex].attachment_id = null;
+
+        setResponses((prev) => ({ ...prev, [itemId]: blocks }));
+        await saveResponses(itemId, blocks);
+
+        await syncService.enqueue(
+          "upload_custom_attachment_and_patch_custom_response",
+          {
+            auditId,
+            customItemId: itemId,
+            blobKey,
+            blockText: blocks[blockIndex]?.text || "",
+            category: "evidence",
+            description: "custom checklist evidence",
+          }
+        );
+      } catch (syncErr) {
+        console.error("Errore upload allegato (offline):", err, syncErr);
+      }
     }
   };
 

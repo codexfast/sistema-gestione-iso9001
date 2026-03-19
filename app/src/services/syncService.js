@@ -245,6 +245,15 @@ export class SyncService {
             case 'save_responses':
                 return await this.syncSaveResponses(payload);
 
+            // Checklist custom: salva evidence_blocks per custom_item_id
+            case 'save_custom_checklist_responses':
+                return await this.syncSaveCustomChecklistResponses(payload);
+
+            // Upload allegato custom offline -> patch evidence_blocks sul server
+            // (usa pending_blobKey per riconoscere il blocco a cui associare attachment_id)
+            case 'upload_custom_attachment_and_patch_custom_response':
+                return await this.syncUploadCustomAttachmentAndPatchCustomResponse(payload);
+
             default:
                 throw new Error(`Tipo sync non supportato: ${type}`);
         }
@@ -398,6 +407,17 @@ export class SyncService {
     }
 
     /**
+     * Sync: Salva risposte checklist custom
+     * payload: { auditId, responses: [{ custom_item_id, evidence_blocks }] }
+     */
+    async syncSaveCustomChecklistResponses(payload) {
+        const { auditId, responses } = payload;
+        if (!auditId) throw new Error('syncSaveCustomChecklistResponses: auditId mancante');
+        if (!Array.isArray(responses)) throw new Error('syncSaveCustomChecklistResponses: responses deve essere un array');
+        return await apiService.saveCustomChecklistResponses(auditId, responses);
+    }
+
+    /**
      * Risolve conflict timestamp-based (last-write-wins)
      */
     async resolveConflict(localAudit) {
@@ -473,6 +493,104 @@ export class SyncService {
         }
 
         return result;
+    }
+
+    /**
+     * Sync: Upload allegato custom (custom_item_id) da blobKey offline e patch evidence_blocks sul server.
+     *
+     * payload:
+     * {
+     *   auditId,
+     *   customItemId,
+     *   blobKey,              // chiave del blob in attachments_offline
+     *   blockText,           // testo del blocco (usato se la response row non esiste)
+     *   category,            // default 'evidence'
+     *   description          // opzionale
+     * }
+     */
+    async syncUploadCustomAttachmentAndPatchCustomResponse(payload) {
+        const {
+            auditId,
+            customItemId,
+            blobKey,
+            blockText = '',
+            category = 'evidence',
+            description = undefined,
+        } = payload || {};
+
+        if (!auditId) throw new Error('syncUploadCustomAttachmentAndPatchCustomResponse: auditId mancante');
+        if (!customItemId) throw new Error('syncUploadCustomAttachmentAndPatchCustomResponse: customItemId mancante');
+        if (!blobKey) throw new Error('syncUploadCustomAttachmentAndPatchCustomResponse: blobKey mancante');
+
+        // Recupera blob da IDB
+        const blobData = await this.getFileBlob(blobKey);
+        if (!blobData) {
+            throw new Error(`Blob non trovato in IDB per key: ${blobKey}`);
+        }
+
+        const file = new File([new Blob([blobData.arrayBuffer], { type: blobData.mimeType })], blobData.fileName || 'upload', {
+            type: blobData.mimeType || 'application/octet-stream',
+        });
+
+        // 1) Upload allegato su server
+        const uploadResult = await apiService.uploadAttachment(file, {
+            auditId,
+            customItemId,
+            category,
+            description,
+        });
+
+        const attachmentId = uploadResult?.data?.attachment_id;
+        if (!attachmentId) {
+            throw new Error('syncUploadCustomAttachmentAndPatchCustomResponse: attachment_id non ricevuto dal server');
+        }
+
+        // 2) Patch evidence_blocks sul server, usando pending_blobKey per trovare il blocco
+        const rowsResult = await apiService.getCustomChecklistResponses(auditId);
+        const rows = rowsResult?.data ?? [];
+
+        // evidence_blocks può arrivare come stringa (JSON) o array
+        const parseEvidenceBlocks = (v) => {
+            if (Array.isArray(v)) return v;
+            if (typeof v === 'string') {
+                try { return JSON.parse(v || '[]'); } catch { return []; }
+            }
+            return [];
+        };
+
+        const existingRow = rows.find(r => Number(r.custom_item_id) === Number(customItemId));
+        const evidenceBlocks = parseEvidenceBlocks(existingRow?.evidence_blocks);
+
+        let found = false;
+        const nextBlocks = (evidenceBlocks.length ? evidenceBlocks : []).map(b => {
+            if (b && b.pending_blobKey === blobKey) {
+                found = true;
+                // Associa il nuovo attachment_id al blocco pendente
+                return { ...b, attachment_id: attachmentId, pending_blobKey: undefined };
+            }
+            return b;
+        });
+
+        if (!found) {
+            // Evita duplicati: aggiungi un blocco minimo solo se la row non esiste.
+            if (!existingRow) {
+                nextBlocks.push({
+                    text: blockText,
+                    attachment_id: attachmentId,
+                    pending_blobKey: undefined,
+                });
+            }
+        }
+
+        await apiService.saveCustomChecklistResponses(auditId, [
+            { custom_item_id: customItemId, evidence_blocks: nextBlocks }
+        ]);
+
+        // 3) Cleanup blob offline solo dopo successo patch
+        await this.deleteBlobFromStore(blobKey);
+        console.log(`🗑️ [OFFLINE BLOB] Blob ${blobKey} rimosso dopo patch custom_response`);
+
+        return { attachmentId, savedBlocks: nextBlocks.length };
     }
 
     /**

@@ -56,20 +56,14 @@ export function useAutoSave(data, storageProvider, entityType, delay = 2000) {
 
                 previousDataRef.current = currentDataString;
                 setSaveStatus('saved');
-
-                // Reset a idle dopo 1s
-                setTimeout(() => {
-                    setSaveStatus('idle');
-                }, 1000);
+                // Mantieni 'saved' finché non cambiano i dati.
+                // Serve per mostrare in UI uno stato stabile "✓ Salvato"
+                // invece di oscillare su "● In attesa" dopo pochi istanti.
 
             } catch (error) {
                 console.error('❌ Auto-save error (IndexedDB):', error);
                 setSaveStatus('error');
-
-                // Reset a idle dopo 2s
-                setTimeout(() => {
-                    setSaveStatus('idle');
-                }, 2000);
+                // Mantieni 'error' finché non cambiano i dati (nuovo tentativo).
             }
         }, delay);
 
