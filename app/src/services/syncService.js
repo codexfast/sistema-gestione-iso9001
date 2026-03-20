@@ -300,6 +300,9 @@ export class SyncService {
         try {
             // Mappa campi frontend→backend per multi-standard support
             // selectedStandards può essere al top-level (payload piatto) oppure dentro metadata (oggetto audit completo)
+            const hasCustomChecklistField =
+                Object.prototype.hasOwnProperty.call(auditData || {}, 'custom_checklist_id') ||
+                Object.prototype.hasOwnProperty.call(auditData?.metadata || {}, 'customChecklistId');
             const customChecklistId = auditData.custom_checklist_id
                 ?? auditData.metadata?.customChecklistId
                 ?? null;
@@ -333,11 +336,14 @@ export class SyncService {
                 standard_ids: resolvedIds,
                 // company_id da metadata (Fase 1 multi-tenant)
                 company_id: auditData.metadata?.companyId ?? auditData.company_id ?? null,
-                // custom_checklist_id (Phase 6)
-                custom_checklist_id: customChecklistId,
                 // Persistenza campi ricchi (generalData, auditObjective, auditOutcome, auditPartyType, fornitoreName)
                 audit_extra_data: Object.keys(auditExtraData).length > 0 ? auditExtraData : null,
             };
+            // custom_checklist_id (Phase 6): invialo SOLO se il campo è esplicito nel payload.
+            // Evita "stacco" accidentale a null durante update parziali.
+            if (hasCustomChecklistField) {
+                mappedAudit.custom_checklist_id = customChecklistId;
+            }
 
             // Rimuovi campi legacy frontend per pulire payload
             delete mappedAudit.selectedStandards;

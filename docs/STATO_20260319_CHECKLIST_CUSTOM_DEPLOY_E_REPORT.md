@@ -65,6 +65,10 @@ Dopo verifica build locale: `npm run build` in `app/`, poi commit messaggio tipo
   - preserva `custom_checklist_id` negli update
   - evita fallback implicito ISO 9001 su audit custom-only
   - rende l'upsert non distruttivo quando alcuni campi non sono esplicitamente inviati
+- `hardening 20/03` — ulteriore protezione anti-override audit custom:
+  - frontend `syncService`: invia `custom_checklist_id` **solo se campo esplicito**
+  - backend `upsertAudit`: ignorata cancellazione implicita a `null` (serve `custom_checklist_clear=true` per stacco esplicito)
+  - backend `upsertAudit`: in INSERT rifiuta payload senza tipologia (`standard_id/standard_ids` o `custom_checklist_id`)
 
 ### Diagnosi dati audit `2026-06`
 - audit trovato con `custom_checklist_id = NULL` e associazione standard legacy presente.
