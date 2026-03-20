@@ -370,7 +370,8 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
  * Modifica audit.attachments in-place aggiungendo imageBase64.
  */
 async function preloadImagesIntoAudit(audit, getViewUrl) {
-    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    // Word support affidabile: evita webp in embedding, mantiene fallback a link.
+    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
     const attachments = audit.attachments || [];
     await Promise.allSettled(
         attachments.map(async (att) => {

@@ -215,7 +215,9 @@ function xmlHyperlinkPara(url, displayText, opts = {}) {
 }
 
 // ─── Helpers immagini embedded ────────────────────────────────────────────────
-const IMAGE_EXTS = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
+// Nota compatibilita Word: WEBP puo causare documenti corrotti/non apribili in alcune versioni.
+// Embed consentito solo per formati stabili (jpg/png/gif). WEBP resta disponibile come link.
+const IMAGE_EXTS = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif' };
 const IMAGE_MIME_TYPES = new Set(Object.keys(IMAGE_EXTS));
 
 /** Genera OOXML per un'immagine embedded (200x150px → 1905000x1428750 EMU) */
