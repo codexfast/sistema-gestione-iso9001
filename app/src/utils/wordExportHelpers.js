@@ -52,7 +52,9 @@ export const STATUS_CFG = {
 /** Escape obbligatorio per inserire testo in XML */
 export function escXml(val) {
     if (val == null) return '';
-    return String(val)
+    // XML 1.0 non accetta alcuni control chars: rimuovili per evitare DOCX corrotti.
+    const cleaned = String(val).replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD]/g, '');
+    return cleaned
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')

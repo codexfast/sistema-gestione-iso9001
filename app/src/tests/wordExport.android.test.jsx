@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import PizZip from "pizzip";
 import {
   exportAuditToFileSystem,
   exportAuditToWorkspace,
@@ -57,10 +58,59 @@ const mockAudit = {
 
 describe("Android Export Word Fallback", () => {
   let originalShowDirectoryPicker;
+  let originalFetch;
+  let templateArrayBuffer;
+
+  const buildMinimalTemplateArrayBuffer = () => {
+    const zip = new PizZip();
+    zip.file(
+      "[Content_Types].xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`
+    );
+    zip.file(
+      "_rels/.rels",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`
+    );
+    zip.file(
+      "word/document.xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>{clientName}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>CHECKLIST_MARKER</w:t></w:r></w:p>
+    <w:p><w:r><w:t>RILIEVI_MARKER</w:t></w:r></w:p>
+    <w:sectPr/>
+  </w:body>
+</w:document>`
+    );
+    zip.file(
+      "word/_rels/document.xml.rels",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`
+    );
+
+    return zip.generate({ type: "arraybuffer" });
+  };
 
   beforeEach(() => {
     // Salva originale
     originalShowDirectoryPicker = window.showDirectoryPicker;
+    originalFetch = global.fetch;
+
+    templateArrayBuffer = buildMinimalTemplateArrayBuffer();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => templateArrayBuffer,
+    });
 
     // Reset mock
     vi.clearAllMocks();
@@ -72,6 +122,11 @@ describe("Android Export Word Fallback", () => {
       window.showDirectoryPicker = originalShowDirectoryPicker;
     } else {
       delete window.showDirectoryPicker;
+    }
+    if (originalFetch) {
+      global.fetch = originalFetch;
+    } else {
+      delete global.fetch;
     }
   });
 
@@ -169,23 +224,21 @@ describe("Android Export Word Fallback", () => {
   });
 
   describe("Console Warnings", () => {
-    it("dovrebbe loggare warning quando usa fallback Android", async () => {
-      const consoleWarnSpy = vi
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-
+    it("dovrebbe compilare DOCX valido in fallback Android", async () => {
       delete window.showDirectoryPicker;
 
       await exportAuditToFileSystem(mockAudit);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[ANDROID]")
-      );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("fallback blob download")
-      );
+      expect(fileSaver.saveAs).toHaveBeenCalledOnce();
+      const [blobArg] = fileSaver.saveAs.mock.calls[0];
+      expect(blobArg).toBeInstanceOf(Blob);
+      expect(blobArg.size).toBeGreaterThan(0);
 
-      consoleWarnSpy.mockRestore();
+      if (blobArg.type) {
+        expect(blobArg.type).toContain(
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
+      }
     });
   });
 });

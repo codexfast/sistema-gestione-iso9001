@@ -244,6 +244,10 @@ function embedImagesInZip(zip, imageRegistry) {
     // Leggi relazioni esistenti
     const relsPath = 'word/_rels/document.xml.rels';
     let relsXml = zip.files[relsPath]?.asText() || '';
+    if (!relsXml || !relsXml.includes('<Relationships')) {
+        relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    }
 
     imageRegistry.forEach(({ rId, base64, mimeType, ext }) => {
         // Strip il prefisso data URL: "data:image/jpeg;base64,..."
@@ -255,7 +259,9 @@ function embedImagesInZip(zip, imageRegistry) {
 
         // Aggiungi relazione
         const relEntry = `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${rId}.${ext}"/>`;
-        relsXml = relsXml.replace('</Relationships>', relEntry + '</Relationships>');
+        if (!relsXml.includes(`Id="${rId}"`)) {
+            relsXml = relsXml.replace('</Relationships>', relEntry + '</Relationships>');
+        }
     });
 
     zip.file(relsPath, relsXml);
