@@ -92,6 +92,38 @@ function normalizeStatus(status) {
 }
 
 /**
+ * Deduplica audit caricati da cache/server.
+ * Priorita: audit con id numerico DB, poi audit custom checklist, poi record piu ricco/recente.
+ */
+function dedupeAudits(audits = []) {
+  const scoreAudit = (a) => {
+    const hasDbId = a?.metadata?.auditId != null ? 1000 : 0;
+    const hasCustom = (a?.metadata?.customChecklistId ?? a?.custom_checklist_id) ? 500 : 0;
+    const checklistDepth = Object.keys(a?.checklist || {}).length * 20;
+    const attachments = (a?.attachments?.length || 0) * 5;
+    const customResponses = Object.keys(a?.customResponses || {}).length * 10;
+    const ts = Date.parse(a?.metadata?.lastModified || a?.metadata?.updatedAt || 0) || 0;
+    return hasDbId + hasCustom + checklistDepth + attachments + customResponses + ts;
+  };
+
+  const keyFor = (a) => {
+    const num = a?.metadata?.auditNumber || a?.audit_number;
+    if (num) return `num:${String(num).trim().toUpperCase()}`;
+    return `id:${a?.metadata?.id || a?.id}`;
+  };
+
+  const byKey = new Map();
+  for (const audit of audits) {
+    const key = keyFor(audit);
+    const existing = byKey.get(key);
+    if (!existing || scoreAudit(audit) > scoreAudit(existing)) {
+      byKey.set(key, audit);
+    }
+  }
+  return Array.from(byKey.values());
+}
+
+/**
  * Provider per gestione stato audit
  */
 export function StorageProvider({ children, useMockData = false }) {
@@ -378,14 +410,32 @@ export function StorageProvider({ children, useMockData = false }) {
         let finalAudits = mergedAudits;
         if (serverAudits.length > 0 && mergedAudits.length > 0) {
           const mergedIds = new Set(mergedAudits.map((a) => a.metadata?.id || a.id));
+          const mergedNumbers = new Set(
+            mergedAudits
+              .map((a) => a.metadata?.auditNumber)
+              .filter(Boolean)
+              .map((n) => String(n).trim().toUpperCase())
+          );
           const localOnly = localAudits.filter(
-            (la) => !mergedIds.has(la.metadata?.id || la.id)
+            (la) => {
+              const localId = la.metadata?.id || la.id;
+              const localNumber = la.metadata?.auditNumber
+                ? String(la.metadata.auditNumber).trim().toUpperCase()
+                : null;
+              // Evita doppioni: se stesso UUID o stesso auditNumber già presente lato server/merge, scarta locale.
+              if (mergedIds.has(localId)) return false;
+              if (localNumber && mergedNumbers.has(localNumber)) return false;
+              return true;
+            }
           );
           if (localOnly.length > 0) {
             finalAudits = [...mergedAudits, ...localOnly];
             console.log(`📋 [MERGE] Aggiunti ${localOnly.length} audit solo locali alla lista`);
           }
         }
+
+        // Deduplica difensiva finale per evitare doppioni nel menu selector.
+        finalAudits = dedupeAudits(finalAudits);
 
         // Ripristina metadata.auditId da sync_metadata per audit che non ce l'hanno
         // (così il banner "non sincronizzato" scompare dopo una sync riuscita, anche dopo ricarica)
@@ -526,8 +576,9 @@ export function StorageProvider({ children, useMockData = false }) {
           for (const audit of serverAudits) {
             await fsProvider.saveAudit(audit);
           }
-          setAudits(serverAudits);
-          console.log(`✅ [LOGIN] ${serverAudits.length} audit caricati in memoria`);
+          const dedupedServerAudits = dedupeAudits(serverAudits);
+          setAudits(dedupedServerAudits);
+          console.log(`✅ [LOGIN] ${dedupedServerAudits.length} audit caricati in memoria`);
         }
       } catch (err) {
         console.error("❌ [LOGIN] Errore download audit:", err);
