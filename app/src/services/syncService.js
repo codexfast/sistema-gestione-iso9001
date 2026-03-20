@@ -292,7 +292,10 @@ export class SyncService {
          * Il backend /audits/sync accetta standard_id singolo (non array).
          */
         const resolveStandardId = (codes, hasCustomChecklist = false) => {
-            if (!Array.isArray(codes) || codes.length === 0) return hasCustomChecklist ? null : 1;
+            // Niente fallback implicito a ISO 9001:
+            // se non ci sono standard espliciti e non c'è custom checklist, lascia null
+            // e lascia che il backend rifiuti payload incompleto (MISSING_AUDIT_TYPE).
+            if (!Array.isArray(codes) || codes.length === 0) return hasCustomChecklist ? null : null;
             const first = codes[0];
             return typeof first === 'number' ? first : (STANDARD_CODE_TO_ID[first] ?? 1);
         };

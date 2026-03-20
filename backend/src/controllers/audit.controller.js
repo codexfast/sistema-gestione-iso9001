@@ -771,7 +771,7 @@ async function upsertAudit(req, res) {
         // Priorità: standard_ids array (nuovo) > standard_id scalare (legacy) > default ISO 9001 (se no custom_checklist_id)
         const bodyHasCustomChecklistField = Object.prototype.hasOwnProperty.call(req.body, 'custom_checklist_id');
         const bodyHasStandardField = Object.prototype.hasOwnProperty.call(req.body, 'standard_id');
-        const bodyHasStandardsArray = Array.isArray(standard_ids);
+        const bodyHasStandardsArray = Array.isArray(standard_ids) && standard_ids.length > 0;
         const clearCustomChecklist = req.body.custom_checklist_clear === true;
         const parsedCustomChecklistId = (custom_checklist_id && parseInt(custom_checklist_id, 10) > 0)
             ? parseInt(custom_checklist_id, 10)
