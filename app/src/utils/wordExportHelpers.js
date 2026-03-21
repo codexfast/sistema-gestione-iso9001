@@ -834,51 +834,55 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
                     return;
                 }
 
+                // Una sola riga per voce: colonna codice sempre itemCode (no 1.1.2, 1.1.3).
+                let detail = '';
+                if (itemTitle) {
+                    detail += xmlPara(xmlRun(itemTitle, { bold: true, size: 18 }), { sa: 50, sb: 40 });
+                }
+
                 blocks.forEach((blk, i) => {
+                    if (i > 0) {
+                        detail += xmlPara('', { sa: 100, sb: 40 });
+                    }
                     const text = String(blk?.text || '').trim();
                     const attId = blk?.attachment_id ? Number(blk.attachment_id) : null;
                     const att = attId != null ? attById.get(attId) : null;
                     const mimeType = att?.imageMimeType || att?.mimeType || '';
-                    const rowCode = i === 0 ? itemCode : `${itemCode}.${i + 1}`;
 
-                    let detail = '';
-                    if (i === 0 && itemTitle) {
-                        detail += xmlPara(xmlRun(itemTitle, { bold: true, size: 18 }), { sa: 50, sb: 40 });
-                    }
+                    let fragment = '';
                     if (text) {
-                        detail += textToRichParagraphs(text);
+                        fragment += textToRichParagraphs(text);
                     }
 
                     if (attId != null) {
                         if (usePreview && imageRegistry && IMAGE_MIME_TYPES.has(mimeType) && att?.imageBase64?.startsWith('data:image/')) {
-                            // Indici sequenziali: stesso allegato su piu righe non deve duplicare rId (invalido in Word).
                             const imgIdx = imageRegistry.length;
                             const imgId = 30000 + imgIdx;
                             const rId = `rId${imgId}`;
                             const ext = IMAGE_EXTS[mimeType] || 'jpg';
                             imageRegistry.push({ rId, imgId, base64: att.imageBase64, mimeType, ext });
-                            detail += xmlPara(xmlImageOoxml(rId, imgId), { sa: 60, sb: 60 });
-                            // Verbale custom: niente hyperlink sotto la foto (richiesta utente).
+                            fragment += xmlPara(xmlImageOoxml(rId, imgId), { sa: 60, sb: 60 });
                         } else {
                             const fname = escXml(att?.fileName || att?.name || 'Allegato');
-                            detail += xmlPara(
+                            fragment += xmlPara(
                                 xmlRun('\uD83D\uDCCE ' + fname, { size: 18, ital: true, color: '64748B' }),
                                 { sa: 40 }
                             );
                         }
                     }
 
-                    if (!detail) {
-                        detail = xmlPara(xmlRun('\u2014 Evidenza senza contenuto testuale.', { ital: true, size: 18 }));
+                    if (!fragment) {
+                        fragment = xmlPara(xmlRun('\u2014 Evidenza senza contenuto testuale.', { ital: true, size: 18 }));
                     }
-
-                    allRows.push(xmlRow([
-                        xmlCell(xmlPara(rowCode, { align: 'center' }), { dxa: C[0], va: 'top' }),
-                        xmlCell(detail, { dxa: C[1], va: 'top', ml: 120 }),
-                        emptyCell(2),
-                        emptyCell(3),
-                    ]));
+                    detail += fragment;
                 });
+
+                allRows.push(xmlRow([
+                    xmlCell(xmlPara(itemCode, { align: 'center' }), { dxa: C[0], va: 'top' }),
+                    xmlCell(detail, { dxa: C[1], va: 'top', ml: 120 }),
+                    emptyCell(2),
+                    emptyCell(3),
+                ]));
             });
         });
 

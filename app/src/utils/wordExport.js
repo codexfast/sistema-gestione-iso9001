@@ -252,6 +252,7 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
         'w:top="720" w:right="720" w:bottom="720" w:left="720"$1'
     );
 
+    xml = repairWordDocumentXmlMalformedAttrs(xml);
     zip.file('word/document.xml', xml);
 
     // Embedded images: aggiungi file media + relazioni nel zip
@@ -383,6 +384,13 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
 
     doc.render(buildTemplateData(auditForGen));
     const processedZip = doc.getZip();
+    // Dopo il render il template puo reintrodurre w:p annidati o attributi senza quote.
+    if (processedZip.files[docPath]) {
+        processedZip.file(
+            docPath,
+            repairWordDocumentXmlMalformedAttrs(processedZip.files[docPath].asText())
+        );
+    }
 
     if (options.photoMode === 'preview') {
         await preloadImagesIntoAudit(auditForGen, getViewUrl);

@@ -138,13 +138,34 @@ async function run() {
     (id) => `https://dummy.local/attachments/${id}/view`,
     {
       customChecklistId: audit.custom_checklist_id,
-      photoMode: undefined,
+      // Allineato a ExportPanel: embedding immagini (fetch fallisce → solo link testuale, ma stesso percorso codice).
+      photoMode: 'preview',
     }
   );
 
   const out = path.join(root, 'app', 'tmp-audit-2026-06-repro.docx');
   fs.writeFileSync(out, Buffer.from(await blob.arrayBuffer()));
   console.log('GENERATED', out);
+
+  // Stesso tipo di controllo usato in app/scripts/verify-template-repair.js (bilancio w:p).
+  try {
+    const PizZip = require(path.join(root, 'app', 'node_modules', 'pizzip'));
+    const z2 = new PizZip(fs.readFileSync(out));
+    const dx = z2.files['word/document.xml']?.asText() || '';
+    const openP = (dx.match(/<w:p(?=[ \/>])/g) || []).length;
+    const closeP = (dx.match(/<\/w:p>/g) || []).length;
+    const nested = /<w:p[^>]*>\s*<w:p(?=[\s/>])/.test(dx);
+    console.log(
+      '[VALIDATE] word/document.xml w:p open=',
+      openP,
+      'close=',
+      closeP,
+      openP === closeP ? 'OK' : '!!! ERR BILANCIAMENTO'
+    );
+    console.log('[VALIDATE] pattern w:p annidato:', nested ? '!!! SI' : 'no');
+  } catch (e) {
+    console.warn('[VALIDATE] skip (pizzip):', e.message);
+  }
   await closePool();
   process.exit(0);
 }

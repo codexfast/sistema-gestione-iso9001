@@ -18,6 +18,8 @@ alwaysApply: true
 - Testo evidenze custom: markdown `**` senza chiusura su riga = grassetto riga in `wordExportHelpers.buildCustomChecklistSectionOoxml`.
 - Export verbale/checklist custom: `photoMode: 'preview'` in `ExportPanel` → `preloadImagesIntoAudit` + embedding; niente hyperlink sotto la foto (PDF/webp: solo nome file in grigio).
 - Checklist custom in Word: una sola `w:tbl` continua in `buildCustomChecklistSectionOoxml` (righe sezione + voci in sequenza).
+- Voci custom: una riga per `item` (codice sempre `itemCode`); piu `evidence_blocks` concatenati nella stessa cella.
+- `repairWordDocumentXmlMalformedAttrs` anche **dopo** `doc.render` e **dopo** inject marker (`wordExport.js`) per evitare DOCX illeggibili.
 
 ## Regole operative terminale (Windows PowerShell)
 - Evita `&&` in PowerShell legacy: usa `;` + controllo `$LASTEXITCODE`.
