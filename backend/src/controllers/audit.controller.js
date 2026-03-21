@@ -312,6 +312,7 @@ async function createAudit(req, res) {
         // Crea audit
         const result = await query(`
       INSERT INTO audits (
+        audit_uuid,
         audit_number,
         client_name,
         project_year,
@@ -328,6 +329,7 @@ async function createAudit(req, res) {
       )
       OUTPUT INSERTED.audit_id, INSERTED.audit_uuid
       VALUES (
+        NEWID(),
         @audit_number,
         @client_name,
         @project_year,

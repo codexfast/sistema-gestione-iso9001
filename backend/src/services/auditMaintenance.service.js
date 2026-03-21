@@ -32,13 +32,21 @@ async function hardDeleteAudit(auditId, organizationId) {
 
   await query(
     `
-      DELETE FROM attachments WHERE audit_id = @audit_id;
-      DELETE FROM audit_responses WHERE audit_id = @audit_id;
-      DELETE FROM audit_custom_checklist_responses WHERE audit_id = @audit_id;
-      DELETE FROM pending_issues WHERE audit_id = @audit_id;
-      DELETE FROM non_conformities WHERE audit_id = @audit_id;
-      DELETE FROM audit_standards WHERE audit_id = @audit_id;
-      IF OBJECT_ID('audit_history', 'U') IS NOT NULL
+      IF OBJECT_ID('attachments', 'U') IS NOT NULL AND COL_LENGTH('attachments', 'audit_id') IS NOT NULL
+        DELETE FROM attachments WHERE audit_id = @audit_id;
+      IF OBJECT_ID('audit_responses', 'U') IS NOT NULL AND COL_LENGTH('audit_responses', 'audit_id') IS NOT NULL
+        DELETE FROM audit_responses WHERE audit_id = @audit_id;
+      IF OBJECT_ID('audit_custom_checklist_responses', 'U') IS NOT NULL AND COL_LENGTH('audit_custom_checklist_responses', 'audit_id') IS NOT NULL
+        DELETE FROM audit_custom_checklist_responses WHERE audit_id = @audit_id;
+      IF COL_LENGTH('pending_issues', 'audit_id') IS NOT NULL
+        DELETE FROM pending_issues WHERE audit_id = @audit_id;
+      IF COL_LENGTH('pending_issues', 'source_audit_id') IS NOT NULL
+        DELETE FROM pending_issues WHERE source_audit_id = @audit_id;
+      IF OBJECT_ID('non_conformities', 'U') IS NOT NULL AND COL_LENGTH('non_conformities', 'audit_id') IS NOT NULL
+        DELETE FROM non_conformities WHERE audit_id = @audit_id;
+      IF OBJECT_ID('audit_standards', 'U') IS NOT NULL AND COL_LENGTH('audit_standards', 'audit_id') IS NOT NULL
+        DELETE FROM audit_standards WHERE audit_id = @audit_id;
+      IF OBJECT_ID('audit_history', 'U') IS NOT NULL AND COL_LENGTH('audit_history', 'audit_id') IS NOT NULL
         DELETE FROM audit_history WHERE audit_id = @audit_id;
       DELETE FROM audits WHERE audit_id = @audit_id AND organization_id = @organization_id;
     `,
