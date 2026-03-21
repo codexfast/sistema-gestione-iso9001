@@ -228,8 +228,8 @@ const ExportPanel = () => {
       if (customChecklistId && (!auditForExport.metadata?.selectedStandards?.length) && !Object.keys(auditForExport.checklist || {}).length) {
         const fileName = await exportAuditToWord(auditForExport, getViewUrl, {
           customChecklistId,
-          // Safe-mode per stabilita Word: su checklist custom usa solo link allegati (no embedding immagini).
-          photoMode: undefined,
+          // Immagini jpg/png/gif incorporate nel DOCX (webp e PDF restano solo testo nome file, senza hyperlink).
+          photoMode: 'preview',
           getTemplateResolver: () => apiService.getReportTemplate(null, customChecklistId),
         });
         showMessage(`✅ Report Word generato: ${fileName}`, "success");
@@ -291,8 +291,8 @@ const ExportPanel = () => {
       const stds = auditForExport.metadata?.selectedStandards || [];
       const hasPhotoStd = stds.some(s => String(s).includes('3834') || s === 'RDP_MSN');
       const exportOpts = {
-        // Safe-mode: embedding immagini solo per standard foto-specifici (3834), non per custom checklist.
-        ...(hasPhotoStd ? { photoMode: 'preview' } : {}),
+        // Anteprima/embedding immagini per checklist custom (verbale) o standard con foto (3834).
+        ...(hasPhotoStd || hasCustomOnly ? { photoMode: 'preview' } : {}),
         ...(hasCustomOnly ? { customChecklistId, getTemplateResolver: () => apiService.getReportTemplate(null, customChecklistId) } : { getTemplateResolver: (stdId) => apiService.getReportTemplate(stdId) }),
       };
 

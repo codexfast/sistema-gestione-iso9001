@@ -849,16 +849,22 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
                         detail += textToRichParagraphs(text);
                     }
 
-                    if (attId != null && getViewUrl) {
+                    if (attId != null) {
                         if (usePreview && imageRegistry && IMAGE_MIME_TYPES.has(mimeType) && att?.imageBase64?.startsWith('data:image/')) {
-                            const imgId = 20000 + attId + i;
+                            // Indici sequenziali: stesso allegato su piu righe non deve duplicare rId (invalido in Word).
+                            const imgIdx = imageRegistry.length;
+                            const imgId = 30000 + imgIdx;
                             const rId = `rId${imgId}`;
                             const ext = IMAGE_EXTS[mimeType] || 'jpg';
                             imageRegistry.push({ rId, imgId, base64: att.imageBase64, mimeType, ext });
                             detail += xmlPara(xmlImageOoxml(rId, imgId), { sa: 60, sb: 60 });
-                            detail += xmlHyperlinkPara(getViewUrl(attId), '\uD83D\uDD17 Apri allegato', { size: 18 });
+                            // Verbale custom: niente hyperlink sotto la foto (richiesta utente).
                         } else {
-                            detail += xmlHyperlinkPara(getViewUrl(attId), '\uD83D\uDCCE Allegato', { size: 18 });
+                            const fname = escXml(att?.fileName || att?.name || 'Allegato');
+                            detail += xmlPara(
+                                xmlRun('\uD83D\uDCCE ' + fname, { size: 18, ital: true, color: '64748B' }),
+                                { sa: 40 }
+                            );
                         }
                     }
 
