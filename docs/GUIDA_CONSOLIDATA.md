@@ -30,6 +30,91 @@
 
 **Deploy**: non copiare solo i controller; verificare `systemctl status sgq-backend.service`. Dettaglio: `DEPLOY_CHECKLIST_RELEASE.md`, script `deploy-controllers-to-vps.ps1`. Dopo release lock: copiare anche `services/auditLock.service.js` e `controllers/auditLock.controller.js`.
 
+### Netlify — Deploy Preview (guida passo-passo)
+
+**Cosa ottieni**: per ogni **Pull Request** su GitHub, Netlify costruisce un sito di anteprima con URL dedicato (es. `deploy-preview-12--nome-sito.netlify.app`). **Non** serve un secondo progetto Netlify né configurazioni diverse per branch: è la stessa app collegata al repo.
+
+**Prerequisiti**
+- Sito Netlify già collegato al repository GitHub (deploy da `main` funziona oggi).
+- Permessi **Owner** o ruolo che possa modificare *Site configuration*.
+
+---
+
+#### Passo 1 — Verificare collegamento GitHub
+
+1. Accedi a [Netlify](https://app.netlify.com) → seleziona il **sito** del SGQ.
+2. **Site configuration** (ingranaggio o menu sito) → **Build & deploy**.
+3. Sotto **Continuous deployment** deve comparire il **repository** corretto (es. `qsstudio241/sistema-gestione-iso9001`) e il branch di produzione (di solito **`main`**).
+
+**Verifica OK**: vedi il nome repo e l’ultimo deploy da `main` con stato *Published*.
+
+**Se manca il repo**: *Link repository* → autorizza GitHub → scegli il repo → branch `main` → conferma. Netlify userà `netlify.toml` in root (`base = "app"`, `publish = "dist"`).
+
+---
+
+#### Passo 2 — Abilitare i Deploy Preview
+
+L’interfaccia Netlify cambia a volte nome alle voci; cerca sempre equivalenti a *Deploy previews* / *Pull request previews*.
+
+1. Stesso percorso: **Site configuration** → **Build & deploy**.
+2. Cerca la sezione **Deploy Previews** (o **Pull request previews** / sotto *Branches and deploy contexts*).
+3. Imposta **Deploy Previews** su **Any pull request** (o **All pull requests** / **Enabled** — formulazione equivalente).
+
+**Cosa evitare**: non limitare i preview a “solo branch con nome X” se l’obiettivo è provare ogni PR verso `main`.
+
+**Verifica OK**: l’opzione risulta attiva e salvata (nessun messaggio di errore in pagina).
+
+---
+
+#### Passo 3 — Permessi GitHub App Netlify (se i preview non partono)
+
+1. Su GitHub: **Settings** dell’organizzazione o dell’utente → **Applications** → **Installed GitHub Apps** → **Netlify**.
+2. Controlla **Repository access**: deve includere il repo del progetto.
+3. Se Netlify chiede scope aggiuntivi per **Pull requests**, accetta.
+
+**Verifica OK**: Netlify può ricevere eventi `pull_request` dal repo.
+
+---
+
+#### Passo 4 — Prova reale con una Pull Request
+
+1. Su GitHub crea un branch minimo (es. `chore/test-netlify-preview`) da `main`.
+2. Modifica un file banale (es. un commento in `app/README` o una riga in `docs` — oppure solo merge una riga senza effetto se preferisci).
+3. Apri **Pull Request** verso **`main`**.
+4. Nella pagina della PR, attendi 1–3 minuti: dovrebbe comparire il check **netlify** / **Deploy Preview** (o un commento di Netlify con il link).
+5. Clicca l’URL del **Deploy Preview** e verifica che l’app carichi (login, home).
+
+**Verifica OK**
+- Build Netlify sulla PR in stato **Success** (verde).
+- URL preview apre la SPA (anche `/` → `index.html` grazie al redirect in `netlify.toml`).
+
+**Se fallisce**
+- In Netlify: **Deploys** → filtra per *Deploy previews* → apri il deploy fallito → leggi **Deploy log** (errore `npm`, Node, ecc.).
+- Confronta **Node**: in `netlify.toml` è `NODE_VERSION = "20"`; deve essere coerente con CI locale.
+
+---
+
+#### Passo 5 — Differenza tra Production e Preview
+
+| Contesto | Cosa viene deployato | Chi lo usa |
+|----------|----------------------|------------|
+| **Production** | Branch `main` (dopo merge) | Beta tester URL principale |
+| **Deploy Preview** | Ogni PR | Sviluppatore / QA prima del merge |
+
+I preview **non** sostituiscono `main`: servono a **non rompere** i beta finché la PR non è mergiata.
+
+---
+
+#### Passo 6 — CI GitHub sulle PR (consigliato, già in repo)
+
+Workflow: `.github/workflows/ci-app-pr.yml` — su ogni PR che tocca `app/` esegue `npm ci`, `npm run test:run` (con `NODE_ENV=test`), `npm run build` nella cartella `app`.
+
+**Verifica OK**: nella PR, tab **Checks**, job **CI app (Pull Request)** verde.
+
+**Nota**: Netlify e GitHub Actions sono indipendenti; entrambi verdi = maggiore sicurezza prima del merge.
+
+---
+
 **Backlog architetturale**: [adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md).
 
 ---
