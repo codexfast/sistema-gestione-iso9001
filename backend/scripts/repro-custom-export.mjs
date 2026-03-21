@@ -163,6 +163,9 @@ async function run() {
       openP === closeP ? 'OK' : '!!! ERR BILANCIAMENTO'
     );
     console.log('[VALIDATE] pattern w:p annidato:', nested ? '!!! SI' : 'no');
+    const ct = z2.files['[Content_Types].xml']?.asText() || '';
+    const hasJpg = /Extension="jpg"/i.test(ct);
+    console.log('[VALIDATE] [Content_Types] Default jpg:', hasJpg ? 'OK' : 'manca (fix solo dopo embed immagini)');
   } catch (e) {
     console.warn('[VALIDATE] skip (pizzip):', e.message);
   }

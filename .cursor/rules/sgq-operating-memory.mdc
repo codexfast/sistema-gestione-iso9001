@@ -20,6 +20,8 @@ alwaysApply: true
 - Checklist custom in Word: una sola `w:tbl` continua in `buildCustomChecklistSectionOoxml` (righe sezione + voci in sequenza).
 - Voci custom: una riga per `item` (codice sempre `itemCode`); piu `evidence_blocks` concatenati nella stessa cella.
 - `repairWordDocumentXmlMalformedAttrs` anche **dopo** `doc.render` e **dopo** inject marker (`wordExport.js`) per evitare DOCX illeggibili.
+- DOCX "contenuto illeggibile" con **foto JPEG** e template che ha solo `png` in `[Content_Types].xml`: `ensureImageContentTypesInZip` in `embedImagesInZip` aggiunge Default per jpg/jpeg/gif.
+- Audit **solo checklist custom** deve usare sempre il ramo template verbale (`isCustomChecklist`); senza resolver non usare mai il template ISO9001 per errore.
 
 ## Regole operative terminale (Windows PowerShell)
 - Evita `&&` in PowerShell legacy: usa `;` + controllo `$LASTEXITCODE`.

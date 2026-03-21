@@ -262,6 +262,39 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
 }
 
 /**
+ * Ogni parte in word/media/ DEVE avere un Default in [Content_Types].xml.
+ * Molti template (es. Verbale) hanno solo png: senza jpg/jpeg/gif Word segnala "contenuto illeggibile".
+ */
+function ensureImageContentTypesInZip(zip, extensions) {
+    const ctPath = '[Content_Types].xml';
+    let ct = zip.files[ctPath]?.asText();
+    if (!ct || !ct.includes('</Types>')) return;
+
+    const EXT_TO_CT = {
+        jpg:  'image/jpeg',
+        jpeg: 'image/jpeg',
+        png:  'image/png',
+        gif:  'image/gif',
+    };
+
+    const unique = [...new Set((extensions || []).map((e) => String(e || '').toLowerCase()))];
+    let lo = ct.toLowerCase();
+    let added = 0;
+    for (const ext of unique) {
+        const contentType = EXT_TO_CT[ext];
+        if (!contentType) continue;
+        if (lo.includes(`extension="${ext}"`)) continue;
+        ct = ct.replace('</Types>', `<Default Extension="${ext}" ContentType="${contentType}"/></Types>`);
+        lo = ct.toLowerCase(); // aggiorna dopo inserimento (ext sempre minuscolo)
+        added++;
+    }
+    if (added > 0) {
+        zip.file(ctPath, ct);
+        console.log(`[wordExport] [Content_Types].xml: aggiunti ${added} Default per estensioni media.`);
+    }
+}
+
+/**
  * Aggiunge le immagini al zip Word e aggiorna il file delle relazioni.
  * @param {PizZip} zip
  * @param {Array<{rId,imgId,base64,mimeType,ext}>} imageRegistry
@@ -291,6 +324,7 @@ function embedImagesInZip(zip, imageRegistry) {
     });
 
     zip.file(relsPath, relsXml);
+    ensureImageContentTypesInZip(zip, imageRegistry.map((r) => r.ext));
     console.log(`[wordExport] ${imageRegistry.length} immagini embedded nel documento.`);
 }
 
@@ -301,17 +335,23 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     let templateUrl;
     const getTemplateResolver = options.getTemplateResolver;
 
-    if (isCustomChecklist && getTemplateResolver && typeof getTemplateResolver === 'function') {
-        try {
-            const resolved = await getTemplateResolver();
-            if (resolved?.url) {
-                templateUrl = resolved.url;
-                console.log('[wordExport] Template risolto da API (checklist custom):', resolved.name || templateUrl);
+    // Checklist custom: sempre template verbale (o da API se resolver ok). Senza questo blocco,
+    // se manca getTemplateResolver si cascava nel ramo ISO e si usava ISO9001-audit-report.docx.
+    if (isCustomChecklist) {
+        if (getTemplateResolver && typeof getTemplateResolver === 'function') {
+            try {
+                const resolved = await getTemplateResolver();
+                if (resolved?.url) {
+                    templateUrl = resolved.url;
+                    console.log('[wordExport] Template risolto da API (checklist custom):', resolved.name || templateUrl);
+                }
+            } catch (e) {
+                console.warn('[wordExport] Risoluzione template custom fallita:', e.message);
             }
-        } catch (e) {
-            console.warn('[wordExport] Risoluzione template custom fallita:', e.message);
         }
-        if (!templateUrl) templateUrl = TEMPLATE_MAP.custom_checklist || TEMPLATE_MAP.default;
+        if (!templateUrl) {
+            templateUrl = TEMPLATE_MAP.custom_checklist || TEMPLATE_MAP.default;
+        }
     }
 
     if (!templateUrl) {
