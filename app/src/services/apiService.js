@@ -30,6 +30,23 @@ const TOKEN_KEY = 'sgq_auth_token';
 const REFRESH_TOKEN_KEY = 'sgq_refresh_token';
 const USER_KEY = 'sgq_user';
 
+/** Token lock audit per UUID (header X-Audit-Lock-Token sulle scritture) */
+const AUDIT_LOCK_TOKENS = new Map();
+
+/**
+ * Registra il token lock server per un audit (UUID). Passa null per rimuovere.
+ */
+function setAuditLockTokenForUuid(auditUuid, token) {
+    if (!auditUuid) return;
+    const k = String(auditUuid);
+    if (token) AUDIT_LOCK_TOKENS.set(k, token);
+    else AUDIT_LOCK_TOKENS.delete(k);
+}
+
+function clearAllAuditLockTokens() {
+    AUDIT_LOCK_TOKENS.clear();
+}
+
 /**
  * Classe API Client
  */
@@ -113,9 +130,16 @@ class ApiService {
         try {
             const fetchOptions = {
                 method,
-                headers: this.getHeaders(includeAuth),
+                headers: { ...this.getHeaders(includeAuth) },
                 signal: controller.signal
             };
+
+            if (options.lockAuditUuid) {
+                const lt = AUDIT_LOCK_TOKENS.get(String(options.lockAuditUuid));
+                if (lt) {
+                    fetchOptions.headers['X-Audit-Lock-Token'] = lt;
+                }
+            }
 
             if (data && method !== 'GET') {
                 fetchOptions.body = JSON.stringify(data);
@@ -334,7 +358,29 @@ class ApiService {
      * Usa audit_uuid come chiave stabile
      */
     async upsertAudit(auditData) {
-        return this.post('/audits/sync', auditData);
+        const uuid = auditData?.audit_uuid || auditData?.id;
+        return this.post('/audits/sync', auditData, { lockAuditUuid: uuid || undefined });
+    }
+
+    /** Acquisisce lock pessimistico sull'audit (ref = UUID o audit_id) */
+    async acquireAuditLock(auditRef) {
+        return this.post(`/audits/${encodeURIComponent(auditRef)}/lock`, {});
+    }
+
+    async renewAuditLock(auditRef) {
+        return this.request('PUT', `/audits/${encodeURIComponent(auditRef)}/lock`, null, {
+            lockAuditUuid: String(auditRef),
+        });
+    }
+
+    async releaseAuditLock(auditRef) {
+        return this.request('DELETE', `/audits/${encodeURIComponent(auditRef)}/lock`, null, {
+            lockAuditUuid: String(auditRef),
+        });
+    }
+
+    async getAuditLockStatus(auditRef) {
+        return this.get(`/audits/${encodeURIComponent(auditRef)}/lock/status`);
     }
 
     async deleteAudit(id) {
@@ -469,7 +515,7 @@ class ApiService {
      * @param {Object} response - { question_id, conformity_status, notes, evidence, client_updated_at }
      */
     async saveAuditResponse(auditId, response) {
-        return this.post(`/audits/${auditId}/responses`, response);
+        return this.post(`/audits/${auditId}/responses`, response, { lockAuditUuid: String(auditId) });
     }
 
     /**
@@ -478,14 +524,14 @@ class ApiService {
      * @param {Array} responses - Array di risposte
      */
     async bulkSaveResponses(auditId, responses) {
-        return this.post(`/audits/${auditId}/responses/bulk`, { responses });
+        return this.post(`/audits/${auditId}/responses/bulk`, { responses }, { lockAuditUuid: String(auditId) });
     }
 
     /**
      * Elimina risposta
      */
     async deleteAuditResponse(auditId, questionId) {
-        return this.delete(`/audits/${auditId}/responses/${questionId}`);
+        return this.delete(`/audits/${auditId}/responses/${questionId}`, { lockAuditUuid: String(auditId) });
     }
 
     // ==========================================
@@ -584,12 +630,16 @@ class ApiService {
         if (description) formData.append('description', description);
 
         const token = this.getToken();
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+        };
+        if (auditId) {
+            const lt = AUDIT_LOCK_TOKENS.get(String(auditId));
+            if (lt) headers['X-Audit-Lock-Token'] = lt;
+        }
         const response = await fetch(`${this.baseUrl}/attachments/upload`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // Non includere Content-Type per FormData
-            },
+            headers,
             body: formData
         });
 
@@ -805,7 +855,7 @@ class ApiService {
     }
 
     async saveCustomChecklistResponses(auditId, responses) {
-        return this.put(`/audits/${auditId}/custom-checklist-responses`, { responses });
+        return this.put(`/audits/${auditId}/custom-checklist-responses`, { responses }, { lockAuditUuid: String(auditId) });
     }
 
     // ==========================================
@@ -840,5 +890,5 @@ class ApiError extends Error {
 
 // Singleton export
 const apiService = new ApiService();
-export { apiService, ApiError, config as apiConfig };
+export { apiService, ApiError, config as apiConfig, setAuditLockTokenForUuid, clearAllAuditLockTokens };
 export default apiService;

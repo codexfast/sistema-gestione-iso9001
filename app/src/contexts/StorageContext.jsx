@@ -10,6 +10,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { MOCK_AUDITS } from "../data/mockAudits";
 import { createNewAudit, validateAuditSchema } from "../data/auditDataModel";
@@ -20,7 +21,7 @@ import {
   getDeviceInfo,
 } from "../services/storageAdapter";
 import { syncService } from "../services/syncService";
-import apiService from "../services/apiService";
+import apiService, { setAuditLockTokenForUuid } from "../services/apiService";
 
 // Crea Context
 const StorageContext = createContext(null);
@@ -164,6 +165,27 @@ export function StorageProvider({ children, useMockData = false }) {
     conflictData: null,
   });
 
+  /** Lock pessimistico audit (server): owner | foreign | pending_server | offline | error */
+  const [auditLock, setAuditLock] = useState({
+    mode: "none",
+    lockedByName: null,
+    message: null,
+  });
+  const auditLockRef = useRef(auditLock);
+  useEffect(() => {
+    auditLockRef.current = auditLock;
+  }, [auditLock]);
+
+  const auditsRef = useRef(audits);
+  useEffect(() => {
+    auditsRef.current = audits;
+  }, [audits]);
+
+  const lockTokenRef = useRef(null);
+  const lockUuidRef = useRef(null);
+  const lockHeartbeatRef = useRef(null);
+  const lockWriteWarnTsRef = useRef(0);
+
   // Audit corrente (computed) - supporta sia metadata.id che id top-level
   const currentAudit =
     audits.find((a) => {
@@ -181,6 +203,222 @@ export function StorageProvider({ children, useMockData = false }) {
       auditsIds: audits.map((a) => a.metadata?.id || a.id),
     });
   }, [audits, currentAuditId, currentAudit]);
+
+  // --- Lock audit server (multi-utente): acquisizione, heartbeat, rilascio ---
+  useEffect(() => {
+    let cancelled = false;
+
+    function clearHeartbeat() {
+      if (lockHeartbeatRef.current) {
+        clearInterval(lockHeartbeatRef.current);
+        lockHeartbeatRef.current = null;
+      }
+    }
+
+    async function releaseHeldLock() {
+      clearHeartbeat();
+      const u = lockUuidRef.current;
+      const t = lockTokenRef.current;
+      if (u && t) {
+        setAuditLockTokenForUuid(u, null);
+        lockTokenRef.current = null;
+        lockUuidRef.current = null;
+        try {
+          await apiService.releaseAuditLock(u);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    (async () => {
+      await releaseHeldLock();
+      if (cancelled) return;
+
+      if (!currentAuditId) {
+        setAuditLock({ mode: "none", lockedByName: null, message: null });
+        return;
+      }
+
+      const audit = auditsRef.current.find(
+        (a) => (a.metadata?.id || a.id) === currentAuditId,
+      );
+      const uuid = audit?.metadata?.id || audit?.id;
+      if (!uuid) {
+        setAuditLock({ mode: "none", lockedByName: null, message: null });
+        return;
+      }
+
+      if (!navigator.onLine) {
+        setAuditLock({
+          mode: "offline",
+          lockedByName: null,
+          message:
+            "Sei offline: lock non attivo sul server. Evita modifiche concorrenti sullo stesso audit con altri utenti.",
+        });
+        return;
+      }
+
+      try {
+        const res = await apiService.acquireAuditLock(uuid);
+        if (cancelled) return;
+        const tok = res?.data?.lock_token;
+        if (tok) {
+          setAuditLockTokenForUuid(uuid, tok);
+          lockTokenRef.current = tok;
+          lockUuidRef.current = uuid;
+          setAuditLock({ mode: "owner", lockedByName: null, message: null });
+          const hb = setInterval(() => {
+            apiService.renewAuditLock(uuid).catch((e) => {
+              console.warn("[AUDIT_LOCK] heartbeat fallito:", e?.message || e);
+            });
+          }, 60 * 1000);
+          lockHeartbeatRef.current = hb;
+        }
+      } catch (e) {
+        if (cancelled) return;
+        const status = e?.status;
+        const code = e?.code;
+        if (status === 423 || code === "AUDIT_LOCKED") {
+          setAuditLockTokenForUuid(uuid, null);
+          setAuditLock({
+            mode: "foreign",
+            lockedByName: e?.data?.locked_by_name || "Altro utente",
+            message:
+              e?.message ||
+              "Questo audit è in modifica da un altro utente. Le modifiche non verranno salvate sul server.",
+          });
+        } else if (status === 404) {
+          setAuditLock({
+            mode: "pending_server",
+            lockedByName: null,
+            message:
+              "Audit non ancora sul server: il lock si attiverà dopo la prima sincronizzazione.",
+          });
+        } else {
+          setAuditLock({
+            mode: "error",
+            lockedByName: null,
+            message: e?.message || "Impossibile acquisire il lock",
+          });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      clearHeartbeat();
+      const u = lockUuidRef.current;
+      const t = lockTokenRef.current;
+      if (u && t) {
+        setAuditLockTokenForUuid(u, null);
+        lockTokenRef.current = null;
+        lockUuidRef.current = null;
+        apiService.releaseAuditLock(u).catch(() => {});
+      }
+    };
+  }, [currentAuditId]);
+
+  // Ritenta lock quando l'audit compare sul server (stesso audit selezionato)
+  useEffect(() => {
+    if (auditLock.mode !== "pending_server" || !currentAuditId || !navigator.onLine) {
+      return undefined;
+    }
+    const timer = setInterval(async () => {
+      const audit = auditsRef.current.find(
+        (a) => (a.metadata?.id || a.id) === currentAuditId,
+      );
+      const uuid = audit?.metadata?.id || audit?.id;
+      if (!uuid) return;
+      try {
+        const res = await apiService.acquireAuditLock(uuid);
+        const tok = res?.data?.lock_token;
+        if (tok) {
+          if (lockHeartbeatRef.current) {
+            clearInterval(lockHeartbeatRef.current);
+            lockHeartbeatRef.current = null;
+          }
+          setAuditLockTokenForUuid(uuid, tok);
+          lockTokenRef.current = tok;
+          lockUuidRef.current = uuid;
+          setAuditLock({ mode: "owner", lockedByName: null, message: null });
+          lockHeartbeatRef.current = setInterval(() => {
+            apiService.renewAuditLock(uuid).catch(() => {});
+          }, 60 * 1000);
+          clearInterval(timer);
+        }
+      } catch {
+        /* resta in pending_server */
+      }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [auditLock.mode, currentAuditId]);
+
+  // Rilascio lock server al logout (prima che i token in memoria vengano azzerati)
+  useEffect(() => {
+    const onUserLoggedOut = () => {
+      if (lockHeartbeatRef.current) {
+        clearInterval(lockHeartbeatRef.current);
+        lockHeartbeatRef.current = null;
+      }
+      const u = lockUuidRef.current;
+      const t = lockTokenRef.current;
+      if (u && t) {
+        setAuditLockTokenForUuid(u, null);
+        lockTokenRef.current = null;
+        lockUuidRef.current = null;
+        apiService.releaseAuditLock(u).catch(() => {});
+      }
+      setAuditLock({ mode: "none", lockedByName: null, message: null });
+    };
+    window.addEventListener("sgq:userLoggedOut", onUserLoggedOut);
+    return () => window.removeEventListener("sgq:userLoggedOut", onUserLoggedOut);
+  }, []);
+
+  const refreshAuditLock = useCallback(async () => {
+    const uuid =
+      currentAudit?.metadata?.id ||
+      currentAudit?.id ||
+      lockUuidRef.current;
+    if (!uuid || !navigator.onLine) return { ok: false };
+    if (lockHeartbeatRef.current) {
+      clearInterval(lockHeartbeatRef.current);
+      lockHeartbeatRef.current = null;
+    }
+    if (lockUuidRef.current && lockTokenRef.current) {
+      setAuditLockTokenForUuid(lockUuidRef.current, null);
+      try {
+        await apiService.releaseAuditLock(lockUuidRef.current);
+      } catch {
+        /* ignore */
+      }
+    }
+    lockTokenRef.current = null;
+    lockUuidRef.current = null;
+    try {
+      const res = await apiService.acquireAuditLock(uuid);
+      const tok = res?.data?.lock_token;
+      if (tok) {
+        setAuditLockTokenForUuid(uuid, tok);
+        lockTokenRef.current = tok;
+        lockUuidRef.current = uuid;
+        setAuditLock({ mode: "owner", lockedByName: null, message: null });
+        lockHeartbeatRef.current = setInterval(() => {
+          apiService.renewAuditLock(uuid).catch(() => {});
+        }, 60 * 1000);
+        return { ok: true };
+      }
+    } catch (e) {
+      if (e?.status === 423) {
+        setAuditLock({
+          mode: "foreign",
+          lockedByName: e?.data?.locked_by_name || "Altro utente",
+          message: e?.message,
+        });
+      }
+    }
+    return { ok: false };
+  }, [currentAudit]);
 
   // Auto-save multiplo con IndexedDB
   const { auditSaveStatus, listSaveStatus, isSaving, allSaved } =
@@ -246,6 +484,170 @@ export function StorageProvider({ children, useMockData = false }) {
 
   // === INIZIALIZZAZIONE: MIGRAZIONE localStorage → IndexedDB + CARICAMENTO ===
   const [hasInitialized, setHasInitialized] = useState(false);
+  const isReconcilingRef = useRef(false);
+
+  /**
+   * Scarica TUTTI gli audit server (paginazione completa).
+   * Evita menu incompleti quando il totale supera il limit default API.
+   */
+  const fetchAllServerAudits = useCallback(async () => {
+    const converter = await import('../utils/auditConverter');
+    const first = await apiService.getAudits({ page: 1, limit: 200 });
+    const firstData = first?.data || [];
+    const totalPages = Number(first?.pagination?.totalPages || 1);
+
+    if (totalPages <= 1) {
+      return converter.convertAuditsFromBackend(firstData);
+    }
+
+    const allBackendAudits = [...firstData];
+    for (let page = 2; page <= totalPages; page++) {
+      const next = await apiService.getAudits({ page, limit: 200 });
+      allBackendAudits.push(...(next?.data || []));
+    }
+
+    return converter.convertAuditsFromBackend(allBackendAudits);
+  }, []);
+
+  /**
+   * Riconciliazione robusta multi-device:
+   * processQueue -> download server -> merge deterministico -> replace cache.
+   */
+  const reconcileAuditsFromServer = useCallback(async ({ processQueueFirst = true } = {}) => {
+    if (!fsProvider || !navigator.onLine) return { success: false, reason: "offline_or_no_provider" };
+    if (isReconcilingRef.current) return { success: false, reason: "already_running" };
+
+    isReconcilingRef.current = true;
+    try {
+      if (processQueueFirst) {
+        await syncService.processQueue();
+      }
+
+      const localAudits = await fsProvider.loadAllAudits();
+      const serverAudits = await fetchAllServerAudits();
+
+      if (serverAudits.length > 0) {
+        const serverUuids = serverAudits.map((a) => a.metadata?.id || a.id).filter(Boolean);
+        syncService.clearQueueForServerAudits(serverUuids).catch(() => {});
+      }
+
+      const mergedAudits = serverAudits.map((serverAudit) => {
+        const sid = serverAudit.metadata?.id || serverAudit.id;
+        const localAudit = localAudits.find((la) => (la.metadata?.id || la.id) === sid);
+        let merged = { ...serverAudit };
+
+        // Preserva contenuti ricchi locali se il server non li ha ancora
+        const localGD = localAudit?.metadata?.generalData ?? localAudit?.generalData;
+        const localAO = localAudit?.metadata?.auditObjective ?? localAudit?.auditObjective;
+        const localAOut = localAudit?.metadata?.auditOutcome ?? localAudit?.auditOutcome;
+        const hasRichDataLocal = localGD || localAO || localAOut;
+        const hasRichDataServer = serverAudit?.generalData || serverAudit?.auditObjective || serverAudit?.auditOutcome;
+        if (hasRichDataLocal && !hasRichDataServer) {
+          merged.metadata = {
+            ...merged.metadata,
+            generalData: localGD,
+            auditObjective: localAO,
+            auditOutcome: localAOut,
+          };
+        }
+
+        // Preserva custom checklist locale in caso di payload server incompleto
+        const localCustomId = localAudit?.metadata?.customChecklistId ?? localAudit?.custom_checklist_id;
+        const serverCustomId = serverAudit?.metadata?.customChecklistId ?? serverAudit?.custom_checklist_id;
+        if (localCustomId != null && localCustomId !== '' && (serverCustomId == null || serverCustomId === '')) {
+          merged.metadata = {
+            ...merged.metadata,
+            customChecklistId: localCustomId,
+            selectedStandards: localAudit?.metadata?.selectedStandards ?? [],
+          };
+          merged.checklist = localAudit?.checklist ?? {};
+        }
+
+        // Preserva selectedStandards locale se più completo
+        const localStds = localAudit?.metadata?.selectedStandards;
+        const serverStds = serverAudit?.metadata?.selectedStandards || [];
+        if (localStds && localStds.length > serverStds.length) {
+          merged.metadata = { ...merged.metadata, selectedStandards: localStds };
+        }
+
+        // Preserva checklist locale se server non contiene struttura utile
+        const localChecklist = localAudit?.checklist;
+        const serverChecklistKeys = Object.keys(serverAudit?.checklist || {});
+        const localChecklistKeys = Object.keys(localChecklist || {});
+        if (
+          localChecklistKeys.length > 0 &&
+          (serverChecklistKeys.length === 0 ||
+            (serverChecklistKeys.length === 1 &&
+              serverChecklistKeys[0] === 'ISO_9001' &&
+              Object.keys(serverAudit?.checklist?.ISO_9001 || {}).length === 0))
+        ) {
+          merged.checklist = localChecklist;
+        }
+
+        if (localAudit?.attachments?.length > 0 && !(serverAudit?.attachments?.length > 0)) {
+          merged.attachments = localAudit.attachments;
+        }
+
+        const localCustomResponses = localAudit?.customResponses;
+        const hasLocalCustomResponses = localCustomResponses && Object.keys(localCustomResponses).length > 0;
+        const serverHasCustomResponses = merged?.customResponses && Object.keys(merged.customResponses).length > 0;
+        if (hasLocalCustomResponses && !serverHasCustomResponses) {
+          merged.customResponses = localCustomResponses;
+        }
+
+        return merged;
+      });
+
+      const mergedIds = new Set(mergedAudits.map((a) => a.metadata?.id || a.id));
+      const mergedNumbers = new Set(
+        mergedAudits
+          .map((a) => a.metadata?.auditNumber)
+          .filter(Boolean)
+          .map((n) => String(n).trim().toUpperCase())
+      );
+      const localOnly = localAudits.filter((la) => {
+        const localId = la.metadata?.id || la.id;
+        const localNumber = la.metadata?.auditNumber ? String(la.metadata.auditNumber).trim().toUpperCase() : null;
+        if (mergedIds.has(localId)) return false;
+        if (localNumber && mergedNumbers.has(localNumber)) return false;
+        return true;
+      });
+
+      let finalAudits = dedupeAudits(localOnly.length > 0 ? [...mergedAudits, ...localOnly] : mergedAudits);
+
+      // Ripristina metadata.auditId da sync_metadata se disponibile
+      for (let i = 0; i < finalAudits.length; i++) {
+        const a = finalAudits[i];
+        if (a.metadata?.auditId != null) continue;
+        const uuid = a.metadata?.id || a.id;
+        const serverId = await syncService.getAuditIdForUuid(uuid);
+        if (serverId != null) {
+          finalAudits[i] = { ...a, metadata: { ...a.metadata, auditId: serverId } };
+        }
+      }
+
+      if (typeof fsProvider.clearAuditsStore === "function") {
+        await fsProvider.clearAuditsStore();
+      }
+      for (const audit of finalAudits) {
+        await fsProvider.saveAudit(audit);
+      }
+
+      setAudits(finalAudits);
+      setCurrentAuditId((prev) => {
+        if (!prev) return prev;
+        const exists = finalAudits.some((a) => (a.metadata?.id || a.id) === prev);
+        return exists ? prev : null;
+      });
+
+      return { success: true, count: finalAudits.length };
+    } catch (error) {
+      console.error("❌ [RECONCILE] Errore riconciliazione audit:", error);
+      return { success: false, reason: error?.message || "unknown_error" };
+    } finally {
+      isReconcilingRef.current = false;
+    }
+  }, [fetchAllServerAudits, fsProvider]);
 
   useEffect(() => {
     async function loadAuditsFromIndexedDB() {
@@ -555,39 +957,34 @@ export function StorageProvider({ children, useMockData = false }) {
   useEffect(() => {
     const handleLoginSuccess = async () => {
       if (!fsProvider) return;
-
-      console.log("🔄 [LOGIN] Ricarico audit dal server...");
-      
-      try {
-        const apiService = (await import('../services/apiService')).default;
-        const converter = await import('../utils/auditConverter');
-        
-        const response = await apiService.getAudits();
-        const backendAudits = response.data || [];
-        const serverAudits = converter.convertAuditsFromBackend(backendAudits);
-        
-        console.log(`✅ [LOGIN] Scaricati ${serverAudits.length} audit dal server`);
-        
-        // Server come fonte di verità: sostituisci cache
-        if (serverAudits.length > 0) {
-          if (typeof fsProvider.clearAuditsStore === "function") {
-            await fsProvider.clearAuditsStore();
-          }
-          for (const audit of serverAudits) {
-            await fsProvider.saveAudit(audit);
-          }
-          const dedupedServerAudits = dedupeAudits(serverAudits);
-          setAudits(dedupedServerAudits);
-          console.log(`✅ [LOGIN] ${dedupedServerAudits.length} audit caricati in memoria`);
-        }
-      } catch (err) {
-        console.error("❌ [LOGIN] Errore download audit:", err);
-      }
+      console.log("🔄 [LOGIN] Avvio riconciliazione server/cache...");
+      await reconcileAuditsFromServer({ processQueueFirst: true });
     };
 
     window.addEventListener('auth:login', handleLoginSuccess);
     return () => window.removeEventListener('auth:login', handleLoginSuccess);
-  }, [fsProvider]);
+  }, [fsProvider, reconcileAuditsFromServer]);
+
+  // Pull periodico dal server per allineare menu audit su multi-device senza reload pagina.
+  useEffect(() => {
+    if (!fsProvider || !hasInitialized) return;
+
+    const intervalId = setInterval(async () => {
+      if (!navigator.onLine) return;
+      await reconcileAuditsFromServer({ processQueueFirst: true });
+    }, 45000);
+
+    return () => clearInterval(intervalId);
+  }, [fsProvider, hasInitialized, reconcileAuditsFromServer]);
+
+  // Riconciliazione immediata quando torna online.
+  useEffect(() => {
+    const onOnline = async () => {
+      await reconcileAuditsFromServer({ processQueueFirst: true });
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [reconcileAuditsFromServer]);
 
   // === SALVATAGGIO AUTOMATICO IN INDEXEDDB (depreca localStorage) ===
   useEffect(() => {
@@ -691,6 +1088,21 @@ export function StorageProvider({ children, useMockData = false }) {
   const updateCurrentAudit = useCallback(
     (updater) => {
       setAudits((prevAudits) => {
+        if (auditLockRef.current.mode === "foreign") {
+          const now = Date.now();
+          if (now - lockWriteWarnTsRef.current > 5000) {
+            lockWriteWarnTsRef.current = now;
+            window.dispatchEvent(
+              new CustomEvent("sgq:auditWriteBlocked", {
+                detail: {
+                  lockedBy: auditLockRef.current.lockedByName,
+                  message: auditLockRef.current.message,
+                },
+              }),
+            );
+          }
+          return prevAudits;
+        }
         return prevAudits.map((audit) => {
           const auditId = audit.metadata?.id || audit.id;
           if (auditId === currentAuditId) {
@@ -1334,6 +1746,7 @@ export function StorageProvider({ children, useMockData = false }) {
     try {
       setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
       await syncService.processQueue();
+      await reconcileAuditsFromServer({ processQueueFirst: false });
       const queueSize = await syncService.getQueueSize();
       setSyncStatus((prev) => ({
         ...prev,
@@ -1348,7 +1761,7 @@ export function StorageProvider({ children, useMockData = false }) {
       setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [reconcileAuditsFromServer]);
 
   /**
    * Risolvi conflitto manualmente (scelta utente)
@@ -1397,6 +1810,11 @@ export function StorageProvider({ children, useMockData = false }) {
     syncStatus,
     triggerManualSync,
     resolveConflict,
+
+    // Lock audit (server)
+    auditLock,
+    isAuditReadOnly: auditLock.mode === "foreign",
+    refreshAuditLock,
 
     // CRUD operations
     updateCurrentAudit,

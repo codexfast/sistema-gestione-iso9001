@@ -10,6 +10,7 @@
 
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
+const { assertWriteAllowed, getLockTokenFromRequest } = require('../services/auditLock.service');
 
 /**
  * GET /api/v1/response-options
@@ -164,16 +165,33 @@ async function saveResponse(req, res) {
             });
         }
 
-        // Verifica ownership audit
-        const auditCheck = await query(`
-            SELECT audit_id, status FROM audits
-            WHERE audit_id = @audit_id AND organization_id = @organization_id AND is_deleted = 0
-        `, { audit_id: parseInt(auditId), organization_id });
+        // Verifica ownership audit (ID numerico o UUID)
+        let auditIdNumeric = parseInt(auditId, 10);
+        if (isNaN(auditIdNumeric)) {
+            const uuidLookup = await query(`
+                SELECT audit_id, status FROM audits
+                WHERE audit_uuid = @audit_uuid AND organization_id = @organization_id AND is_deleted = 0
+            `, { audit_uuid: auditId, organization_id });
+            if (uuidLookup.recordset.length === 0) {
+                return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
+            }
+            auditIdNumeric = uuidLookup.recordset[0].audit_id;
+        } else {
+            const auditCheck = await query(`
+                SELECT audit_id, status FROM audits
+                WHERE audit_id = @audit_id AND organization_id = @organization_id AND is_deleted = 0
+            `, { audit_id: auditIdNumeric, organization_id });
+            if (auditCheck.recordset.length === 0) {
+                return res.status(404).json({ error: 'Audit non trovato', code: 'AUDIT_NOT_FOUND' });
+            }
+        }
 
-        if (auditCheck.recordset.length === 0) {
-            return res.status(404).json({
-                error: 'Audit non trovato',
-                code: 'AUDIT_NOT_FOUND'
+        const lockSingle = await assertWriteAllowed(req.user, auditIdNumeric, getLockTokenFromRequest(req));
+        if (!lockSingle.ok) {
+            return res.status(lockSingle.status).json({
+                error: lockSingle.message,
+                code: lockSingle.code,
+                locked_by_name: lockSingle.locked_by_name,
             });
         }
 
@@ -193,7 +211,7 @@ async function saveResponse(req, res) {
         const existingResponse = await query(`
             SELECT response_id, updated_at FROM audit_responses
             WHERE audit_id = @audit_id AND question_id = @question_id
-        `, { audit_id: parseInt(auditId), question_id: parseInt(question_id) });
+        `, { audit_id: auditIdNumeric, question_id: parseInt(question_id) });
 
         const isAnswered = conformity_status && conformity_status !== 'NOT_ANSWERED';
 
@@ -226,7 +244,7 @@ async function saveResponse(req, res) {
                     updated_by = @user_id
                 WHERE audit_id = @audit_id AND question_id = @question_id
             `, {
-                audit_id: parseInt(auditId),
+                audit_id: auditIdNumeric,
                 question_id: parseInt(question_id),
                 conformity_status: conformity_status || null,
                 notes: notes || null,
@@ -234,7 +252,7 @@ async function saveResponse(req, res) {
                 user_id
             });
 
-            logger.info('Response updated', { audit_id: auditId, question_id });
+            logger.info('Response updated', { audit_id: auditIdNumeric, question_id });
 
             res.json({
                 success: true,
@@ -268,7 +286,7 @@ async function saveResponse(req, res) {
                     GETDATE()
                 )
             `, {
-                audit_id: parseInt(auditId),
+                audit_id: auditIdNumeric,
                 question_id: parseInt(question_id),
                 conformity_status: conformity_status || null,
                 notes: notes || null,
@@ -282,12 +300,12 @@ async function saveResponse(req, res) {
                 FROM audit_responses 
                 WHERE audit_id = @audit_id AND question_id = @question_id
             `, {
-                audit_id: parseInt(auditId),
+                audit_id: auditIdNumeric,
                 question_id: parseInt(question_id)
             });
 
             logger.info('Response created', {
-                audit_id: auditId,
+                audit_id: auditIdNumeric,
                 question_id,
                 response_id: insertedResponse.recordset[0].response_id
             });
@@ -301,7 +319,7 @@ async function saveResponse(req, res) {
         }
 
         // Aggiorna statistiche audit
-        await updateAuditStatistics(parseInt(auditId));
+        await updateAuditStatistics(auditIdNumeric);
 
     } catch (error) {
         logger.error('Error saving response', { error: error.message, stack: error.stack });
@@ -373,6 +391,15 @@ async function bulkSaveResponses(req, res) {
                 });
             }
             auditIdNumeric = parsedId;
+        }
+
+        const lockBulk = await assertWriteAllowed(req.user, auditIdNumeric, getLockTokenFromRequest(req));
+        if (!lockBulk.ok) {
+            return res.status(lockBulk.status).json({
+                error: lockBulk.message,
+                code: lockBulk.code,
+                locked_by_name: lockBulk.locked_by_name,
+            });
         }
 
         const results = {

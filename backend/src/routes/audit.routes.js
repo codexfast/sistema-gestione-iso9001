@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const auditController = require('../controllers/audit.controller');
+const auditLockController = require('../controllers/auditLock.controller');
 const customChecklistController = require('../controllers/customChecklist.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
@@ -13,6 +14,12 @@ router.use(authenticate);
 
 // GET /api/v1/audits - Lista audit con filtri e paginazione
 router.get('/audits', auditController.listAudits);
+
+// Lock audit (multi-utente) — PRIMA di /audits/:id per evitare collisioni di route
+router.get('/audits/:auditRef/lock/status', auditLockController.getLockStatus);
+router.post('/audits/:auditRef/lock', auditLockController.acquireLock);
+router.put('/audits/:auditRef/lock', auditLockController.renewLock);
+router.delete('/audits/:auditRef/lock', auditLockController.releaseLock);
 
 // GET /api/v1/audits/:id - Dettagli audit singolo
 router.get('/audits/:id', auditController.getAuditById);

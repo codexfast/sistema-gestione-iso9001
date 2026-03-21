@@ -25,8 +25,9 @@
 | `MODULE_NOT_FOUND` sul VPS | Copiare tutti i `require` (es. `auditMaintenance.service.js`, `customChecklist.service.js`, `reportTemplate.service.js`). |
 | Word senza dati custom | `ExportPanel`: merge `currentAudit.customResponses` + server prima di `exportAuditToWord` (server non vuoto vince). |
 | Regressione verso ISO 9001 su audit custom | Preservare `custom_checklist_id` in update; `syncService` / `upsertAudit` non distruttivi — vedi commit `ac5d981` e hardening successivi. |
+| Due utenti sullo stesso audit / conflitti salvataggio | **Lock pessimistico server** (tab. `audit_locks`, migrazione `027_audit_locks.sql`). Frontend: `StorageContext` + header `X-Audit-Lock-Token` via `apiService`; banner `AuditLockBanner.jsx`. Deploy: eseguire migrazione DB + aggiornare backend (`auditLock.service.js`, controller, route) + `systemctl restart`. |
 
-**Deploy**: non copiare solo i controller; verificare `systemctl status sgq-backend.service`. Dettaglio: `DEPLOY_CHECKLIST_RELEASE.md`, script `deploy-controllers-to-vps.ps1`.
+**Deploy**: non copiare solo i controller; verificare `systemctl status sgq-backend.service`. Dettaglio: `DEPLOY_CHECKLIST_RELEASE.md`, script `deploy-controllers-to-vps.ps1`. Dopo release lock: copiare anche `services/auditLock.service.js` e `controllers/auditLock.controller.js`.
 
 **Backlog architetturale**: [adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md).
 

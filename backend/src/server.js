@@ -51,7 +51,7 @@ const corsOptions = {
     origin: process.env.CORS_ORIGIN.split(','),
     credentials: process.env.CORS_CREDENTIALS === 'true',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Audit-Lock-Token'],
     preflightContinue: false,
     optionsSuccessStatus: 204
 };

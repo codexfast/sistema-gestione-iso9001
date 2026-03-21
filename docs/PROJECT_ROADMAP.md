@@ -2,7 +2,7 @@
 
 > **Data Inizio**: 13 gennaio 2026
 > **Ultimo Aggiornamento**: 21 marzo 2026
-> **Prossimo Step**: ADR-006 auto-reconcile cache/sync; eventuali affinamenti export Word
+> **Prossimo Step**: ADR-006 auto-reconcile cache/sync; deploy migrazione `027_audit_locks` su DB produzione se non ancora eseguita
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 
@@ -183,6 +183,8 @@ Frontend (wordExport.js):
 #### Audit Locking — accesso concorrente (Fase 1)
 **Problema**: se due auditor aprono lo stesso audit contemporaneamente si sovrascrivono le risposte.
 **Soluzione**: pessimistic lock con TTL (time-to-live).
+
+**Stato (21/03/2026)**: implementato in codice — migrazione `database/migrations/027_audit_locks.sql`, `backend/src/services/auditLock.service.js`, route `/audits/:auditRef/lock` (+ status), header `X-Audit-Lock-Token` sulle scritture, `AuditLockBanner.jsx`, heartbeat ~60s, TTL `AUDIT_LOCK_TTL_MINUTES` (default 15). **Produzione**: eseguire migrazione sul DB prima del deploy backend.
 
 ```
 Flusso proposto:

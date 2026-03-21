@@ -17,7 +17,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import apiService, { ApiError } from "../services/apiService";
+import apiService, { ApiError, clearAllAuditLockTokens } from "../services/apiService";
 
 // Ruoli disponibili
 export const USER_ROLES = {
@@ -122,6 +122,8 @@ export function AuthProvider({ children }) {
   // Listener per logout forzato (token scaduto)
   useEffect(() => {
     const handleForceLogout = () => {
+      window.dispatchEvent(new CustomEvent("sgq:userLoggedOut"));
+      clearAllAuditLockTokens();
       setUser(null);
       setError("Sessione scaduta. Effettua nuovamente il login.");
     };
@@ -185,6 +187,8 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn("Errore logout API:", err);
     }
+    window.dispatchEvent(new CustomEvent("sgq:userLoggedOut"));
+    clearAllAuditLockTokens();
     setUser(null);
     setError(null);
     console.log("👋 Logout effettuato");

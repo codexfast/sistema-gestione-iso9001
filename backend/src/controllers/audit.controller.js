@@ -7,6 +7,7 @@ const { query } = require('../config/database');
 const logger = require('../utils/logger');
 const { hardDeleteAudit } = require('../services/auditMaintenance.service');
 const { getAllowedStandardIds } = require('./auth.controller');
+const { assertWriteAllowed, getLockTokenFromRequest } = require('../services/auditLock.service');
 
 /**
  * GET /api/v1/audits
@@ -449,6 +450,15 @@ async function updateAudit(req, res) {
             });
         }
 
+        const lockChkUpd = await assertWriteAllowed(req.user, parseInt(id, 10), getLockTokenFromRequest(req));
+        if (!lockChkUpd.ok) {
+            return res.status(lockChkUpd.status).json({
+                error: lockChkUpd.message,
+                code: lockChkUpd.code,
+                locked_by_name: lockChkUpd.locked_by_name,
+            });
+        }
+
         // Conflict detection: verifica timestamp client vs server
         const currentUpdatedAt = existingAudit.recordset[0].updated_at;
         const clientUpdatedAt = req.headers['x-last-known-updated-at'];
@@ -832,6 +842,16 @@ async function upsertAudit(req, res) {
             // ========== UPDATE ESISTENTE ==========
             const existingAudit = existing.recordset[0];
             const audit_id = existingAudit.audit_id;
+
+            const lockChk = await assertWriteAllowed(req.user, audit_id, getLockTokenFromRequest(req));
+            if (!lockChk.ok) {
+                return res.status(lockChk.status).json({
+                    error: lockChk.message,
+                    code: lockChk.code,
+                    locked_by_name: lockChk.locked_by_name,
+                });
+            }
+
             // Determina il custom checklist effettivo:
             // - se payload include custom_checklist_id, usa quel valore (anche null per "stacco")
             // - altrimenti preserva valore esistente in DB

@@ -1,0 +1,61 @@
+.audit-lock-banner {
+  background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6f 100%);
+  color: #f0f4f8;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.audit-lock-banner.mode-foreign {
+  background: linear-gradient(90deg, #6b2c2c 0%, #8b3a3a 100%);
+}
+
+.audit-lock-banner.mode-offline,
+.audit-lock-banner.mode-pending_server {
+  background: linear-gradient(90deg, #4a4a2c 0%, #5c5c38 100%);
+}
+
+.audit-lock-banner-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.audit-lock-banner-icon {
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.audit-lock-banner-text {
+  flex: 1;
+  min-width: 200px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.audit-lock-banner-text strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.audit-lock-banner-text p {
+  margin: 0;
+  opacity: 0.95;
+}
+
+.audit-lock-banner-retry {
+  align-self: center;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.audit-lock-banner-retry:hover {
+  background: rgba(255, 255, 255, 0.22);
+}

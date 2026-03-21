@@ -178,6 +178,26 @@ export class SyncService {
                     await this.removeFromQueue(item.id);
                     console.log(`✅ [SYNC] Completato: ${item.type} (${item.id})`);
                 } catch (error) {
+                    const st = error?.status;
+                    const code = error?.code;
+                    const lockDenied =
+                        st === 423 ||
+                        code === 'AUDIT_LOCKED' ||
+                        code === 'AUDIT_LOCK_REQUIRED' ||
+                        code === 'AUDIT_LOCK_INVALID';
+                    if (lockDenied) {
+                        await this.removeFromQueue(item.id);
+                        console.warn(
+                            `⛔ [SYNC] Operazione rimossa dalla coda (lock audit): ${item.type}`,
+                            error?.message,
+                        );
+                        window.dispatchEvent(
+                            new CustomEvent('sgq:auditLockSyncDenied', {
+                                detail: { type: item.type, code, message: error?.message },
+                            }),
+                        );
+                        continue;
+                    }
                     console.error(`❌ [SYNC] Errore: ${item.type} (${item.id})`, error);
                     await this.updateRetryCount(item.id, error.message);
                 }

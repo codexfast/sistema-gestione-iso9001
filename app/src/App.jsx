@@ -11,6 +11,7 @@ import CustomChecklistsPage from "./components/CustomChecklistsPage";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
+import AuditLockBanner from "./components/AuditLockBanner";
 import { useCheckpointSaver } from "./hooks/useCheckpointSaver";
 import { checkAndMigrateStorage } from "./utils/storageVersion";
 import "./App.css";
@@ -240,6 +241,7 @@ function AppContent() {
     <div className="app">
       {/* Connection Status Indicator */}
       <ConnectionStatus />
+      <AuditLockBanner />
 
       <header className="app-header">
         <div className="container header-flex">
