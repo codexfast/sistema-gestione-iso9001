@@ -1,6 +1,6 @@
 # Indice e convenzioni documentazione
 
-> Punto di ingresso per capire dove si trova cosa. Aggiornato: 2026-03-15.
+> Punto di ingresso per capire dove si trova cosa. Aggiornato: 2026-03-21.
 
 ---
 
