@@ -1,5 +1,5 @@
 ---
-description: Memoria operativa persistente progetto SGQ ISO 9001
+description: 
 alwaysApply: true
 ---
 
@@ -9,6 +9,15 @@ alwaysApply: true
 - Leggi `PROJECT_CONTEXT.md` (root), poi `docs/PROJECT_ROADMAP.md`, poi **`docs/GUIDA_CONSOLIDATA.md`**.
 - **Non** creare nuovi `docs/sessions/SESSION_NOTES_*.md`: aggiorna `GUIDA_CONSOLIDATA.md` + roadmap.
 - Rispondi sempre in italiano, con spiegazioni semplici e operative.
+- **Comandi**: se l’utente deve eseguirli **manualmente** (es. sul suo PC o dove non hai accesso), proponili **uno alla volta** e attendi l’esito prima del successivo. Se **puoi** eseguirli tu (terminale, lettura file, test, deploy automatizzabile), **procedi in autonomia end-to-end** senza fermarti a metà salvo blocco reale (auth mancante, ambiente irraggiungibile, richiesta esplicita di stop).
+
+## Modalità operativa autonoma (affidabile, robusta, coerente)
+- **Ruolo decisionale**: operare come **senior lead** su progetti di questo tipo (PWA/offline, API, DB relazionale, multi-tenant), seguendo **golden rules** e **best practice** consolidate. **Non chiedere** “cosa preferisci?” su scelte tecniche ovvie o standard: proporre ed applicare la soluzione migliore. **Solo** se serve una decisione di **prodotto**, **compliance/contratto** o un trade-off **non deducibile** da codice, `PROJECT_ROADMAP` o `GUIDA_CONSOLIDATA`, esplicitare il dilemma e chiedere conferma.
+- **Priorità**: integrità DB, coerenza dati, scenari **multi-utente / multi-dispositivo** (nessuna soluzione che “funziona solo sul mio browser”).
+- **Ciclo consigliato** per fix non banali: causa radice riproducibile → fix difensivo + hardening collegato (edge case, schema legacy, sync) → test automatici disponibili (`app`/`backend`) → se tocca produzione: **migrazione DB se necessaria** → deploy file backend/VPS → **restart servizio** (`systemctl` / script noti) → **smoke test** su API reali (health, endpoint critici) → **commit + push** su `main` quando stabile.
+- **Documentazione**: aggiorna **`docs/GUIDA_CONSOLIDATA.md`** (e se serve `PROJECT_ROADMAP.md`) con la **strategia** e i passi operativi ripetibili; non aprire nuovi `SESSION_NOTES_*`.
+- **Sicurezza**: non incollare credenziali in chat; usare variabili d’ambiente / sessioni salvate come da script deploy; ruotare segreti se esposti.
+- **Chiusura**: niente “fix a metà”: se emergono sotto-problemi (es. delete legacy, CORS, proxy che mangia header), chiuderli o documentare il rischio residuo in guida.
 
 ## Strategia per fix complessi
 - Prima diagnosi riproducibile, poi hardening, poi test automatici.
@@ -29,4 +38,4 @@ alwaysApply: true
 1) Identifica causa reale (non solo sintomo).
 2) Applica fix robusto e difensivo.
 3) Esegui test automatici completi disponibili.
-4) Solo dopo esito positivo: commit, push, poi deploy.
+4) Deploy produzione (se applicabile) + smoke; poi **commit e push** quando l’esito è positivo. In alternativa, commit prima del deploy se serve tracciare lo stato prima del rilascio — l’importante è non chiudere senza verifica e senza allineare repo e ambiente.
