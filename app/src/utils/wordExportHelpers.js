@@ -745,13 +745,44 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
         if (id != null) attById.set(Number(id), a);
     });
 
-    const toRichTextRuns = (text) => {
-        const parts = String(text || '').split(/\*\*(.*?)\*\*/g);
+    /**
+     * Converte una singola riga in sequenza di w:r (senza w:p).
+     * - Coppie **grassetto** classiche
+     * - Riga che inizia con ** senza seconda ** (es. "**1- testo") → tutto il resto in grassetto
+     * - Asterischi Unicode tipici da mobile/copia-incolla → *
+     */
+    const lineToRichRuns = (line) => {
+        const t = String(line || '')
+            .replace(/\u2217/g, '*')
+            .replace(/\uFE61/g, '*')
+            .replace(/\uFF0A/g, '*');
+        const trimmed = t.trimEnd();
+        const secondStar = trimmed.indexOf('**', 2);
+        const startsWithBoldMarker = /^\s*\*\*/.test(trimmed);
+        if (startsWithBoldMarker && secondStar === -1) {
+            const rest = trimmed.replace(/^\s*\*\*/, '').trim();
+            return xmlRun(escXml(rest), { bold: true, size: 18 });
+        }
+        const parts = trimmed.split(/\*\*(.*?)\*\*/g);
         return parts.map((p, i) =>
             i % 2 === 0
                 ? xmlRun(escXml(p), { size: 18 })
                 : xmlRun(escXml(p), { bold: true, size: 18 })
         ).join('');
+    };
+
+    const textToRichParagraphs = (text) => {
+        const raw = String(text || '').replace(/\r\n/g, '\n');
+        const lines = raw.split('\n');
+        let out = '';
+        for (const line of lines) {
+            if (!line.trim()) {
+                out += xmlPara('', { sa: 20, sb: 20 });
+                continue;
+            }
+            out += xmlPara(lineToRichRuns(line), { sa: 40, sb: 40 });
+        }
+        return out;
     };
 
     const sectionHeaderRow = (sec) => xmlRow([
@@ -815,7 +846,7 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
                         detail += xmlPara(xmlRun(itemTitle, { bold: true, size: 18 }), { sa: 50, sb: 40 });
                     }
                     if (text) {
-                        detail += xmlPara(toRichTextRuns(text), { sa: 40, sb: 40 });
+                        detail += textToRichParagraphs(text);
                     }
 
                     if (attId != null && getViewUrl) {

@@ -1,0 +1,34 @@
+---
+description: Memoria operativa persistente progetto SGQ ISO 9001
+alwaysApply: true
+---
+
+# SGQ Operating Memory
+
+## Avvio sessione obbligatorio
+- Leggi sempre `docs/PROJECT_ROADMAP.md`.
+- Leggi sempre `docs/sessions/SESSION_NOTES_20260301.md` e le note sessione piu recenti.
+- Rispondi sempre in italiano, con spiegazioni semplici e operative.
+
+## Strategia per fix complessi
+- Prima diagnosi riproducibile, poi hardening, poi test automatici.
+- Se il problema e su persistenza custom checklist: verifica merge local/server, sync queue, `custom_checklist_id`, fallback ISO 9001.
+- Se il problema e su report Word: verifica marker, OOXML, relazioni immagini, caratteri XML non validi.
+- Template Verbale custom: gia avuto `document.xml` malformato (w:p annidati, attributi senza quote) — script `app/scripts/fix-verbale-template-xml.js` + `repairWordDocumentXmlMalformedAttrs` in `wordExport.js`.
+- Testo evidenze custom: markdown `**` senza chiusura su riga = grassetto riga in `wordExportHelpers.buildCustomChecklistSectionOoxml`.
+
+## Regole operative terminale (Windows PowerShell)
+- Evita `&&` in PowerShell legacy: usa `;` + controllo `$LASTEXITCODE`.
+- Per test frontend imposta sempre `NODE_ENV=test` (evita errori React `act(...)`).
+- Per deploy VPS con PuTTY usa comandi non interattivi (`plink/pscp`) e gestisci `sudo -S` quando necessario.
+
+## Qualita e stabilita
+- Dopo modifiche sostanziali: esegui test mirati + suite disponibile.
+- Aggiorna test per riprodurre bug reali (non test solo nominali).
+- Se utile, crea test di simulazione DOCX con template minimo in memoria.
+
+## Workflow default consigliato
+1) Identifica causa reale (non solo sintomo).
+2) Applica fix robusto e difensivo.
+3) Esegui test automatici completi disponibili.
+4) Solo dopo esito positivo: commit, push, poi deploy.
