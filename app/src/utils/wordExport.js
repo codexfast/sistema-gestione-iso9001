@@ -30,7 +30,7 @@
 
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
-import { saveAs } from 'file-saver';
+import * as fileSaverModule from 'file-saver';
 import {
     buildChecklistSectionOoxml,
     buildRileviSummaryOoxml,
@@ -78,6 +78,10 @@ const STANDARD_KEY_TO_ID = {
     'ISO_3834_2': 6, 'RDP_MSN': 7,
     'default': 1,
 };
+const saveAs =
+    fileSaverModule.saveAs ||
+    (fileSaverModule.default && fileSaverModule.default.saveAs) ||
+    fileSaverModule.default;
 
 function formatDate(dateStr) {
     if (!dateStr) return 'N/D';
@@ -143,6 +147,27 @@ function buildTemplateData(audit) {
  * Trova il paragrafo contenente il marker e lo sostituisce con l OOXML fornito.
  * Versione robusta: usa carattere per carattere per trovare <w:p> e non <w:pPr>.
  */
+/**
+ * Ripara attributi OOXML non quotati (template salvati/exportati in modo non conforme).
+ * Word e parser XML rigidi possono rifiutare il documento o corrompere la struttura.
+ */
+function repairWordDocumentXmlMalformedAttrs(xml) {
+    if (!xml || typeof xml !== 'string') return xml;
+    let s = xml;
+    // Template corrotti: <w:p ...><w:p><w:pPr> (w:p non puo contenere w:p in OOXML)
+    s = s.replace(/(<w:p[^>]*>)<w:p>(?=<w:pPr>)/g, '$1');
+    s = s.replace(/xml:space=preserve\b/g, 'xml:space="preserve"');
+    s = s.replace(/\bw:before=(\d+)(?=[\s/>])/g, 'w:before="$1"');
+    s = s.replace(/\bw:after=(\d+)(?=[\s/>])/g, 'w:after="$1"');
+    s = s.replace(/\bw:line=(\d+)(?=[\s/>])/g, 'w:line="$1"');
+    s = s.replace(/\bw:lineRule=([A-Za-z0-9]+)(?=[\s/>])/g, 'w:lineRule="$1"');
+    // w:val=AAAAAA (colore) o altri token non numerici
+    s = s.replace(/\bw:val=([0-9A-Fa-f]{6})(?=[\s/>])/g, 'w:val="$1"');
+    // w:val numerico rimasto senza virgolette
+    s = s.replace(/\bw:val=(\d+)(?=[\s/>])/g, 'w:val="$1"');
+    return s;
+}
+
 function replaceMarker(xml, marker, replacementXml) {
     const idx = xml.indexOf(marker);
     if (idx === -1) {
@@ -345,6 +370,11 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     }
 
     const zip = new PizZip(arrayBuffer);
+    const docPath = 'word/document.xml';
+    if (zip.files[docPath]) {
+        const fixed = repairWordDocumentXmlMalformedAttrs(zip.files[docPath].asText());
+        zip.file(docPath, fixed);
+    }
     const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks:    true,
@@ -424,6 +454,12 @@ export async function exportAuditToWord(audit, getViewUrl = null, options = {}) 
     const fileName = buildFileName(audit, options.standardKey || null);
     saveAs(blob, fileName);
     return fileName;
+}
+
+// Entry tecnico per test/investigazione: genera blob DOCX senza saveAs.
+export async function generateAuditDocxBlobForTesting(audit, getViewUrl = null, options = {}) {
+    if (!audit?.metadata) throw new Error('Audit non valido: metadata mancante');
+    return generateDocxBlob(audit, getViewUrl, options);
 }
 
 export async function exportAuditToFileSystem(audit, getViewUrl = null, options = {}) {
