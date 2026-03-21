@@ -148,6 +148,31 @@ function buildTemplateData(audit) {
  * Versione robusta: usa carattere per carattere per trovare <w:p> e non <w:pPr>.
  */
 /**
+ * w:tblInd negativo sposta la tabella fuori dai margini (effetto opposto a "Adatta alla finestra").
+ * Normalizza documento, intestazioni e piè di pagina dopo il caricamento del template.
+ */
+function normalizeNegativeTableIndentsInZip(zip) {
+    if (!zip || !zip.files) return;
+    const replacement = '<w:tblInd w:w="0" w:type="dxa"/>';
+    let parts = 0;
+    Object.keys(zip.files).forEach((p) => {
+        if (!/^word\/(document|header\d+|footer\d+)\.xml$/.test(p)) return;
+        const f = zip.files[p];
+        if (!f || f.dir) return;
+        const t = f.asText();
+        if (!t.includes('tblInd') || !t.includes('w:w="-')) return;
+        const u = t.replace(/<w:tblInd w:w="-\d+" w:type="dxa"\/>/g, replacement);
+        if (u !== t) {
+            zip.file(p, u);
+            parts++;
+        }
+    });
+    if (parts > 0) {
+        console.log('[wordExport] Rientro tabella: azzerato tblInd negativo in', parts, 'file XML (document/header/footer).');
+    }
+}
+
+/**
  * Ripara attributi OOXML non quotati (template salvati/exportati in modo non conforme).
  * Word e parser XML rigidi possono rifiutare il documento o corrompere la struttura.
  */
@@ -411,6 +436,7 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
     }
 
     const zip = new PizZip(arrayBuffer);
+    normalizeNegativeTableIndentsInZip(zip);
     const docPath = 'word/document.xml';
     if (zip.files[docPath]) {
         const fixed = repairWordDocumentXmlMalformedAttrs(zip.files[docPath].asText());

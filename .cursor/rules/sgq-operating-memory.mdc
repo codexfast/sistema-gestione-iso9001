@@ -22,6 +22,7 @@ alwaysApply: true
 - `repairWordDocumentXmlMalformedAttrs` anche **dopo** `doc.render` e **dopo** inject marker (`wordExport.js`) per evitare DOCX illeggibili.
 - DOCX "contenuto illeggibile" con **foto JPEG** e template che ha solo `png` in `[Content_Types].xml`: `ensureImageContentTypesInZip` in `embedImagesInZip` aggiunge Default per jpg/jpeg/gif.
 - Audit **solo checklist custom** deve usare sempre il ramo template verbale (`isCustomChecklist`); senza resolver non usare mai il template ISO9001 per errore.
+- Tabelle fuori margini nel Verbale: spesso `w:tblInd` negativo in header/document → `normalizeNegativeTableIndentsInZip` in `wordExport.js` + script `app/scripts/fix-verbale-table-margins.js` sul `.docx` in `public/templates/`.
 
 ## Regole operative terminale (Windows PowerShell)
 - Evita `&&` in PowerShell legacy: usa `;` + controllo `$LASTEXITCODE`.
