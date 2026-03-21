@@ -30,28 +30,66 @@ async function hardDeleteAudit(auditId, organizationId) {
 
   const audit = existing.recordset[0];
 
-  await query(
+  // Compatibilita' schema: in alcuni ambienti legacy alcune tabelle/colonne
+  // non esistono (es. pending_issues.audit_id). Evitiamo errori di compilazione
+  // SQL costruendo la lista DELETE solo per oggetti realmente presenti.
+  const columnsResult = await query(
     `
-      IF OBJECT_ID('attachments', 'U') IS NOT NULL AND COL_LENGTH('attachments', 'audit_id') IS NOT NULL
-        DELETE FROM attachments WHERE audit_id = @audit_id;
-      IF OBJECT_ID('audit_responses', 'U') IS NOT NULL AND COL_LENGTH('audit_responses', 'audit_id') IS NOT NULL
-        DELETE FROM audit_responses WHERE audit_id = @audit_id;
-      IF OBJECT_ID('audit_custom_checklist_responses', 'U') IS NOT NULL AND COL_LENGTH('audit_custom_checklist_responses', 'audit_id') IS NOT NULL
-        DELETE FROM audit_custom_checklist_responses WHERE audit_id = @audit_id;
-      IF COL_LENGTH('pending_issues', 'audit_id') IS NOT NULL
-        DELETE FROM pending_issues WHERE audit_id = @audit_id;
-      IF COL_LENGTH('pending_issues', 'source_audit_id') IS NOT NULL
-        DELETE FROM pending_issues WHERE source_audit_id = @audit_id;
-      IF OBJECT_ID('non_conformities', 'U') IS NOT NULL AND COL_LENGTH('non_conformities', 'audit_id') IS NOT NULL
-        DELETE FROM non_conformities WHERE audit_id = @audit_id;
-      IF OBJECT_ID('audit_standards', 'U') IS NOT NULL AND COL_LENGTH('audit_standards', 'audit_id') IS NOT NULL
-        DELETE FROM audit_standards WHERE audit_id = @audit_id;
-      IF OBJECT_ID('audit_history', 'U') IS NOT NULL AND COL_LENGTH('audit_history', 'audit_id') IS NOT NULL
-        DELETE FROM audit_history WHERE audit_id = @audit_id;
-      DELETE FROM audits WHERE audit_id = @audit_id AND organization_id = @organization_id;
-    `,
-    { audit_id: auditId, organization_id: organizationId }
+      SELECT TABLE_NAME, COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME IN (
+        'attachments',
+        'audit_responses',
+        'audit_custom_checklist_responses',
+        'pending_issues',
+        'non_conformities',
+        'audit_standards',
+        'audit_history',
+        'audits'
+      )
+    `
   );
+
+  const hasColumn = (table, column) =>
+    columnsResult.recordset.some(
+      row => row.TABLE_NAME === table && row.COLUMN_NAME === column
+    );
+
+  const deletes = [];
+  if (hasColumn('attachments', 'audit_id')) {
+    deletes.push('DELETE FROM attachments WHERE audit_id = @audit_id');
+  }
+  if (hasColumn('audit_responses', 'audit_id')) {
+    deletes.push('DELETE FROM audit_responses WHERE audit_id = @audit_id');
+  }
+  if (hasColumn('audit_custom_checklist_responses', 'audit_id')) {
+    deletes.push('DELETE FROM audit_custom_checklist_responses WHERE audit_id = @audit_id');
+  }
+  if (hasColumn('pending_issues', 'audit_id')) {
+    deletes.push('DELETE FROM pending_issues WHERE audit_id = @audit_id');
+  }
+  if (hasColumn('pending_issues', 'source_audit_id')) {
+    deletes.push('DELETE FROM pending_issues WHERE source_audit_id = @audit_id');
+  }
+  if (hasColumn('non_conformities', 'audit_id')) {
+    deletes.push('DELETE FROM non_conformities WHERE audit_id = @audit_id');
+  }
+  if (hasColumn('audit_standards', 'audit_id')) {
+    deletes.push('DELETE FROM audit_standards WHERE audit_id = @audit_id');
+  }
+  if (hasColumn('audit_history', 'audit_id')) {
+    deletes.push('DELETE FROM audit_history WHERE audit_id = @audit_id');
+  }
+
+  if (!hasColumn('audits', 'audit_id') || !hasColumn('audits', 'organization_id')) {
+    logger.error('[HARD_DELETE] Schema audits non valido: colonne chiave mancanti');
+    return false;
+  }
+  deletes.push('DELETE FROM audits WHERE audit_id = @audit_id AND organization_id = @organization_id');
+
+  for (const stmt of deletes) {
+    await query(stmt, { audit_id: auditId, organization_id: organizationId });
+  }
 
   logger.info('[HARD_DELETE] Completato', {
     auditId,
