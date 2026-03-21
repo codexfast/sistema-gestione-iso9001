@@ -17,6 +17,7 @@ alwaysApply: true
 - Template Verbale custom: gia avuto `document.xml` malformato (w:p annidati, attributi senza quote) — script `app/scripts/fix-verbale-template-xml.js` + `repairWordDocumentXmlMalformedAttrs` in `wordExport.js`.
 - Testo evidenze custom: markdown `**` senza chiusura su riga = grassetto riga in `wordExportHelpers.buildCustomChecklistSectionOoxml`.
 - Export verbale/checklist custom: `photoMode: 'preview'` in `ExportPanel` → `preloadImagesIntoAudit` + embedding; niente hyperlink sotto la foto (PDF/webp: solo nome file in grigio).
+- Checklist custom in Word: una sola `w:tbl` continua in `buildCustomChecklistSectionOoxml` (righe sezione + voci in sequenza).
 
 ## Regole operative terminale (Windows PowerShell)
 - Evita `&&` in PowerShell legacy: usa `;` + controllo `$LASTEXITCODE`.

@@ -725,16 +725,14 @@ export function buildRileviSummaryOoxml(checklist) {
  * @param {Array|null} imageRegistry
  */
 export function buildCustomChecklistSectionOoxml(customChecklist, customResponses = {}, auditAttachments = [], getViewUrl = null, options = {}, imageRegistry = null) {
-    let xml = '';
-
     if (!customChecklist?.sections?.length) {
         return xmlPara(xmlRun('Nessuna sezione nella checklist.', { ital: true }), { sa: 160 });
     }
 
-    // Layout tabellare richiesto:
-    // - 4 colonne
-    // - Riga sezione: col1 numero sezione, col2+3+4 unite (descrizione sezione)
-    // - Riga evidenza: col1 numero sotto-sezione, col2 commenti/foto, col3-4 vuote
+    // Layout: un'unica tabella Word continua (no tabelle separate per sezione).
+    // - 4 colonne in griglia
+    // - Riga sezione: col1 codice sezione, col2+3+4 unite (titolo sezione)
+    // - Riga evidenza: col1 codice voce, col2 testo/foto, col3-4 vuote
     const C = [900, 6400, 1400, 1400]; // DXA
     const secSpanDxa = C[1] + C[2] + C[3];
     const usePreview = options.photoMode === 'preview';
@@ -798,14 +796,16 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
 
     const emptyCell = (idx) => xmlCell(xmlPara(''), { dxa: C[idx], va: 'top' });
 
+    const allRows = [];
+
     customChecklist.sections
         .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
         .forEach((sec) => {
-            const rows = [sectionHeaderRow(sec)];
+            allRows.push(sectionHeaderRow(sec));
             const items = (sec.items || []).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
             if (!items.length) {
-                rows.push(xmlRow([
+                allRows.push(xmlRow([
                     xmlCell(xmlPara('\u2014', { align: 'center' }), { dxa: C[0] }),
                     xmlCell(xmlPara(xmlRun('Nessuna sotto-sezione disponibile.', { ital: true })), { dxa: C[1] }),
                     emptyCell(2),
@@ -819,7 +819,7 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
                 const itemTitle = String(item.title || '').trim();
 
                 if (blocks.length === 0) {
-                    rows.push(xmlRow([
+                    allRows.push(xmlRow([
                         xmlCell(xmlPara(itemCode, { align: 'center' }), { dxa: C[0], va: 'top' }),
                         xmlCell(
                             xmlPara([
@@ -872,7 +872,7 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
                         detail = xmlPara(xmlRun('\u2014 Evidenza senza contenuto testuale.', { ital: true, size: 18 }));
                     }
 
-                    rows.push(xmlRow([
+                    allRows.push(xmlRow([
                         xmlCell(xmlPara(rowCode, { align: 'center' }), { dxa: C[0], va: 'top' }),
                         xmlCell(detail, { dxa: C[1], va: 'top', ml: 120 }),
                         emptyCell(2),
@@ -880,12 +880,9 @@ export function buildCustomChecklistSectionOoxml(customChecklist, customResponse
                     ]));
                 });
             });
-
-            xml += xmlTable(rows, C, 100, true);
-            xml += xmlPara('', { sa: 180 });
         });
 
-    return xml;
+    return xmlTable(allRows, C, 100, true);
 }
 
 /**
