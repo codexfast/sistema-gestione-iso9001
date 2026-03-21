@@ -1,7 +1,8 @@
 # PROJECT CONTEXT — SGQ ISO 9001
 
 > Documento di orientamento rapido per l'AI agent. Da leggere all'inizio di ogni sessione.  
-> Dettagli tecnici: → [DATABASE.md](docs/DATABASE.md) | [BACKEND_API.md](docs/BACKEND_API.md) | `docs/`
+> **Esperienza consolidata** (deploy, Word, sync): → [docs/GUIDA_CONSOLIDATA.md](docs/GUIDA_CONSOLIDATA.md)  
+> Dettagli tecnici: → [DATABASE.md](docs/DATABASE.md) | [BACKEND_API.md](docs/BACKEND_API.md) | [docs/INDICE_DOCUMENTAZIONE.md](docs/INDICE_DOCUMENTAZIONE.md)
 
 ---
 

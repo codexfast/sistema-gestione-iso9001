@@ -6,23 +6,14 @@ alwaysApply: true
 # SGQ Operating Memory
 
 ## Avvio sessione obbligatorio
-- Leggi sempre `docs/PROJECT_ROADMAP.md`.
-- Leggi sempre `docs/sessions/SESSION_NOTES_20260301.md` e le note sessione piu recenti.
+- Leggi `PROJECT_CONTEXT.md` (root), poi `docs/PROJECT_ROADMAP.md`, poi **`docs/GUIDA_CONSOLIDATA.md`**.
+- **Non** creare nuovi `docs/sessions/SESSION_NOTES_*.md`: aggiorna `GUIDA_CONSOLIDATA.md` + roadmap.
 - Rispondi sempre in italiano, con spiegazioni semplici e operative.
 
 ## Strategia per fix complessi
 - Prima diagnosi riproducibile, poi hardening, poi test automatici.
-- Se il problema e su persistenza custom checklist: verifica merge local/server, sync queue, `custom_checklist_id`, fallback ISO 9001.
-- Se il problema e su report Word: verifica marker, OOXML, relazioni immagini, caratteri XML non validi.
-- Template Verbale custom: gia avuto `document.xml` malformato (w:p annidati, attributi senza quote) — script `app/scripts/fix-verbale-template-xml.js` + `repairWordDocumentXmlMalformedAttrs` in `wordExport.js`.
-- Testo evidenze custom: markdown `**` senza chiusura su riga = grassetto riga in `wordExportHelpers.buildCustomChecklistSectionOoxml`.
-- Export verbale/checklist custom: `photoMode: 'preview'` in `ExportPanel` → `preloadImagesIntoAudit` + embedding; niente hyperlink sotto la foto (PDF/webp: solo nome file in grigio).
-- Checklist custom in Word: una sola `w:tbl` continua in `buildCustomChecklistSectionOoxml` (righe sezione + voci in sequenza).
-- Voci custom: una riga per `item` (codice sempre `itemCode`); piu `evidence_blocks` concatenati nella stessa cella.
-- `repairWordDocumentXmlMalformedAttrs` anche **dopo** `doc.render` e **dopo** inject marker (`wordExport.js`) per evitare DOCX illeggibili.
-- DOCX "contenuto illeggibile" con **foto JPEG** e template che ha solo `png` in `[Content_Types].xml`: `ensureImageContentTypesInZip` in `embedImagesInZip` aggiunge Default per jpg/jpeg/gif.
-- Audit **solo checklist custom** deve usare sempre il ramo template verbale (`isCustomChecklist`); senza resolver non usare mai il template ISO9001 per errore.
-- Tabelle fuori margini nel Verbale: spesso `w:tblInd` negativo in header/document → `normalizeNegativeTableIndentsInZip` in `wordExport.js` + script `app/scripts/fix-verbale-table-margins.js` sul `.docx` in `public/templates/`.
+- Deploy, checklist custom, Word Verbale, DB/repro: tabelle e file in **`docs/GUIDA_CONSOLIDATA.md`** (sez. A–D).
+- Persistenza custom: merge local/server, `custom_checklist_id`, fallback ISO 9001.
 
 ## Regole operative terminale (Windows PowerShell)
 - Evita `&&` in PowerShell legacy: usa `;` + controllo `$LASTEXITCODE`.

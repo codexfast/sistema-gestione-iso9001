@@ -8,7 +8,7 @@
 
 - **Persistenza checklist custom**: backend VPS allineato (inclusi `src/services/*.js` richiesti da `audit.controller.js`); `sgq-backend.service` deve essere `active (running)` dopo `sudo systemctl restart`.
 - **Report Word**: in `ExportPanel.jsx` le risposte checklist custom per l’export sono **merge** tra server e `currentAudit.customResponses` (IndexedDB), così il report non risulta vuoto se i dati sono solo locali o in transito.
-- **Memoria operativa**: `docs/STATO_20260319_CHECKLIST_CUSTOM_DEPLOY_E_REPORT.md` (problemi risolti, strategie deploy, diagnosi 401/404).
+- **Memoria operativa** (oggi in): `docs/GUIDA_CONSOLIDATA.md` sez. A (questo file e archivio storico).
 
 ---
 

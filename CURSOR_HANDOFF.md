@@ -23,7 +23,7 @@
 3. [`docs/PROJECT_ROADMAP.md`](docs/PROJECT_ROADMAP.md) — stato componenti, backlog
 4. [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — schema DB critico
 5. [`docs/BACKEND_API.md`](docs/BACKEND_API.md) — endpoint attivi
-6. [`docs/sessions/SESSION_NOTES_20260301.md`](docs/sessions/SESSION_NOTES_20260301.md) — ultima sessione (allegati, pending issues)
+6. [`docs/GUIDA_CONSOLIDATA.md`](docs/GUIDA_CONSOLIDATA.md) — esperienza operativa (deploy, Word, sync); storico in `docs/archive/sessions/`
 7. [`docs/open_points.md`](docs/open_points.md) — bug aperti + risolti con root cause
 
 ---
@@ -199,7 +199,7 @@ Vedere [`FASE_8_EXPORT_WORD.md`](FASE_8_EXPORT_WORD.md) per la spec completa.
 
 ### Coerenza standard_id (contesto tecnico decisioni 01/03/2026)
 
-4 bug corretti in commit `9894ed5` (leggere `docs/SESSION_NOTES_20260301.md` §seconda parte):
+4 bug corretti in commit `9894ed5` (dettaglio in `docs/archive/sessions/SESSION_NOTES_20260301.md`):
 1. `formData.norms` non mappato a `selectedStandards` nel modal creazione
 2. Accordion accordion checklist ISO 14001 non visibile con codice `ISO_14001_2015`
 3. `backendToFrontend` restituiva formato inconsistente senza sfruttare junction table
@@ -387,7 +387,7 @@ docs/
   PROJECT_ROADMAP.md          ← stato avanzamento aggiornato al 01/03/2026
   DATABASE_SCHEMA.md          ← LEGGERE PRIMA DI TOCCARE IL DB
   MANUALE_UTENTE.md           ← flusso utente verificato su codice
-  sessions/SESSION_NOTES_20260301.md   ← ultima sessione: fix standard, allegati, pending issues
+  GUIDA_CONSOLIDATA.md      ← guida operativa unica; storico: archive/sessions/
   open_points.md              ← bug #006-#009 risolti, P1/P2 aperti
 
 CURSOR_HANDOFF.md             ← QUESTO FILE: punto di ingresso per Cursor

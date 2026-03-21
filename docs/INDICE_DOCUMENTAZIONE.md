@@ -10,7 +10,8 @@
 |-------|------|------|
 | **Contesto progetto (AI / onboarding)** | [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md) (root) | Stack, infra, workflow deploy, regole operative |
 | **Roadmap e stato** | [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) | Fasi, backlog, stato avanzamento |
-| **Sessione corrente** | [sessions/SESSION_NOTES_20260308.md](sessions/SESSION_NOTES_20260308.md) | Ultimo checkpoint; usare il più recente in `sessions/SESSION_NOTES_*.md` |
+| **Esperienza operativa (unica guida)** | [GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) | Deploy, Word Verbale, DB/repro — aggiornare qui, non creare nuovi SESSION_NOTES |
+| **Storico sessioni** | [archive/sessions/](archive/sessions/) | Solo consultazione |
 | **Schema DB** | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | Leggere prima di modificare il DB |
 | **Quick-ref DB e API** | [DATABASE.md](DATABASE.md), [BACKEND_API.md](BACKEND_API.md) | Riferimento rapido (spostati da root) |
 | **Deploy Netlify** | [NETLIFY_DEPLOYMENT.md](NETLIFY_DEPLOYMENT.md) | Build, deploy, convenzioni Git |
@@ -26,8 +27,8 @@
 
 ## Convenzione: istruzioni e workflow
 
-Le **regole operative** e il **workflow deploy** (incluso “commit + push per Netlify”) stanno in **PROJECT_CONTEXT.md**, sezione *Workflow deploy* e *Regole operative critiche*.  
-Non creare file dedicati solo a una regola: aggiungere a PROJECT_CONTEXT o a un .md di ambito già esistente (es. NETLIFY_DEPLOYMENT per il deploy).
+Le **regole operative** e il **workflow deploy** stanno in **PROJECT_CONTEXT.md**.  
+L’**esperienza accumulata** (bug risolti, procedure) va in **`GUIDA_CONSOLIDATA.md`** — non creare nuovi `SESSION_NOTES_YYYYMMDD.md`.
 
 ---
 

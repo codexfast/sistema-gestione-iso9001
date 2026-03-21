@@ -2,7 +2,8 @@
 
 Contiene documenti storici non più attivi:
 
+- **sessions/** — vecchi `SESSION_NOTES_*.md` e checkpoint (solo consultazione)
 - **CLEANUP_ROADMAP.md** — piano di pulizia (storico)
 - **ROADMAP_RESET_COMPLETO.md** — reset roadmap (storico)
 
-Il roadmap attivo è [PROJECT_ROADMAP.md](../PROJECT_ROADMAP.md).
+Guida operativa attuale: [GUIDA_CONSOLIDATA.md](../GUIDA_CONSOLIDATA.md). Roadmap: [PROJECT_ROADMAP.md](../PROJECT_ROADMAP.md).

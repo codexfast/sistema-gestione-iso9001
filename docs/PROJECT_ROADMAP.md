@@ -1,10 +1,10 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 19 marzo 2026
-> **Prossimo Step**: Ricreazione audit custom `2026-06` + validazione save/reload/relogin/export; avvio ADR-006 auto-reconcile cache/sync
+> **Ultimo Aggiornamento**: 21 marzo 2026
+> **Prossimo Step**: ADR-006 auto-reconcile cache/sync; eventuali affinamenti export Word
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
-> **Riferimenti**: [docs/sessions/SESSION_NOTES_20260319.md](sessions/SESSION_NOTES_20260319.md) (stato aggiornato) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
+> **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 
 ---
 

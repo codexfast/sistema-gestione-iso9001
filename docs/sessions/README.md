@@ -1,5 +1,5 @@
-# Session notes e messaggi commit
+# Cartella `sessions`
 
-Contiene le note di sessione (`SESSION_NOTES_*.md`), i checkpoint (`SESSION_CHECKPOINT_*.md`) e i messaggi di commit di riferimento (`COMMIT_MESSAGES.md`).
-
-Per lo stato aggiornato del progetto usare il file SESSION_NOTES con data più recente (es. `SESSION_NOTES_20260321.md` — export Word Verbale / DOCX; precedente `SESSION_NOTES_20260319.md`).
+- **Guida operativa e archivio esperienza**: **[../GUIDA_CONSOLIDATA.md](../GUIDA_CONSOLIDATA.md)** — *unico file da aggiornare* al posto di nuovi `SESSION_NOTES_*.md`.
+- **Storico** sessioni (feb–mar 2026): [../archive/sessions/](../archive/sessions/)
+- **Commit di riferimento**: [COMMIT_MESSAGES.md](COMMIT_MESSAGES.md)
