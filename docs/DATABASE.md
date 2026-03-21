@@ -25,6 +25,17 @@ plink -P 1122 -pw "Sistemi@2026" -batch spascarella@www.fr-busato.it
 sqlcmd -S localhost,11043 -U sgq_app -P Sgq2024!App -d SGQ_ISO9001
 ```
 
+### Script Node `backend/scripts/repro-custom-export.mjs`
+
+Legge l’audit `2026-06` dal DB e genera `app/tmp-audit-2026-06-repro.docx`. La connessione usa `backend/config/database.json`:
+
+| `NODE_ENV` | Effetto tipico |
+|---|---|
+| **`development`** | Host/porta di lavoro (come in tabella sopra) — **usare questo** per il repro sul PC di sviluppo. |
+| **`test`** | `localhost:1433` + DB `SGQ_ISO9001_Test` — serve solo se hai SQL Express locale; altrimenti fallisce con `ESOCKET`. |
+
+Se il terminale (es. Cursor) imposta `NODE_ENV=test`, lo script **forza `development`** prima di aprire il pool, così il repro coincide con la connessione documentata.
+
 ---
 
 ## Tabelle

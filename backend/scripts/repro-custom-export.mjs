@@ -1,3 +1,11 @@
+/**
+ * Export Word di prova per audit `2026-06` (checklist custom).
+ *
+ * IMPORTANTE (vedi docs/DATABASE.md + backend/config/database.json):
+ * - `NODE_ENV=test` → SQL su localhost:1433 (spesso assente in locale → errore ESOCKET).
+ * - `NODE_ENV=development` → stesso host/porta del DB di lavoro documentato (es. fr-busato.it:11043).
+ * Cursor/terminal possono avere NODE_ENV=test: qui lo normalizziamo a development prima di caricare il pool.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -5,6 +13,10 @@ import { fileURLToPath } from 'node:url';
 import { generateAuditDocxBlobForTesting } from '../../app/src/utils/wordExport.js';
 
 const require = createRequire(import.meta.url);
+if (process.env.NODE_ENV === 'test') {
+  process.env.NODE_ENV = 'development';
+  console.warn('[repro] NODE_ENV era "test" (localhost:1433) → impostato "development" per usare database.json come da docs/DATABASE.md');
+}
 const { getPool, closePool } = require('../src/config/database');
 
 const __filename = fileURLToPath(import.meta.url);
