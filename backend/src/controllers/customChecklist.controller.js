@@ -177,6 +177,37 @@ async function createSection(req, res) {
 }
 
 /**
+ * PUT /api/v1/custom-checklists/:id/sections/:sectionId
+ * Aggiorna sezione (code, title, display_order?)
+ */
+async function updateSection(req, res) {
+  try {
+    const { id, sectionId } = req.params;
+    const organizationId = req.user.organization_id;
+    const { code, title, display_order } = req.body;
+
+    const data = await customChecklistService.updateSection(
+      parseInt(sectionId, 10),
+      parseInt(id, 10),
+      organizationId,
+      { code, title, display_order }
+    );
+
+    if (!data) {
+      return res.status(404).json({ error: 'Sezione non trovata', code: 'SECTION_NOT_FOUND' });
+    }
+
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.message?.includes('vuoti')) {
+      return res.status(400).json({ error: err.message, code: 'VALIDATION_ERROR' });
+    }
+    logger.error('updateSection error', { error: err.message });
+    res.status(500).json({ error: 'Errore aggiornamento sezione', code: 'CUSTOM_CHECKLIST_SECTION_UPDATE_ERROR' });
+  }
+}
+
+/**
  * PUT /api/v1/custom-checklists/:id/sections/order
  * Aggiorna ordine sezioni
  * Body: { sections: [{ id, display_order }] }
@@ -288,6 +319,37 @@ async function createItem(req, res) {
     }
     logger.error('createItem error', { error: err.message });
     res.status(500).json({ error: 'Errore creazione voce', code: 'CUSTOM_CHECKLIST_ITEM_CREATE_ERROR' });
+  }
+}
+
+/**
+ * PUT /api/v1/custom-checklists/:id/items/:itemId
+ * Aggiorna voce (code, title, display_order?)
+ */
+async function updateItem(req, res) {
+  try {
+    const { id, itemId } = req.params;
+    const organizationId = req.user.organization_id;
+    const { code, title, display_order } = req.body;
+
+    const data = await customChecklistService.updateItem(
+      parseInt(itemId, 10),
+      parseInt(id, 10),
+      organizationId,
+      { code, title, display_order }
+    );
+
+    if (!data) {
+      return res.status(404).json({ error: 'Voce non trovata', code: 'ITEM_NOT_FOUND' });
+    }
+
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.message?.includes('vuoti')) {
+      return res.status(400).json({ error: err.message, code: 'VALIDATION_ERROR' });
+    }
+    logger.error('updateItem error', { error: err.message });
+    res.status(500).json({ error: 'Errore aggiornamento voce', code: 'CUSTOM_CHECKLIST_ITEM_UPDATE_ERROR' });
   }
 }
 
@@ -462,10 +524,12 @@ module.exports = {
   deleteChecklist,
   listSections,
   createSection,
+  updateSection,
   updateSectionsOrder,
   deleteSection,
   listItems,
   createItem,
+  updateItem,
   deleteItem,
   getCustomChecklistResponses,
   saveCustomChecklistResponses,

@@ -134,6 +134,93 @@ async function createSection(customChecklistId, organizationId, data) {
 }
 
 /**
+ * Aggiorna sezione (code, title, display_order)
+ */
+async function updateSection(sectionId, customChecklistId, organizationId, data) {
+  const check = await getChecklistById(customChecklistId, organizationId);
+  if (!check) return null;
+
+  const existing = await query(
+    `SELECT id, code, title, display_order FROM custom_checklist_sections
+     WHERE id = @id AND custom_checklist_id = @custom_checklist_id`,
+    { id: parseInt(sectionId, 10), custom_checklist_id: parseInt(customChecklistId, 10) }
+  );
+  if (!existing.recordset.length) return null;
+
+  const row = existing.recordset[0];
+  const code = data.code !== undefined ? String(data.code).trim() : row.code;
+  const title = data.title !== undefined ? String(data.title).trim() : row.title;
+  const display_order = data.display_order !== undefined ? parseInt(data.display_order, 10) : row.display_order;
+
+  if (!code || !title) {
+    throw new Error('code e title non possono essere vuoti');
+  }
+
+  await query(
+    `UPDATE custom_checklist_sections
+     SET code = @code, title = @title, display_order = @display_order
+     WHERE id = @id AND custom_checklist_id = @custom_checklist_id`,
+    {
+      id: parseInt(sectionId, 10),
+      custom_checklist_id: parseInt(customChecklistId, 10),
+      code,
+      title,
+      display_order: Number.isNaN(display_order) ? row.display_order : display_order,
+    }
+  );
+
+  const out = await query(
+    `SELECT id, code, title, display_order FROM custom_checklist_sections WHERE id = @id`,
+    { id: parseInt(sectionId, 10) }
+  );
+  return out.recordset[0] || null;
+}
+
+/**
+ * Aggiorna voce (item): code, title, display_order
+ */
+async function updateItem(itemId, customChecklistId, organizationId, data) {
+  const check = await getChecklistById(customChecklistId, organizationId);
+  if (!check) return null;
+
+  const existing = await query(
+    `SELECT id, section_id, code, title, response_type, display_order
+     FROM custom_checklist_items
+     WHERE id = @id AND custom_checklist_id = @custom_checklist_id`,
+    { id: parseInt(itemId, 10), custom_checklist_id: parseInt(customChecklistId, 10) }
+  );
+  if (!existing.recordset.length) return null;
+
+  const row = existing.recordset[0];
+  const code = data.code !== undefined ? String(data.code).trim() : row.code;
+  const title = data.title !== undefined ? String(data.title).trim() : row.title;
+  const display_order = data.display_order !== undefined ? parseInt(data.display_order, 10) : row.display_order;
+
+  if (!code || !title) {
+    throw new Error('code e title non possono essere vuoti');
+  }
+
+  await query(
+    `UPDATE custom_checklist_items
+     SET code = @code, title = @title, display_order = @display_order
+     WHERE id = @id AND custom_checklist_id = @custom_checklist_id`,
+    {
+      id: parseInt(itemId, 10),
+      custom_checklist_id: parseInt(customChecklistId, 10),
+      code,
+      title,
+      display_order: Number.isNaN(display_order) ? row.display_order : display_order,
+    }
+  );
+
+  const out = await query(
+    `SELECT id, section_id, code, title, response_type, display_order FROM custom_checklist_items WHERE id = @id`,
+    { id: parseInt(itemId, 10) }
+  );
+  return out.recordset[0] || null;
+}
+
+/**
  * Aggiorna ordine sezioni (bulk)
  */
 async function updateSectionsOrder(customChecklistId, organizationId, sections) {
@@ -271,10 +358,12 @@ module.exports = {
   deleteChecklist,
   listSections,
   createSection,
+  updateSection,
   updateSectionsOrder,
   deleteSection,
   listItems,
   createItem,
+  updateItem,
   deleteItem,
   getChecklistWithStructure,
 };

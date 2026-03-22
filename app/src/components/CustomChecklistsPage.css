@@ -130,6 +130,102 @@
   opacity: 0.8;
 }
 
+/* Editor — anagrafica + inline edit */
+.cc-meta-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f0f7ff;
+  border: 1px solid #cce0ff;
+  border-radius: 4px;
+}
+
+.cc-meta-section h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.cc-meta-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+  max-width: 520px;
+}
+
+.cc-meta-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.cc-meta-input {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.btn-cc-save-meta {
+  align-self: flex-start;
+  padding: 0.45rem 1rem;
+  background: #0066cc;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-cc-save-meta:hover:not(:disabled) {
+  background: #0052a3;
+}
+
+.btn-cc-save-meta:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cc-error-inline {
+  color: #c00;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+.cc-section-header {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cc-section-title-text {
+  flex: 1;
+  min-width: 120px;
+}
+
+.cc-section-actions,
+.cc-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.cc-inline-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  width: 100%;
+}
+
+.cc-item-inline {
+  width: 100%;
+}
+
+.cc-item-row {
+  flex-wrap: wrap;
+}
+
 /* Editor */
 .cc-template-section {
   margin-top: 1rem;

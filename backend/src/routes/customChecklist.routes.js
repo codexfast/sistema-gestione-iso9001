@@ -21,11 +21,13 @@ router.delete('/custom-checklists/:id', authorize('admin', 'auditor'), customChe
 router.get('/custom-checklists/:id/sections', customChecklistController.listSections);
 router.post('/custom-checklists/:id/sections', authorize('admin', 'auditor'), customChecklistController.createSection);
 router.put('/custom-checklists/:id/sections/order', authorize('admin', 'auditor'), customChecklistController.updateSectionsOrder);
+router.put('/custom-checklists/:id/sections/:sectionId', authorize('admin', 'auditor'), customChecklistController.updateSection);
 router.delete('/custom-checklists/:id/sections/:sectionId', authorize('admin', 'auditor'), customChecklistController.deleteSection);
 
 // Voci (items)
 router.get('/custom-checklists/:id/items', customChecklistController.listItems);
 router.post('/custom-checklists/:id/items', authorize('admin', 'auditor'), customChecklistController.createItem);
+router.put('/custom-checklists/:id/items/:itemId', authorize('admin', 'auditor'), customChecklistController.updateItem);
 router.delete('/custom-checklists/:id/items/:itemId', authorize('admin', 'auditor'), customChecklistController.deleteItem);
 
 module.exports = router;

@@ -183,16 +183,35 @@ const CustomChecklistsPage = ({ onBack }) => {
  */
 function CustomChecklistEditor({ checklist, onBack, onSaved }) {
   const [sections, setSections] = useState([]);
+  const [checklistName, setChecklistName] = useState("");
+  const [checklistDescription, setChecklistDescription] = useState("");
+  const [metaSaving, setMetaSaving] = useState(false);
+  const [metaError, setMetaError] = useState(null);
   const [newSectionCode, setNewSectionCode] = useState("");
   const [newSectionTitle, setNewSectionTitle] = useState("");
   const [newItemBySection, setNewItemBySection] = useState({}); // { sectionId: { code, title } }
   const [saving, setSaving] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [sectionDraft, setSectionDraft] = useState({ code: "", title: "" });
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [itemDraft, setItemDraft] = useState({ code: "", title: "" });
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [templateSaving, setTemplateSaving] = useState(false);
 
+  const reloadChecklistStructure = async () => {
+    const res = await apiService.getCustomChecklist(checklist.id);
+    setSections(res?.data?.sections ?? []);
+    onSaved?.();
+  };
+
   useEffect(() => {
     setSections(checklist?.sections ?? []);
+    setChecklistName(checklist?.name ?? "");
+    setChecklistDescription(checklist?.description ?? "");
+    setEditingSectionId(null);
+    setEditingItemId(null);
+    setMetaError(null);
   }, [checklist]);
 
   useEffect(() => {
@@ -214,6 +233,72 @@ function CustomChecklistEditor({ checklist, onBack, onSaved }) {
     load();
     return () => { cancelled = true; };
   }, [checklist?.id]);
+
+  const saveChecklistMeta = async (e) => {
+    e.preventDefault();
+    if (!checklistName.trim()) return;
+    try {
+      setMetaSaving(true);
+      setMetaError(null);
+      await apiService.updateCustomChecklist(checklist.id, {
+        name: checklistName.trim(),
+        description: checklistDescription.trim() || null,
+      });
+      onSaved?.();
+    } catch (err) {
+      setMetaError(err.message || "Errore salvataggio anagrafica");
+    } finally {
+      setMetaSaving(false);
+    }
+  };
+
+  const startEditSection = (sec) => {
+    setEditingSectionId(sec.id);
+    setSectionDraft({ code: sec.code || "", title: sec.title || "" });
+    setEditingItemId(null);
+  };
+
+  const saveSectionEdit = async () => {
+    if (!editingSectionId || !sectionDraft.code.trim() || !sectionDraft.title.trim()) return;
+    try {
+      setSaving(true);
+      await apiService.updateCustomChecklistSection(checklist.id, editingSectionId, {
+        code: sectionDraft.code.trim(),
+        title: sectionDraft.title.trim(),
+      });
+      setEditingSectionId(null);
+      await reloadChecklistStructure();
+    } catch (err) {
+      console.error("Errore aggiornamento sezione:", err);
+      window.alert(err.message || "Errore aggiornamento sezione");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEditItem = (it) => {
+    setEditingItemId(it.id);
+    setItemDraft({ code: it.code || "", title: it.title || "" });
+    setEditingSectionId(null);
+  };
+
+  const saveItemEdit = async () => {
+    if (!editingItemId || !itemDraft.code.trim() || !itemDraft.title.trim()) return;
+    try {
+      setSaving(true);
+      await apiService.updateCustomChecklistItem(checklist.id, editingItemId, {
+        code: itemDraft.code.trim(),
+        title: itemDraft.title.trim(),
+      });
+      setEditingItemId(null);
+      await reloadChecklistStructure();
+    } catch (err) {
+      console.error("Errore aggiornamento voce:", err);
+      window.alert(err.message || "Errore aggiornamento voce");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleTemplateChange = async (e) => {
     const templateId = e.target.value ? parseInt(e.target.value, 10) : null;
@@ -241,9 +326,7 @@ function CustomChecklistEditor({ checklist, onBack, onSaved }) {
       });
       setNewSectionCode("");
       setNewSectionTitle("");
-      const res = await apiService.getCustomChecklist(checklist.id);
-      setSections(res?.data?.sections ?? []);
-      onSaved?.();
+      await reloadChecklistStructure();
     } catch (err) {
       console.error("Errore creazione sezione:", err);
     } finally {
@@ -281,9 +364,7 @@ function CustomChecklistEditor({ checklist, onBack, onSaved }) {
         delete next[sectionId];
         return next;
       });
-      const res = await apiService.getCustomChecklist(checklist.id);
-      setSections(res?.data?.sections ?? []);
-      onSaved?.();
+      await reloadChecklistStructure();
     } catch (err) {
       console.error("Errore creazione voce:", err);
     } finally {
@@ -295,9 +376,7 @@ function CustomChecklistEditor({ checklist, onBack, onSaved }) {
     if (!window.confirm("Eliminare questa voce?")) return;
     try {
       await apiService.deleteCustomChecklistItem(checklist.id, itemId);
-      const res = await apiService.getCustomChecklist(checklist.id);
-      setSections(res?.data?.sections ?? []);
-      onSaved?.();
+      await reloadChecklistStructure();
     } catch (err) {
       console.error("Errore eliminazione voce:", err);
     }
@@ -309,8 +388,37 @@ function CustomChecklistEditor({ checklist, onBack, onSaved }) {
         <button type="button" className="btn-back" onClick={onBack}>
           ← Indietro
         </button>
-        <h2>{checklist?.name ?? "Editor"}</h2>
-        {checklist?.description && <p className="cc-desc">{checklist.description}</p>}
+        <h2>{checklistName || checklist?.name || "Editor"}</h2>
+      </div>
+
+      <div className="cc-meta-section">
+        <h3>Anagrafica checklist</h3>
+        <p className="cc-hint">Modifica nome e descrizione; le modifiche valgono per tutti gli audit che usano questa checklist.</p>
+        {metaError && <p className="cc-error-inline">{metaError}</p>}
+        <form onSubmit={saveChecklistMeta} className="cc-meta-form">
+          <label className="cc-meta-label">
+            Nome *
+            <input
+              type="text"
+              value={checklistName}
+              onChange={(e) => setChecklistName(e.target.value)}
+              required
+              className="cc-meta-input"
+            />
+          </label>
+          <label className="cc-meta-label">
+            Descrizione
+            <input
+              type="text"
+              value={checklistDescription}
+              onChange={(e) => setChecklistDescription(e.target.value)}
+              className="cc-meta-input"
+            />
+          </label>
+          <button type="submit" disabled={metaSaving} className="btn-cc-save-meta">
+            {metaSaving ? "Salvataggio…" : "Salva anagrafica"}
+          </button>
+        </form>
       </div>
 
       <div className="cc-template-section">
@@ -356,17 +464,73 @@ function CustomChecklistEditor({ checklist, onBack, onSaved }) {
         {sections.map((sec) => (
           <div key={sec.id} className="cc-section-block">
             <div className="cc-section-header">
-              <strong>{sec.code}</strong> — {sec.title}
-              <button type="button" className="btn-delete-small" onClick={() => deleteSection(sec.id)} title="Elimina sezione">
-                🗑️
-              </button>
+              {editingSectionId === sec.id ? (
+                <div className="cc-inline-edit">
+                  <input
+                    type="text"
+                    value={sectionDraft.code}
+                    onChange={(e) => setSectionDraft((d) => ({ ...d, code: e.target.value }))}
+                    placeholder="Codice"
+                    style={{ width: "80px" }}
+                  />
+                  <input
+                    type="text"
+                    value={sectionDraft.title}
+                    onChange={(e) => setSectionDraft((d) => ({ ...d, title: e.target.value }))}
+                    placeholder="Titolo sezione"
+                    style={{ flex: 1 }}
+                  />
+                  <button type="button" onClick={saveSectionEdit} disabled={saving}>Salva</button>
+                  <button type="button" onClick={() => setEditingSectionId(null)} disabled={saving}>Annulla</button>
+                </div>
+              ) : (
+                <>
+                  <span className="cc-section-title-text">
+                    <strong>{sec.code}</strong>
+                    {" — "}
+                    {sec.title}
+                  </span>
+                  <span className="cc-section-actions">
+                    <button type="button" className="btn-edit" onClick={() => startEditSection(sec)} title="Modifica sezione">
+                      ✏️
+                    </button>
+                    <button type="button" className="btn-delete-small" onClick={() => deleteSection(sec.id)} title="Elimina sezione">
+                      🗑️
+                    </button>
+                  </span>
+                </>
+              )}
             </div>
             <ul className="cc-items-list">
               {(sec.items || []).map((it) => (
                 <li key={it.id} className="cc-item-row">
-                  <span className="cc-item-code">{it.code}</span>
-                  <span className="cc-item-title">{it.title}</span>
-                  <button type="button" className="btn-delete-small" onClick={() => deleteItem(it.id)}>🗑️</button>
+                  {editingItemId === it.id ? (
+                    <div className="cc-inline-edit cc-item-inline">
+                      <input
+                        type="text"
+                        value={itemDraft.code}
+                        onChange={(e) => setItemDraft((d) => ({ ...d, code: e.target.value }))}
+                        style={{ width: "70px" }}
+                      />
+                      <input
+                        type="text"
+                        value={itemDraft.title}
+                        onChange={(e) => setItemDraft((d) => ({ ...d, title: e.target.value }))}
+                        style={{ flex: 1 }}
+                      />
+                      <button type="button" onClick={saveItemEdit} disabled={saving}>Salva</button>
+                      <button type="button" onClick={() => setEditingItemId(null)} disabled={saving}>Annulla</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="cc-item-code">{it.code}</span>
+                      <span className="cc-item-title">{it.title}</span>
+                      <span className="cc-item-actions">
+                        <button type="button" className="btn-edit" onClick={() => startEditItem(it)} title="Modifica voce">✏️</button>
+                        <button type="button" className="btn-delete-small" onClick={() => deleteItem(it.id)}>🗑️</button>
+                      </span>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

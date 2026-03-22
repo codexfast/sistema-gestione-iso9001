@@ -842,12 +842,20 @@ class ApiService {
         return this.delete(`/custom-checklists/${checklistId}/sections/${sectionId}`);
     }
 
+    async updateCustomChecklistSection(checklistId, sectionId, data) {
+        return this.put(`/custom-checklists/${checklistId}/sections/${sectionId}`, data);
+    }
+
     async createCustomChecklistItem(checklistId, data) {
         return this.post(`/custom-checklists/${checklistId}/items`, data);
     }
 
     async deleteCustomChecklistItem(checklistId, itemId) {
         return this.delete(`/custom-checklists/${checklistId}/items/${itemId}`);
+    }
+
+    async updateCustomChecklistItem(checklistId, itemId, data) {
+        return this.put(`/custom-checklists/${checklistId}/items/${itemId}`, data);
     }
 
     async getCustomChecklistResponses(auditId) {
