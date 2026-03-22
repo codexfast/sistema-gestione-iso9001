@@ -1,7 +1,7 @@
 # Case study 01 — Verifica gestione utenti (admin)
 
 **Stato**: verifica in corso — codice feature su `main` (commit `2fc71cd` in poi: UI utenti + API admin + fix auditor-orgs).  
-**Rischio per stabilità**: basso se si seguono i vincoli sotto (nessuna modifica distruttiva a `main` senza PR). **Backend VPS**: aggiornare i file admin + `auditorOrg.controller.js` e riavviare il servizio, altrimenti la UI darà errore API.
+**Rischio per stabilità**: basso se si seguono i vincoli sotto (nessuna modifica distruttiva a `main` senza PR). **Backend VPS**: da PowerShell (con PuTTY/sessione configurata come da guida deploy) eseguire `backend/scripts/deploy-controllers-to-vps.ps1` — copia anche `admin` e `auditorOrg` + restart. Senza deploy API aggiornate la UI darà errore sulle nuove rotte.
 
 ## Contesto funzionale
 

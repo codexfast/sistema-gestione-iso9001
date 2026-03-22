@@ -72,10 +72,13 @@ if (-not $useSession) {
 # Controllers
 Copy-FileToVps "src/controllers/audit.controller.js" "$RemoteBase/src/controllers/audit.controller.js"
 Copy-FileToVps "src/controllers/customChecklist.controller.js" "$RemoteBase/src/controllers/customChecklist.controller.js"
+Copy-FileToVps "src/controllers/admin.controller.js" "$RemoteBase/src/controllers/admin.controller.js"
+Copy-FileToVps "src/controllers/auditorOrg.controller.js" "$RemoteBase/src/controllers/auditorOrg.controller.js"
 
 # Routes (necessarie per esporre gli endpoint custom-checklist-responses)
 Copy-FileToVps "src/routes/audit.routes.js" "$RemoteBase/src/routes/audit.routes.js"
 Copy-FileToVps "src/routes/customChecklist.routes.js" "$RemoteBase/src/routes/customChecklist.routes.js"
+Copy-FileToVps "src/routes/admin.routes.js" "$RemoteBase/src/routes/admin.routes.js"
 
 # Entry point server (include customChecklistRoutes)
 Copy-FileToVps "src/server.js" "$RemoteBase/src/server.js"
