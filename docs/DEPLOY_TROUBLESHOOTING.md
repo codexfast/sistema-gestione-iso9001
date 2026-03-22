@@ -94,6 +94,21 @@ Poi lancia lo script con:
   - `SGQ_SSH_PASSWORD` (NON committare mai password nel repo)
 - Esegui lo script: userà `plink/pscp -pw` per evitare prompt.
 
+## 2.c) `sudo -n systemctl restart` fallisce (password richiesta)
+
+**Sintomi**
+- Dopo `deploy-controllers-to-vps.ps1` i file su disco sono aggiornati ma le **nuove route** non rispondono; oppure in `/api/v1/health` l’`uptime` resta molto alto come prima del deploy.
+
+**Causa**
+- `sudo` senza password non consente il restart di `sgq-backend.service`; il processo Node **vecchio** resta in memoria.
+
+**Soluzione (in ordine)**
+1. **Opzione A — password sudo solo per la sessione PowerShell** (mai in repo):  
+   `$env:SGQ_SUDO_PASSWORD = '...'` poi rieseguire `deploy-controllers-to-vps.ps1`. Lo script prova `sudo systemctl restart` con quella password (internamente via base64), poi `sudo -n`, poi il fallback sotto.
+2. **Opzione B — come DEPLOY_CHECKLIST_RELEASE.md**: SSH sul server, poi  
+   `fuser -k 3000/tcp` → `sleep 2` → `cd /var/www/sgq-backend && nohup node src/server.js >> /var/www/sgq-backend/app.log 2>&1 &`  
+   (stesso fallback eseguito dallo script se A e `sudo -n` non bastano).
+
 ## 3) PowerShell: `&&` non supportato
 
 **Sintomi**
