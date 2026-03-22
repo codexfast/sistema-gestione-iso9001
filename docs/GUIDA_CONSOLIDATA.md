@@ -91,6 +91,11 @@ L’interfaccia Netlify cambia a volte nome alle voci; cerca sempre equivalenti 
 **Se fallisce**
 - In Netlify: **Deploys** → filtra per *Deploy previews* → apri il deploy fallito → leggi **Deploy log** (errore `npm`, Node, ecc.).
 - Confronta **Node**: in `netlify.toml` è `NODE_VERSION = "20"`; deve essere coerente con CI locale.
+- Stato **Canceled** con *Building* ok e *Deploying* skipped: sul piano **Free** spesso c’è **una sola build concorrente**; un altro deploy (es. su `main`) può far annullare il preview. Attendere o usare **Retry** → *Retry with latest branch commit*; aprire il deploy riuscito e **Open deploy preview**.
+
+**Best practice — PR solo per smoke test Deploy Preview**
+- **Non mergiare** commit “usa e getta” (es. riga di prova in questa guida): chiudere la PR **senza merge** e **eliminare il branch** remoto (`git push origin --delete nome-branch`).
+- I Deploy Preview restano attivi sul sito Netlify; la verifica non richiede merge su `main`.
 
 ---
 
