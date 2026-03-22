@@ -9,7 +9,8 @@ alwaysApply: true
 - Leggi `PROJECT_CONTEXT.md` (root), poi `docs/PROJECT_ROADMAP.md`, poi **`docs/GUIDA_CONSOLIDATA.md`**.
 - **Non** creare nuovi `docs/sessions/SESSION_NOTES_*.md`: aggiorna `GUIDA_CONSOLIDATA.md` + roadmap.
 - Rispondi sempre in italiano, con spiegazioni semplici e operative.
-- **Comandi**: se l’utente deve eseguirli **manualmente** (es. sul suo PC o dove non hai accesso), proponili **uno alla volta** e attendi l’esito prima del successivo. Se **puoi** eseguirli tu (terminale, lettura file, test, deploy automatizzabile), **procedi in autonomia end-to-end** senza fermarti a metà salvo blocco reale (auth mancante, ambiente irraggiungibile, richiesta esplicita di stop).
+- **Comandi**: se **hai accesso al terminale** del workspace (Cursor desktop sul progetto), esegui **tu** i comandi **meccanici** (`git pull`/`push`, `npm run build`/`test`, lint, commit su richiesta implicita di avanzare il task) **senza** chiedere all’utente di copiarli. Chiedi all’utente **solo** quando serve un’azione **fuori** dall’agente (login browser a servizi terzi, password VPS, scelta committente, approvazione eccezione alle golden rules). La regola “un comando alla volta” vale quando **l’utente** è l’unico che può lanciare quel comando sul suo ambiente — non come scusa per delegare al umano ciò che il terminale del workspace può fare.
+- **Dialogo con l’utente**: privilegiare messaggi su **obiettivi**, **requisiti clienti**, **priorità**, **vincoli legali/commerciali**; evitare di usare il turno utente per operazioni ripetitive che l’agente può completare da solo.
 
 ## Approvazione esplicita dell’utente (solo eccezioni)
 - **Default**: eseguire task in **autonomia** (codice, test, doc, commit/push) quando la soluzione rispetta **golden rules**, `GUIDA_CONSOLIDATA`, `PROJECT_ROADMAP` e i pattern del repo.
