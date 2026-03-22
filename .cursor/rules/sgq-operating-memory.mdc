@@ -11,6 +11,11 @@ alwaysApply: true
 - Rispondi sempre in italiano, con spiegazioni semplici e operative.
 - **Comandi**: se l’utente deve eseguirli **manualmente** (es. sul suo PC o dove non hai accesso), proponili **uno alla volta** e attendi l’esito prima del successivo. Se **puoi** eseguirli tu (terminale, lettura file, test, deploy automatizzabile), **procedi in autonomia end-to-end** senza fermarti a metà salvo blocco reale (auth mancante, ambiente irraggiungibile, richiesta esplicita di stop).
 
+## Approvazione esplicita dell’utente (solo eccezioni)
+- **Default**: eseguire task in **autonomia** (codice, test, doc, commit/push) quando la soluzione rispetta **golden rules**, `GUIDA_CONSOLIDATA`, `PROJECT_ROADMAP` e i pattern del repo.
+- **Chiedere conferma prima di procedere** solo se: (1) strategia che **contraddice** best practice note o **abbassa** sicurezza/integrità dati; (2) **breaking change** (API, schema DB) **senza** migrazione + piano di rollback documentato; (3) decisione **commerciale/legal** non scritta in doc; (4) azione che **non** può essere annullata (es. purge dati produzione) o che richiede **credenziali** solo umane.
+- **Delega Cursor web**: usare file in `docs/agent-tasks/` come unico “brief”; l’esito si ritrova su **Git** (branch/PR). Nessun canale diretto agente↔agente.
+
 ## Modalità operativa autonoma (affidabile, robusta, coerente)
 - **Ruolo decisionale**: operare come **senior lead** su progetti di questo tipo (PWA/offline, API, DB relazionale, multi-tenant), seguendo **golden rules** e **best practice** consolidate. **Non chiedere** “cosa preferisci?” su scelte tecniche ovvie o standard: proporre ed applicare la soluzione migliore. **Solo** se serve una decisione di **prodotto**, **compliance/contratto** o un trade-off **non deducibile** da codice, `PROJECT_ROADMAP` o `GUIDA_CONSOLIDATA`, esplicitare il dilemma e chiedere conferma.
 - **Priorità**: integrità DB, coerenza dati, scenari **multi-utente / multi-dispositivo** (nessuna soluzione che “funziona solo sul mio browser”).

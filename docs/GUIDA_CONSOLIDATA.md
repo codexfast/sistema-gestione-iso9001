@@ -28,6 +28,8 @@
 | Regressione verso ISO 9001 su audit custom | Preservare `custom_checklist_id` in update; `syncService` / `upsertAudit` non distruttivi — vedi commit `ac5d981` e hardening successivi. |
 | Due utenti sullo stesso audit / conflitti salvataggio | **Lock pessimistico server** (tab. `audit_locks`, migrazione `027_audit_locks.sql`). Frontend: `StorageContext` + header `X-Audit-Lock-Token` via `apiService`; banner `AuditLockBanner.jsx`. Deploy: eseguire migrazione DB + aggiornare backend (`auditLock.service.js`, controller, route) + `systemctl restart`. |
 | `DELETE /audits/:id` fallisce su ambienti legacy (`Invalid column name 'audit_id'`) | Risolto con hardening `auditMaintenance.service.js`: delete dinamici guidati da metadati `INFORMATION_SCHEMA.COLUMNS` (solo tabelle/colonne presenti), poi delete finale su `audits`. Strategia da riusare per compatibilita' cross-schema. |
+| Admin: creare / modificare utenti | UI `UsersAdminPage` + API `POST /admin/users`, `PATCH /admin/users/:id`, `DELETE /admin/users/:id` (`admin.controller` / `admin.routes`). Solo **admin/superadmin senza** `auditor_org_id` può creare o promuovere **admin**; non si può disattivare sé stessi né l’**ultimo admin attivo** dell’org. Deploy VPS: `admin.controller.js`, `admin.routes.js`, event. `auditorOrg.controller.js` (lista studi per `superadmin` senza studio) + restart. |
+| `GET /auditor-orgs` vuoto per superadmin | Fix: trattare come “org-wide” sia `role === 'admin'` sia `role === 'superadmin'` quando `auditor_org_id` è null (`auditorOrg.controller.js`). |
 
 **Deploy**: non copiare solo i controller; verificare `systemctl status sgq-backend.service`. Dettaglio: `DEPLOY_CHECKLIST_RELEASE.md`, script `deploy-controllers-to-vps.ps1`. Dopo release lock: copiare anche `services/auditLock.service.js` e `controllers/auditLock.controller.js`.
 
@@ -154,6 +156,11 @@ Workflow: `.github/workflows/ci-app-pr.yml` — su ogni PR che tocca `app/` eseg
 ---
 
 ## D. Comandi di verifica rapida
+
+### Delega Cursor desktop / web (senza aumentare il carico operativo)
+
+- Brief condivisi in **`docs/agent-tasks/`** (es. `CASE_STUDY_01_USERS_ADMIN.md`). L’agente **web** restituisce lavoro via **branch + PR**; l’agente **desktop** analizza diff/CI. Nessun canale diretto tra sessioni AI.
+- **Approvazione umana** solo per eccezioni alle golden rules: vedi `.cursor/rules/sgq-operating-memory.mdc` (sezione approvazione).
 
 ```powershell
 cd "...\app"
