@@ -180,8 +180,22 @@ node scripts/repro-custom-export.mjs
 
 ## E. Punto di ripresa / idee
 
+### Chiusura sessione 22 marzo 2026
+
+**Consegnato su `main` (GitHub + Netlify al prossimo deploy):**
+- Case study 01 gestione utenti: chiusura doc + cherry-pick branch web; deploy VPS con script aggiornato (`admin` / `auditorOrg`) e restart con fallback `fuser`+`nohup`.
+- **Fase 0.5**: export Word — prima `GET /audits/:id/pending-issues`, fallback `checkReaudit`+NC; riga **AP** in `RILIEVI_MARKER` con X su **NC** se pending aperti.
+- Regole operative: comandi meccanici nel workspace = agente; approvazione solo eccezioni golden rules.
+
+**All’inizio della prossima sessione (ordine consigliato):**
+1. Leggere `PROJECT_ROADMAP.md` (header) + questa sezione.  
+2. **Smoke test** (browser, utente reale): aprire audit con storico cliente → Export Word → verificare tabella rilievi pendenti e riga AP coerente con dati server.  
+3. Scegliere traccia sviluppo: **0.2 ISO 14001** (migration + template) **vs** aggiornare **DATABASE_SCHEMA** per `norm_excerpt` / `checklist_questions`.  
+4. Opzionale GitHub: eliminare branch remoto `docs/case-study-01-chiusura` (già mergiato in `main`).
+
+**Backlog invariato / ricorrente:**
 - [ ] ADR-006 (auto-reconcile cache) se non avviato.  
-- [ ] `DATABASE.md` / `database.json` contengono segreti: non duplicare in chat; ruotare se esposti.  
+- [ ] `DATABASE.md` / `database.json`: segreti — non in chat; ruotare se esposti.  
 - [ ] Opzionale: `ExecStartPre` systemd non bloccante (vedi note deploy).
 
 ---
