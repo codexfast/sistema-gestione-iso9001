@@ -1,7 +1,7 @@
 # Case study 01 — Verifica gestione utenti (admin)
 
-**Stato**: protocollo di verifica + delega opzionale su Cursor web.  
-**Rischio per stabilità**: basso se si seguono i vincoli sotto (nessuna modifica distruttiva a `main` senza PR).
+**Stato**: verifica in corso — codice feature su `main` (commit `2fc71cd` in poi: UI utenti + API admin + fix auditor-orgs).  
+**Rischio per stabilità**: basso se si seguono i vincoli sotto (nessuna modifica distruttiva a `main` senza PR). **Backend VPS**: aggiornare i file admin + `auditorOrg.controller.js` e riavviare il servizio, altrimenti la UI darà errore API.
 
 ## Contesto funzionale
 
