@@ -474,6 +474,31 @@ class ApiService {
     }
 
     /**
+     * Crea utente nella propria organizzazione (solo admin)
+     * @param {{ email: string, password: string, full_name: string, role?: string, auditor_org_id?: number|null }} body
+     */
+    async createAdminUser(body) {
+        return this.post('/admin/users', body);
+    }
+
+    /**
+     * Aggiorna utente (PATCH parziale)
+     * @param {number} userId
+     * @param {Record<string, unknown>} body - full_name, role, is_active, auditor_org_id, password
+     */
+    async patchAdminUser(userId, body) {
+        return this.patch(`/admin/users/${userId}`, body);
+    }
+
+    /**
+     * Disattiva utente (soft delete)
+     * @param {number} userId
+     */
+    async deactivateAdminUser(userId) {
+        return this.delete(`/admin/users/${userId}`);
+    }
+
+    /**
      * Aggiorna standard consentiti per utente (solo admin)
      * @param {number} userId
      * @param {number[]} standardIds - array di standard_id (es. [1,2,3] per 9001, 14001, 45001)

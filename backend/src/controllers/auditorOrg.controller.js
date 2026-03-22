@@ -14,7 +14,7 @@ const logger = require('../utils/logger');
 async function listAuditorOrgs(req, res) {
     try {
         const { organization_id, auditor_org_id, role } = req.user;
-        const isSuperadmin = role === 'admin' && !auditor_org_id;
+        const isOrgWideAdmin = (role === 'admin' || role === 'superadmin') && !auditor_org_id;
 
         let result;
         if (isSuperadmin) {
@@ -52,9 +52,9 @@ async function getAuditorOrgById(req, res) {
     try {
         const id = parseInt(req.params.id, 10);
         const { auditor_org_id, role } = req.user;
-        const isSuperadmin = role === 'admin' && !auditor_org_id;
+        const isOrgWideAdmin = (role === 'admin' || role === 'superadmin') && !auditor_org_id;
 
-        if (!isSuperadmin && id !== auditor_org_id) {
+        if (!isOrgWideAdmin && id !== auditor_org_id) {
             return res.status(403).json({ error: 'Accesso negato', code: 'FORBIDDEN' });
         }
 

@@ -120,7 +120,7 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 | **Deploy backend VPS** | pscp/plink per controller, script deploy-controllers-to-vps.ps1 | ✅ Completato (15/03) |
 | Export Word ISO 3834 | Da testare su produzione | 🔲 Da testare |
 | **Foto embedded in Word** | pic:cNvPr id duplicati → doc corrotto; da reimplementare | 🔲 Backlog tecnico |
-| Pagina Admin utenti | UI gestione utenti e abbonamenti | 🔲 Backlog |
+| **Admin utenti (CRUD + standard)** | `UsersAdminPage`, API admin users; abbonamenti / piani | ✅ Core mar/2026; abbonamenti 🔲 |
 | ISO 14001 checklist completa | Da norma PDF disponibile | 🔲 Prossima priorità |
 | ISO 45001 checklist | Da norma PDF disponibile | 🔲 Backlog |
 | Modulo SAL (Scenario 3) | Nuovo tipo documento per Camellini | 🔲 Backlog |

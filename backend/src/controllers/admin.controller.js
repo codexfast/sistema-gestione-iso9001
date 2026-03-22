@@ -2,8 +2,34 @@
  * Admin Controller - Gestione utenti e assegnazione standard (solo admin)
  */
 
+const bcrypt = require('bcryptjs');
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
+
+const ADMIN_ROLES = ['admin', 'superadmin'];
+
+async function countActiveAdminsInOrg(organizationId) {
+    const r = await query(
+        `SELECT COUNT(*) AS c FROM users
+         WHERE organization_id = @organization_id AND role IN ('admin', 'superadmin') AND is_active = 1`,
+        { organization_id: organizationId }
+    );
+    return r.recordset[0]?.c ?? 0;
+}
+
+async function userIsAdminRole(userId, organizationId) {
+    const r = await query(
+        `SELECT role FROM users WHERE user_id = @user_id AND organization_id = @organization_id`,
+        { user_id: userId, organization_id: organizationId }
+    );
+    const role = r.recordset[0]?.role;
+    return ADMIN_ROLES.includes(role);
+}
+
+/** Admin senza studio (auditor_org_id null) può creare/promuovere altri admin org. */
+function isElevatedAdmin(reqUser) {
+    return (reqUser.role === 'admin' || reqUser.role === 'superadmin') && (reqUser.auditor_org_id == null);
+}
 
 /**
  * GET /api/v1/admin/users
@@ -52,6 +78,346 @@ async function listUsers(req, res) {
             success: false,
             error: 'Errore recupero elenco utenti',
             code: 'ADMIN_LIST_USERS_ERROR'
+        });
+    }
+}
+
+/**
+ * POST /api/v1/admin/users
+ * Crea utente nella stessa organizzazione dell'admin.
+ * Body: { email, password, full_name, role, auditor_org_id? }
+ */
+async function createUser(req, res) {
+    try {
+        const { organization_id, user_id: actorId } = req.user;
+        const { email, password, full_name, role = 'auditor', auditor_org_id } = req.body || {};
+
+        if (!email || !password || !full_name) {
+            return res.status(400).json({
+                success: false,
+                error: 'Campi obbligatori: email, password, full_name',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+        if (String(password).length < 8) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password: minimo 8 caratteri',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+
+        const normalizedRole = String(role).toLowerCase().trim();
+        const allowed = ['auditor', 'viewer', 'admin'];
+        if (!allowed.includes(normalizedRole)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Ruolo non valido (auditor, viewer, admin)',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+        if (normalizedRole === 'admin' && !isElevatedAdmin(req.user)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Solo l\'amministratore principale (senza studio associato) può creare utenti con ruolo admin',
+                code: 'AUTH_FORBIDDEN',
+            });
+        }
+
+        let aoId = auditor_org_id != null && auditor_org_id !== '' ? parseInt(auditor_org_id, 10) : null;
+        if (Number.isNaN(aoId)) aoId = null;
+        if (aoId != null) {
+            const ao = await query(
+                `SELECT id FROM auditor_orgs WHERE id = @id AND organization_id = @organization_id AND is_active = 1`,
+                { id: aoId, organization_id }
+            );
+            if (ao.recordset.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'auditor_org_id non valido per questa organizzazione',
+                    code: 'INVALID_AUDITOR_ORG',
+                });
+            }
+        }
+
+        const existing = await query(
+            `SELECT user_id FROM users WHERE email = @email AND organization_id = @organization_id`,
+            { email: String(email).trim(), organization_id }
+        );
+        if (existing.recordset.length > 0) {
+            return res.status(409).json({
+                success: false,
+                error: 'Email già registrata in questa organizzazione',
+                code: 'EMAIL_DUPLICATE',
+            });
+        }
+
+        const password_hash = await bcrypt.hash(String(password), 10);
+        const result = await query(
+            `INSERT INTO users (email, password_hash, full_name, role, organization_id, auditor_org_id, is_active)
+             VALUES (@email, @password_hash, @full_name, @role, @organization_id, @auditor_org_id, 1);
+             SELECT SCOPE_IDENTITY() AS user_id;`,
+            {
+                email: String(email).trim(),
+                password_hash,
+                full_name: String(full_name).trim(),
+                role: normalizedRole,
+                organization_id,
+                auditor_org_id: aoId,
+            }
+        );
+
+        const newId = result.recordset[0]?.user_id;
+        logger.info('Admin create user', { new_user_id: newId, organization_id, actorId, role: normalizedRole });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                user_id: newId,
+                email: String(email).trim(),
+                full_name: String(full_name).trim(),
+                role: normalizedRole,
+                auditor_org_id: aoId,
+                is_active: true,
+            },
+        });
+    } catch (error) {
+        logger.error('Admin createUser error', { error: error.message });
+        res.status(500).json({
+            success: false,
+            error: 'Errore creazione utente',
+            code: 'ADMIN_CREATE_USER_ERROR',
+        });
+    }
+}
+
+/**
+ * PATCH /api/v1/admin/users/:id
+ * Aggiorna profilo, ruolo, attivo, password (opzionale), auditor_org_id
+ */
+async function updateUser(req, res) {
+    try {
+        const { organization_id, user_id: actorId } = req.user;
+        const targetUserId = parseInt(req.params.id, 10);
+        const { full_name, role, is_active, auditor_org_id, password } = req.body || {};
+
+        if (isNaN(targetUserId)) {
+            return res.status(400).json({
+                success: false,
+                error: 'ID utente non valido',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+
+        const userCheck = await query(
+            `SELECT user_id, role, is_active FROM users
+             WHERE user_id = @user_id AND organization_id = @organization_id`,
+            { user_id: targetUserId, organization_id }
+        );
+        if (userCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utente non trovato',
+                code: 'USER_NOT_FOUND',
+            });
+        }
+
+        const current = userCheck.recordset[0];
+        const updates = [];
+        const params = { user_id: targetUserId, organization_id };
+
+        if (full_name !== undefined) {
+            if (!String(full_name).trim()) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'full_name non può essere vuoto',
+                    code: 'VALIDATION_ERROR',
+                });
+            }
+            updates.push('full_name = @full_name');
+            params.full_name = String(full_name).trim();
+        }
+
+        if (role !== undefined) {
+            const normalizedRole = String(role).toLowerCase().trim();
+            const allowed = ['auditor', 'viewer', 'admin'];
+            if (!allowed.includes(normalizedRole)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Ruolo non valido',
+                    code: 'VALIDATION_ERROR',
+                });
+            }
+            if (normalizedRole === 'admin' && !isElevatedAdmin(req.user)) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Solo l\'amministratore principale può assegnare il ruolo admin',
+                    code: 'AUTH_FORBIDDEN',
+                });
+            }
+            if (ADMIN_ROLES.includes(current.role) && !ADMIN_ROLES.includes(normalizedRole)) {
+                const admins = await countActiveAdminsInOrg(organization_id);
+                if (admins <= 1 && current.is_active) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Non si può togliere il ruolo admin all\'ultimo amministratore attivo',
+                        code: 'LAST_ADMIN_PROTECTED',
+                    });
+                }
+            }
+            updates.push('role = @role');
+            params.role = normalizedRole;
+        }
+
+        if (is_active !== undefined) {
+            const active = Boolean(is_active);
+            if (!active && targetUserId === actorId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Non puoi disattivare il tuo stesso account',
+                    code: 'SELF_DEACTIVATE_FORBIDDEN',
+                });
+            }
+            if (!active && (await userIsAdminRole(targetUserId, organization_id))) {
+                const admins = await countActiveAdminsInOrg(organization_id);
+                if (admins <= 1) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Non si può disattivare l\'ultimo amministratore',
+                        code: 'LAST_ADMIN_PROTECTED',
+                    });
+                }
+            }
+            updates.push('is_active = @is_active');
+            params.is_active = active ? 1 : 0;
+        }
+
+        if (auditor_org_id !== undefined) {
+            let aoId = auditor_org_id === null || auditor_org_id === '' ? null : parseInt(auditor_org_id, 10);
+            if (Number.isNaN(aoId)) aoId = null;
+            if (aoId != null) {
+                const ao = await query(
+                    `SELECT id FROM auditor_orgs WHERE id = @id AND organization_id = @organization_id AND is_active = 1`,
+                    { id: aoId, organization_id }
+                );
+                if (ao.recordset.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'auditor_org_id non valido',
+                        code: 'INVALID_AUDITOR_ORG',
+                    });
+                }
+            }
+            updates.push('auditor_org_id = @auditor_org_id');
+            params.auditor_org_id = aoId;
+        }
+
+        if (password !== undefined && password !== null && String(password).length > 0) {
+            if (String(password).length < 8) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password: minimo 8 caratteri',
+                    code: 'VALIDATION_ERROR',
+                });
+            }
+            const password_hash = await bcrypt.hash(String(password), 10);
+            updates.push('password_hash = @password_hash');
+            params.password_hash = password_hash;
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Nessun campo da aggiornare',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+
+        await query(
+            `UPDATE users SET ${updates.join(', ')} WHERE user_id = @user_id AND organization_id = @organization_id`,
+            params
+        );
+
+        logger.info('Admin update user', { target_user_id: targetUserId, organization_id, actorId, fields: updates });
+
+        res.json({ success: true, message: 'Utente aggiornato' });
+    } catch (error) {
+        logger.error('Admin updateUser error', { error: error.message });
+        res.status(500).json({
+            success: false,
+            error: 'Errore aggiornamento utente',
+            code: 'ADMIN_UPDATE_USER_ERROR',
+        });
+    }
+}
+
+/**
+ * DELETE /api/v1/admin/users/:id
+ * Disattiva utente (soft: is_active = 0)
+ */
+async function deactivateUser(req, res) {
+    try {
+        const { organization_id, user_id: actorId } = req.user;
+        const targetUserId = parseInt(req.params.id, 10);
+
+        if (isNaN(targetUserId)) {
+            return res.status(400).json({
+                success: false,
+                error: 'ID utente non valido',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+
+        if (targetUserId === actorId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Non puoi disattivare il tuo stesso account',
+                code: 'SELF_DEACTIVATE_FORBIDDEN',
+            });
+        }
+
+        const userCheck = await query(
+            `SELECT user_id, is_active FROM users
+             WHERE user_id = @user_id AND organization_id = @organization_id`,
+            { user_id: targetUserId, organization_id }
+        );
+        if (userCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utente non trovato',
+                code: 'USER_NOT_FOUND',
+            });
+        }
+
+        if (!userCheck.recordset[0].is_active) {
+            return res.json({ success: true, message: 'Utente già disattivato' });
+        }
+
+        if (await userIsAdminRole(targetUserId, organization_id)) {
+            const admins = await countActiveAdminsInOrg(organization_id);
+            if (admins <= 1) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Non si può disattivare l\'ultimo amministratore',
+                    code: 'LAST_ADMIN_PROTECTED',
+                });
+            }
+        }
+
+        await query(
+            `UPDATE users SET is_active = 0 WHERE user_id = @user_id AND organization_id = @organization_id`,
+            { user_id: targetUserId, organization_id }
+        );
+
+        logger.info('Admin deactivate user', { target_user_id: targetUserId, organization_id, actorId });
+
+        res.json({ success: true, message: 'Utente disattivato' });
+    } catch (error) {
+        logger.error('Admin deactivateUser error', { error: error.message });
+        res.status(500).json({
+            success: false,
+            error: 'Errore disattivazione utente',
+            code: 'ADMIN_DEACTIVATE_USER_ERROR',
         });
     }
 }
@@ -146,5 +512,8 @@ async function updateUserStandards(req, res) {
 
 module.exports = {
     listUsers,
-    updateUserStandards
+    createUser,
+    updateUser,
+    deactivateUser,
+    updateUserStandards,
 };

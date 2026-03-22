@@ -4,6 +4,42 @@
   padding: 1rem 0;
 }
 
+/* Bottoni base (pagina usabile anche senza altri CSS caricati) */
+.users-admin-page .btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-align: center;
+}
+
+.users-admin-page .btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.users-admin-page .btn-primary {
+  background: #007bff;
+  color: #fff;
+  border-color: #007bff;
+}
+
+.users-admin-page .btn-primary:hover:not(:disabled) {
+  background: #0069d9;
+}
+
+.users-admin-page .btn-secondary {
+  background: #6c757d;
+  color: #fff;
+  border-color: #6c757d;
+}
+
+.users-admin-page .btn-secondary:hover:not(:disabled) {
+  background: #5a6268;
+}
+
 .users-admin-header {
   margin-bottom: 1.5rem;
 }
@@ -64,6 +100,133 @@
 .user-role-badge.role-auditor {
   background: #cce5ff;
   color: #004085;
+}
+
+.user-role-badge.role-viewer {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.user-role-badge.role-superadmin {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.user-card-inactive {
+  opacity: 0.88;
+  border-style: dashed;
+  background: #f5f5f5;
+}
+
+.user-status-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.user-status-badge.inactive {
+  background: #f5c6cb;
+  color: #721c24;
+}
+
+.user-studio {
+  font-size: 0.85rem;
+  color: #555;
+  width: 100%;
+}
+
+.users-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.user-create-form {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  background: #fff;
+}
+
+.user-create-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-row.compact {
+  margin-bottom: 0.5rem;
+}
+
+.form-row label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.form-row input,
+.form-row select {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  max-width: 100%;
+}
+
+.form-hint {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0 0 0.75rem 0;
+}
+
+.form-hint.warn {
+  color: #856404;
+  background: #fff3cd;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.user-profile-section {
+  margin: 0.75rem 0 1rem 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.user-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.users-admin-page .btn-danger {
+  background: #c82333;
+  color: #fff;
+  border: 1px solid #bd2130;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.users-admin-page .btn-danger:hover:not(:disabled) {
+  background: #a71d2a;
+}
+
+.users-admin-page .btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .user-standards-section {
