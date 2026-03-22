@@ -104,7 +104,7 @@ Poi lancia lo script con:
 
 **Soluzione (in ordine)**
 1. **Opzione A — password sudo solo per la sessione PowerShell** (mai in repo):  
-   `$env:SGQ_SUDO_PASSWORD = '...'` poi rieseguire `deploy-controllers-to-vps.ps1`. Lo script prova `sudo systemctl restart` con quella password (internamente via base64), poi `sudo -n`, poi il fallback sotto.
+   `$env:SGQ_SUDO_PASSWORD = '...'` poi rieseguire `deploy-controllers-to-vps.ps1`. Lo script lancia **prima** un `plink` dedicato con `sudo systemctl restart` (password via base64), poi il blocco usuale (`sudo -n` + fallback `fuser`/`nohup`).
 2. **Opzione B — come DEPLOY_CHECKLIST_RELEASE.md**: SSH sul server, poi  
    `fuser -k 3000/tcp` → `sleep 2` → `cd /var/www/sgq-backend && nohup node src/server.js >> /var/www/sgq-backend/app.log 2>&1 &`  
    (stesso fallback eseguito dallo script se A e `sudo -n` non bastano).

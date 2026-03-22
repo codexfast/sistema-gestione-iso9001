@@ -90,45 +90,42 @@ Copy-FileToVps "src/services/reportTemplate.service.js" "$RemoteBase/src/service
 
 Write-Host "OK. Riavvio backend sul VPS..." -ForegroundColor Cyan
 
-# Password sudo opzionale (solo sessione PowerShell corrente): $env:SGQ_SUDO_PASSWORD — mai in repo.
-# Se impostata, viene passata in base64 al remoto per: sudo systemctl restart sgq-backend.service
-$SudoB64 = ""
+# Opzionale: $env:SGQ_SUDO_PASSWORD — restart systemd prima del blocco bash (evita quoting annidato).
+# Mai committare password. Se non impostata, si usa sudo -n poi fallback fuser+nohup.
 if ($env:SGQ_SUDO_PASSWORD) {
-    $SudoB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($env:SGQ_SUDO_PASSWORD))
-    Write-Host "  (SGQ_SUDO_PASSWORD impostata: verra' usata per systemctl restart se necessario)" -ForegroundColor DarkGray
+    Write-Host "  Tentativo systemctl restart con SGQ_SUDO_PASSWORD..." -ForegroundColor DarkGray
+    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($env:SGQ_SUDO_PASSWORD))
+    $sudoLine = "echo $b64 | base64 -d | sudo -S systemctl restart sgq-backend.service"
+    if ($PuttySession -and $useSession) {
+        & $Plink -batch -load $PuttySession "bash -lc `"$sudoLine`""
+    } elseif ($SshPassword) {
+        & $Plink -batch -pw $SshPassword -hostkey $HostKey -P $Port $VPS "bash -lc `"$sudoLine`""
+    } else {
+        & $Plink -batch -hostkey $HostKey -P $Port $VPS "bash -lc `"$sudoLine`""
+    }
+    Write-Host "  (esito systemctl con password: exit $LASTEXITCODE)" -ForegroundColor DarkGray
 }
 
-# Ordine: (1) sudo con password da env, (2) sudo -n NOPASSWD, (3) fallback DEPLOY_CHECKLIST_RELEASE.md (fuser + nohup)
-# Nota: alcune shell (es. csh/tcsh) non supportano "set -e" — usiamo bash -lc.
+# Ordine nel remoto: (1) sudo -n NOPASSWD, (2) fallback DEPLOY_CHECKLIST_RELEASE.md (fuser + nohup)
 $remoteCmd = @"
 bash -lc '
-cd "$RemoteBase"
-export DEPLOY_SUDO_B64="$SudoB64"
-echo "[deploy] restart backend"
+cd $RemoteBase
+echo deploy_restart_begin
 RESTARTED=0
-if [ -n "`$DEPLOY_SUDO_B64" ]; then
-  if echo "`$DEPLOY_SUDO_B64" | base64 -d 2>/dev/null | sudo -S systemctl restart sgq-backend.service 2>/dev/null; then
-    echo "[deploy] systemctl restart OK (SGQ_SUDO_PASSWORD)"
-    RESTARTED=1
-  else
-    echo "[deploy] sudo con password non riuscito — si provano altri metodi"
-  fi
-fi
-if [ "`$RESTARTED" != "1" ] && sudo -n systemctl restart sgq-backend.service 2>/dev/null; then
-  echo "[deploy] systemctl restart OK (sudo NOPASSWD)"
+if sudo -n systemctl restart sgq-backend.service 2>/dev/null; then
+  echo deploy_systemctl_nopass_ok
   RESTARTED=1
 fi
 if [ "`$RESTARTED" != "1" ]; then
-  echo "[deploy] fallback fuser + nohup (come docs/DEPLOY_CHECKLIST_RELEASE.md)"
+  echo deploy_fallback_fuser_nohup
   fuser -k 3000/tcp 2>/dev/null || true
   sleep 2
-  cd "$RemoteBase" || exit 1
-  nohup node src/server.js >> "$RemoteBase/app.log" 2>&1 &
+  cd $RemoteBase || exit 1
+  nohup node src/server.js >> $RemoteBase/app.log 2>&1 &
   sleep 4
-  RESTARTED=1
 fi
 systemctl --no-pager --full status sgq-backend.service 2>/dev/null | tail -n 40 || true
-tail -n 25 "$RemoteBase/app.log" || true
+tail -n 25 $RemoteBase/app.log || true
 '
 "@
 
