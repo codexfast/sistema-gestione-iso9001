@@ -266,7 +266,7 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
         xml = replaceMarker(
             xml,
             'RILIEVI_MARKER',
-            buildRileviSummaryOoxml(audit.checklist)
+            buildRileviSummaryOoxml(audit.checklist, audit.pendingIssues || [])
         );
     }
 

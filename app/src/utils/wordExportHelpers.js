@@ -644,12 +644,17 @@ export function buildChecklistSectionOoxml(checklist, auditAttachments = [], pen
 }
 
 // ─── Tabella sintesi rilievi (iniettata in RILIEVI_MARKER) ────────────────────
-export function buildRileviSummaryOoxml(checklist) {
+export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
     if (!checklist || !Object.keys(checklist).length)
         return xmlPara('Checklist non disponibile.', { ital: true });
 
     const FILL = { CONF: 'D1FAE5', NC: 'FEE2E2', OSS: 'FEF3C7', OM: 'DBEAFE', 'N.A.': 'E5E7EB' };
     const PCT  = [40, 12, 12, 12, 12, 12];
+
+    const hasOpenPending = (pendingIssues || []).some((pi) => {
+        const st = pi.status || pi.issue_status || 'open';
+        return st !== 'resolved' && st !== 'closed';
+    });
 
     const headerRow = xmlRow(
         ['Elemento / Processo della norma', 'CONF', 'NC', 'OSS', 'OM', 'N.A.'].map((h, i) =>
@@ -659,10 +664,18 @@ export function buildRileviSummaryOoxml(checklist) {
         { header: true }
     );
 
+    // Riga AP: senza pending storici → X su CONF (comportamento legacy); con pending aperti → X su NC
     const apRow = xmlRow([
         xmlCell('AP  Azioni pendenti da audit precedenti', { pct: PCT[0] }),
-        xmlCell(xmlPara(xmlRun('X', { bold: true }), { align: 'center' }), { fill: FILL.CONF, pct: PCT[1] }),
-        ...['NC', 'OSS', 'OM', 'N.A.'].map((_, i) => xmlCell(xmlPara(''), { pct: PCT[i + 2] })),
+        hasOpenPending
+            ? xmlCell(xmlPara(''), { pct: PCT[1] })
+            : xmlCell(xmlPara(xmlRun('X', { bold: true }), { align: 'center' }), { fill: FILL.CONF, pct: PCT[1] }),
+        hasOpenPending
+            ? xmlCell(xmlPara(xmlRun('X', { bold: true }), { align: 'center' }), { fill: FILL.NC, pct: PCT[2] })
+            : xmlCell(xmlPara(''), { pct: PCT[2] }),
+        xmlCell(xmlPara(''), { pct: PCT[3] }),
+        xmlCell(xmlPara(''), { pct: PCT[4] }),
+        xmlCell(xmlPara(''), { pct: PCT[5] }),
     ]);
 
     const rows = [headerRow, apRow];

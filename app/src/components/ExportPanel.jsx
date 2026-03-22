@@ -60,29 +60,64 @@ const ExportPanel = () => {
     // Priorità a auditId numerico (integer DB) — stesso ordine di useAttachmentManager.js
     const auditId = currentAudit.metadata?.auditId || currentAudit.metadata?.id || currentAudit.id;
 
-    // Fetch rilievi pendenti dall'audit precedente dello stesso cliente
+    // 1) Preferisci GET /audits/:id/pending-issues (tab. pending_issues + NC) — Fase 0.5 roadmap
     try {
-      const clientName = currentAudit.metadata?.clientName;
-      const auditUuid  = currentAudit.metadata?.id || null;
-      if (clientName) {
-        const reauditInfo = await apiService.checkReaudit(clientName, auditUuid);
-        if (reauditInfo.has_previous_audit && reauditInfo.last_audit_id) {
-          const ncData = await apiService.getNcResponses(reauditInfo.last_audit_id);
-          const rawIssues = (ncData.responses || []).filter(i => i.conformity_status !== 'OM');
-          if (rawIssues.length > 0) {
-            auditForExport.pendingIssues = rawIssues.map(i => ({
-              clause:            i.section_code || '',
-              description:       i.question_text || `Domanda ${i.question_id}`,
-              originAuditNumber: reauditInfo.last_audit_number || `#${reauditInfo.last_audit_id}`,
-              status:            'open',
-              resolutionNotes:   i.notes || '',
-            }));
-            console.log(`📋 [EXPORT] ${rawIssues.length} rilievi pendenti da audit_responses`);
+      if (auditId != null && String(auditId).trim() !== "") {
+        const pendRes = await apiService.getPendingIssues(auditId);
+        const list = pendRes?.pending_issues;
+        if (Array.isArray(list) && list.length > 0) {
+          auditForExport.pendingIssues = list.map((p) => ({
+            clause:
+              p.requirement_reference ||
+              (p.section_id != null && p.section_id !== "" ? String(p.section_id) : "") ||
+              "",
+            description: p.nc_description || "",
+            originAuditNumber:
+              p.nc_number || (p.source_audit_id ? `#${p.source_audit_id}` : "—"),
+            issue_status: p.issue_status || "open",
+            status: p.issue_status || "open",
+            resolutionNotes: p.follow_up_notes || "",
+            source_audit_id: p.source_audit_id,
+          }));
+          console.log(
+            `📋 [EXPORT] ${list.length} rilievi pendenti da GET /audits/.../pending-issues`
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("[EXPORT] pending-issues API non disponibile:", err.message);
+    }
+
+    // 2) Fallback: rilievi da audit_responses ultimo audit stesso cliente (se pending_issues vuoto)
+    try {
+      if (!auditForExport.pendingIssues?.length) {
+        const clientName = currentAudit.metadata?.clientName;
+        const auditUuid = currentAudit.metadata?.id || null;
+        if (clientName) {
+          const reauditInfo = await apiService.checkReaudit(clientName, auditUuid);
+          if (reauditInfo.has_previous_audit && reauditInfo.last_audit_id) {
+            const ncData = await apiService.getNcResponses(reauditInfo.last_audit_id);
+            const rawIssues = (ncData.responses || []).filter(
+              (i) => i.conformity_status !== "OM"
+            );
+            if (rawIssues.length > 0) {
+              auditForExport.pendingIssues = rawIssues.map((i) => ({
+                clause: i.section_code || "",
+                description: i.question_text || `Domanda ${i.question_id}`,
+                originAuditNumber:
+                  reauditInfo.last_audit_number || `#${reauditInfo.last_audit_id}`,
+                status: "open",
+                resolutionNotes: i.notes || "",
+              }));
+              console.log(
+                `📋 [EXPORT] ${rawIssues.length} rilievi pendenti da audit_responses (fallback)`
+              );
+            }
           }
         }
       }
     } catch (err) {
-      console.warn('[EXPORT] pending issues non disp., uso locali:', err.message);
+      console.warn("[EXPORT] pending issues fallback non disp., uso locali:", err.message);
     }
 
     // Fetch rilievi ente certificatore

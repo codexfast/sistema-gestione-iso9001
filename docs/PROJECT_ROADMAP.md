@@ -141,7 +141,7 @@ Gli auditor lo ricevono solo quando stabile e collaudato — zero interruzioni o
 | 0.2 | ISO 14001 checklist da norma PDF | DB migration + `checklistTemplates.js` | Norma già disponibile e leggibile |
 | 0.3 | ISO 45001 checklist da norma PDF | DB migration + `checklistTemplates.js` | Norma già disponibile e leggibile |
 | 0.4 | Campo norm_excerpt in checklist_questions | DB + wordExportHelpers.js | Alto impatto, bassa complessità |
-| 0.5 | Rilievi pendenti reali in Word | `wordExport.js` | RILIEVI_MARKER → GET /audits/:id/pending-issues |
+| 0.5 | Rilievi pendenti reali in Word | `ExportPanel.jsx`, `wordExport.js`, `wordExportHelpers.js` | **Export**: prima `GET /audits/:id/pending-issues`, poi fallback `checkReaudit`+`nc-responses`; tabella AP in `RILIEVI_MARKER` marca **NC** se pending aperti (mar 2026) |
 | 0.6 | Fix Auth Mobile (ADR-004) | `auth.controller.js`, `apiService.js` | localStorage JWT — prerequisito per mobile |
 
 ---
