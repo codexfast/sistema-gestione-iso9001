@@ -125,6 +125,8 @@ if [ "`$RESTARTED" != "1" ]; then
   sleep 4
 fi
 systemctl --no-pager --full status sgq-backend.service 2>/dev/null | tail -n 40 || true
+echo deploy_routes_preview_custom_checklist
+sed -n '1,28p' $RemoteBase/src/routes/customChecklist.routes.js || true
 tail -n 25 $RemoteBase/app.log || true
 '
 "@

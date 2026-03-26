@@ -14,8 +14,7 @@ const { assertWriteAllowed, getLockTokenFromRequest } = require('../services/aud
  */
 async function listChecklists(req, res) {
   try {
-    const organizationId = req.user.organization_id;
-    const data = await customChecklistService.listChecklists(organizationId);
+    const data = await customChecklistService.listChecklists(req.user);
     res.json({ success: true, data });
   } catch (err) {
     logger.error('listChecklists error', { error: err.message });
@@ -30,14 +29,13 @@ async function listChecklists(req, res) {
  */
 async function createChecklist(req, res) {
   try {
-    const organizationId = req.user.organization_id;
     const { name, description, is_active, default_report_template_id, custom_report_template_id } = req.body;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'name obbligatorio', code: 'VALIDATION_ERROR' });
     }
 
-    const data = await customChecklistService.createChecklist(organizationId, {
+    const data = await customChecklistService.createChecklist(req.user, {
       name: name.trim(),
       description: description || null,
       is_active,
@@ -59,9 +57,8 @@ async function createChecklist(req, res) {
 async function getChecklist(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
 
-    const data = await customChecklistService.getChecklistWithStructure(parseInt(id, 10), organizationId);
+    const data = await customChecklistService.getChecklistWithStructure(parseInt(id, 10), req.user);
     if (!data) {
       return res.status(404).json({ error: 'Checklist non trovata', code: 'CUSTOM_CHECKLIST_NOT_FOUND' });
     }
@@ -80,10 +77,9 @@ async function getChecklist(req, res) {
 async function updateChecklist(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
     const { name, description, is_active, default_report_template_id, custom_report_template_id } = req.body;
 
-    const data = await customChecklistService.updateChecklist(parseInt(id, 10), organizationId, {
+    const data = await customChecklistService.updateChecklist(parseInt(id, 10), req.user, {
       name,
       description,
       is_active,
@@ -109,9 +105,8 @@ async function updateChecklist(req, res) {
 async function deleteChecklist(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
 
-    const deleted = await customChecklistService.deleteChecklist(parseInt(id, 10), organizationId);
+    const deleted = await customChecklistService.deleteChecklist(parseInt(id, 10), req.user);
     if (!deleted) {
       return res.status(404).json({ error: 'Checklist non trovata', code: 'CUSTOM_CHECKLIST_NOT_FOUND' });
     }
@@ -130,9 +125,8 @@ async function deleteChecklist(req, res) {
 async function listSections(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
 
-    const data = await customChecklistService.listSections(parseInt(id, 10), organizationId);
+    const data = await customChecklistService.listSections(parseInt(id, 10), req.user);
     if (data === null) {
       return res.status(404).json({ error: 'Checklist non trovata', code: 'CUSTOM_CHECKLIST_NOT_FOUND' });
     }
@@ -152,14 +146,13 @@ async function listSections(req, res) {
 async function createSection(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
     const { code, title, display_order } = req.body;
 
     if (!code || !title) {
       return res.status(400).json({ error: 'code e title obbligatori', code: 'VALIDATION_ERROR' });
     }
 
-    const data = await customChecklistService.createSection(parseInt(id, 10), organizationId, {
+    const data = await customChecklistService.createSection(parseInt(id, 10), req.user, {
       code: String(code).trim(),
       title: String(title).trim(),
       display_order,
@@ -183,13 +176,12 @@ async function createSection(req, res) {
 async function updateSection(req, res) {
   try {
     const { id, sectionId } = req.params;
-    const organizationId = req.user.organization_id;
     const { code, title, display_order } = req.body;
 
     const data = await customChecklistService.updateSection(
       parseInt(sectionId, 10),
       parseInt(id, 10),
-      organizationId,
+      req.user,
       { code, title, display_order }
     );
 
@@ -215,14 +207,13 @@ async function updateSection(req, res) {
 async function updateSectionsOrder(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
     const { sections } = req.body;
 
     if (!Array.isArray(sections)) {
       return res.status(400).json({ error: 'sections deve essere un array', code: 'VALIDATION_ERROR' });
     }
 
-    const ok = await customChecklistService.updateSectionsOrder(parseInt(id, 10), organizationId, sections);
+    const ok = await customChecklistService.updateSectionsOrder(parseInt(id, 10), req.user, sections);
     if (!ok) {
       return res.status(404).json({ error: 'Checklist non trovata', code: 'CUSTOM_CHECKLIST_NOT_FOUND' });
     }
@@ -241,12 +232,11 @@ async function updateSectionsOrder(req, res) {
 async function deleteSection(req, res) {
   try {
     const { id, sectionId } = req.params;
-    const organizationId = req.user.organization_id;
 
     const deleted = await customChecklistService.deleteSection(
       parseInt(sectionId, 10),
       parseInt(id, 10),
-      organizationId
+      req.user
     );
     if (!deleted) {
       return res.status(404).json({ error: 'Sezione non trovata', code: 'SECTION_NOT_FOUND' });
@@ -267,11 +257,10 @@ async function listItems(req, res) {
   try {
     const { id } = req.params;
     const { sectionId } = req.query;
-    const organizationId = req.user.organization_id;
 
     const data = await customChecklistService.listItems(
       parseInt(id, 10),
-      organizationId,
+      req.user,
       sectionId ? parseInt(sectionId, 10) : null
     );
     if (data === null) {
@@ -293,14 +282,13 @@ async function listItems(req, res) {
 async function createItem(req, res) {
   try {
     const { id } = req.params;
-    const organizationId = req.user.organization_id;
     const { section_id, code, title, response_type, display_order } = req.body;
 
     if (!section_id || !code || !title) {
       return res.status(400).json({ error: 'section_id, code e title obbligatori', code: 'VALIDATION_ERROR' });
     }
 
-    const data = await customChecklistService.createItem(parseInt(id, 10), organizationId, {
+    const data = await customChecklistService.createItem(parseInt(id, 10), req.user, {
       section_id,
       code: String(code).trim(),
       title: String(title).trim(),
@@ -329,13 +317,12 @@ async function createItem(req, res) {
 async function updateItem(req, res) {
   try {
     const { id, itemId } = req.params;
-    const organizationId = req.user.organization_id;
     const { code, title, display_order } = req.body;
 
     const data = await customChecklistService.updateItem(
       parseInt(itemId, 10),
       parseInt(id, 10),
-      organizationId,
+      req.user,
       { code, title, display_order }
     );
 
@@ -360,12 +347,11 @@ async function updateItem(req, res) {
 async function deleteItem(req, res) {
   try {
     const { id, itemId } = req.params;
-    const organizationId = req.user.organization_id;
 
     const deleted = await customChecklistService.deleteItem(
       parseInt(itemId, 10),
       parseInt(id, 10),
-      organizationId
+      req.user
     );
     if (!deleted) {
       return res.status(404).json({ error: 'Voce non trovata', code: 'ITEM_NOT_FOUND' });

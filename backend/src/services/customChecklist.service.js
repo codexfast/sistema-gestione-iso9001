@@ -6,16 +6,39 @@
 const { query } = require('../config/database');
 const logger = require('../utils/logger');
 
+function buildChecklistScopeWhere(reqUser) {
+  const isOrgWideAdmin =
+    (reqUser?.role === 'admin' || reqUser?.role === 'superadmin') &&
+    (reqUser?.auditor_org_id == null);
+
+  if (isOrgWideAdmin) {
+    return {
+      where: 'organization_id = @organization_id',
+      params: { organization_id: reqUser.organization_id },
+    };
+  }
+
+  // Policy B: checklist legacy (auditor_org_id NULL) restano visibili a tutti gli auditor.
+  return {
+    where: 'organization_id = @organization_id AND (auditor_org_id = @auditor_org_id OR auditor_org_id IS NULL)',
+    params: {
+      organization_id: reqUser.organization_id,
+      auditor_org_id: reqUser.auditor_org_id ?? null,
+    },
+  };
+}
+
 /**
  * Lista checklist custom per organizzazione
  */
-async function listChecklists(organizationId) {
+async function listChecklists(reqUser) {
+  const scope = buildChecklistScopeWhere(reqUser);
   const result = await query(
-    `SELECT id, name, description, is_active, default_report_template_id, custom_report_template_id, created_at, updated_at
+    `SELECT id, organization_id, auditor_org_id, name, description, is_active, default_report_template_id, custom_report_template_id, created_at, updated_at
      FROM custom_checklists
-     WHERE organization_id = @organization_id
+     WHERE ${scope.where}
      ORDER BY name`,
-    { organization_id: organizationId }
+    scope.params
   );
   return result.recordset;
 }
@@ -23,14 +46,19 @@ async function listChecklists(organizationId) {
 /**
  * Crea checklist custom
  */
-async function createChecklist(organizationId, data) {
+async function createChecklist(reqUser, data) {
   const { name, description = null, is_active = true, default_report_template_id = null, custom_report_template_id = null } = data;
+  const isOrgWideAdmin =
+    (reqUser?.role === 'admin' || reqUser?.role === 'superadmin') &&
+    (reqUser?.auditor_org_id == null);
+  const scopedAuditorOrgId = isOrgWideAdmin ? null : (reqUser?.auditor_org_id ?? null);
   const result = await query(
-    `INSERT INTO custom_checklists (organization_id, name, description, is_active, default_report_template_id, custom_report_template_id, created_at, updated_at)
-     OUTPUT INSERTED.id, INSERTED.name, INSERTED.description, INSERTED.is_active, INSERTED.created_at
-     VALUES (@organization_id, @name, @description, @is_active, @default_report_template_id, @custom_report_template_id, GETDATE(), GETDATE())`,
+    `INSERT INTO custom_checklists (organization_id, auditor_org_id, name, description, is_active, default_report_template_id, custom_report_template_id, created_at, updated_at)
+     OUTPUT INSERTED.id, INSERTED.organization_id, INSERTED.auditor_org_id, INSERTED.name, INSERTED.description, INSERTED.is_active, INSERTED.created_at
+     VALUES (@organization_id, @auditor_org_id, @name, @description, @is_active, @default_report_template_id, @custom_report_template_id, GETDATE(), GETDATE())`,
     {
-      organization_id: organizationId,
+      organization_id: reqUser.organization_id,
+      auditor_org_id: scopedAuditorOrgId,
       name,
       description,
       is_active: is_active ? 1 : 0,
@@ -44,12 +72,13 @@ async function createChecklist(organizationId, data) {
 /**
  * Ottieni checklist per id (con verifica org)
  */
-async function getChecklistById(id, organizationId) {
+async function getChecklistById(id, reqUser) {
+  const scope = buildChecklistScopeWhere(reqUser);
   const result = await query(
-    `SELECT id, organization_id, name, description, is_active, default_report_template_id, custom_report_template_id, created_at, updated_at
+    `SELECT id, organization_id, auditor_org_id, name, description, is_active, default_report_template_id, custom_report_template_id, created_at, updated_at
      FROM custom_checklists
-     WHERE id = @id AND organization_id = @organization_id`,
-    { id: parseInt(id, 10), organization_id: organizationId }
+     WHERE id = @id AND ${scope.where}`,
+    { id: parseInt(id, 10), ...scope.params }
   );
   return result.recordset[0] || null;
 }
@@ -57,9 +86,9 @@ async function getChecklistById(id, organizationId) {
 /**
  * Aggiorna checklist
  */
-async function updateChecklist(id, organizationId, data) {
+async function updateChecklist(id, reqUser, data) {
   const { name, description, is_active, default_report_template_id, custom_report_template_id } = data;
-  const existing = await getChecklistById(id, organizationId);
+  const existing = await getChecklistById(id, reqUser);
   if (!existing) return null;
 
   await query(
@@ -80,14 +109,14 @@ async function updateChecklist(id, organizationId, data) {
       custom_report_template_id: custom_report_template_id !== undefined ? custom_report_template_id : existing.custom_report_template_id,
     }
   );
-  return getChecklistById(id, organizationId);
+  return getChecklistById(id, reqUser);
 }
 
 /**
  * Elimina checklist (CASCADE su sections e items)
  */
-async function deleteChecklist(id, organizationId) {
-  const existing = await getChecklistById(id, organizationId);
+async function deleteChecklist(id, reqUser) {
+  const existing = await getChecklistById(id, reqUser);
   if (!existing) return false;
 
   await query(`DELETE FROM custom_checklists WHERE id = @id`, { id: parseInt(id, 10) });
@@ -97,8 +126,8 @@ async function deleteChecklist(id, organizationId) {
 /**
  * Lista sezioni di una checklist
  */
-async function listSections(customChecklistId, organizationId) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function listSections(customChecklistId, reqUser) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
   const result = await query(
@@ -114,8 +143,8 @@ async function listSections(customChecklistId, organizationId) {
 /**
  * Crea sezione
  */
-async function createSection(customChecklistId, organizationId, data) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function createSection(customChecklistId, reqUser, data) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
   const { code, title, display_order = 0 } = data;
@@ -136,8 +165,8 @@ async function createSection(customChecklistId, organizationId, data) {
 /**
  * Aggiorna sezione (code, title, display_order)
  */
-async function updateSection(sectionId, customChecklistId, organizationId, data) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function updateSection(sectionId, customChecklistId, reqUser, data) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
   const existing = await query(
@@ -179,8 +208,8 @@ async function updateSection(sectionId, customChecklistId, organizationId, data)
 /**
  * Aggiorna voce (item): code, title, display_order
  */
-async function updateItem(itemId, customChecklistId, organizationId, data) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function updateItem(itemId, customChecklistId, reqUser, data) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
   const existing = await query(
@@ -223,8 +252,8 @@ async function updateItem(itemId, customChecklistId, organizationId, data) {
 /**
  * Aggiorna ordine sezioni (bulk)
  */
-async function updateSectionsOrder(customChecklistId, organizationId, sections) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function updateSectionsOrder(customChecklistId, reqUser, sections) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return false;
 
   for (const { id, display_order } of sections) {
@@ -239,8 +268,8 @@ async function updateSectionsOrder(customChecklistId, organizationId, sections) 
 /**
  * Elimina sezione
  */
-async function deleteSection(sectionId, customChecklistId, organizationId) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function deleteSection(sectionId, customChecklistId, reqUser) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return false;
 
   const result = await query(
@@ -253,8 +282,8 @@ async function deleteSection(sectionId, customChecklistId, organizationId) {
 /**
  * Lista voci (items) di una checklist, opzionalmente per sezione
  */
-async function listItems(customChecklistId, organizationId, sectionId = null) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function listItems(customChecklistId, reqUser, sectionId = null) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
   let sql = `SELECT cci.id, cci.section_id, cci.code, cci.title, cci.response_type, cci.display_order
@@ -277,8 +306,8 @@ async function listItems(customChecklistId, organizationId, sectionId = null) {
 /**
  * Crea voce (item)
  */
-async function createItem(customChecklistId, organizationId, data) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function createItem(customChecklistId, reqUser, data) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
   const { section_id, code, title, response_type = 'verbale', display_order = 0 } = data;
@@ -311,8 +340,8 @@ async function createItem(customChecklistId, organizationId, data) {
 /**
  * Elimina voce
  */
-async function deleteItem(itemId, customChecklistId, organizationId) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function deleteItem(itemId, customChecklistId, reqUser) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return false;
 
   const result = await query(
@@ -327,12 +356,12 @@ async function deleteItem(itemId, customChecklistId, organizationId) {
 /**
  * Ottieni checklist completa (sezioni + voci) per audit
  */
-async function getChecklistWithStructure(customChecklistId, organizationId) {
-  const check = await getChecklistById(customChecklistId, organizationId);
+async function getChecklistWithStructure(customChecklistId, reqUser) {
+  const check = await getChecklistById(customChecklistId, reqUser);
   if (!check) return null;
 
-  const sections = await listSections(customChecklistId, organizationId);
-  const items = await listItems(customChecklistId, organizationId);
+  const sections = await listSections(customChecklistId, reqUser);
+  const items = await listItems(customChecklistId, reqUser);
 
   const sectionsMap = {};
   for (const s of sections) {
