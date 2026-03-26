@@ -6,13 +6,12 @@ const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const adminController = require('../controllers/admin.controller');
 
-router.use(authenticate);
-router.use(authorize('admin', 'superadmin'));
+const adminOnly = [authenticate, authorize('admin', 'superadmin')];
 
-router.get('/admin/users', adminController.listUsers);
-router.post('/admin/users', adminController.createUser);
-router.patch('/admin/users/:id', adminController.updateUser);
-router.delete('/admin/users/:id', adminController.deactivateUser);
-router.put('/admin/users/:id/standards', adminController.updateUserStandards);
+router.get('/admin/users', adminOnly, adminController.listUsers);
+router.post('/admin/users', adminOnly, adminController.createUser);
+router.patch('/admin/users/:id', adminOnly, adminController.updateUser);
+router.delete('/admin/users/:id', adminOnly, adminController.deactivateUser);
+router.put('/admin/users/:id/standards', adminOnly, adminController.updateUserStandards);
 
 module.exports = router;
