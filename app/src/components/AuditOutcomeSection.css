@@ -185,6 +185,11 @@
   color: #6b7280;
 }
 
+.metric-compact.nv {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
 /* ==================== FINDINGS LEGEND ==================== */
 
 .findings-legend {
@@ -248,6 +253,11 @@
 .legend-badge.na {
   background: #e5e7eb;
   color: #6b7280;
+}
+
+.legend-badge.nv {
+  background: #ede9fe;
+  color: #5b21b6;
 }
 
 /* ==================== FINDINGS LINK ==================== */

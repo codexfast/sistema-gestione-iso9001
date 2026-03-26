@@ -144,6 +144,20 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
                 )
               : 0}
           </span>
+          <span className="metric-compact nv">
+            <strong>NV:</strong>{" "}
+            {currentAudit?.checklist
+              ? Object.values(currentAudit.checklist).flatMap(cl =>
+                  Object.values(cl || {})
+                ).reduce(
+                  (total, clause) =>
+                    total +
+                    (clause.questions || []).filter((q) => q.status === "NV")
+                      .length,
+                  0
+                )
+              : 0}
+          </span>
         </div>
 
         {/* LEGENDA (spostata da ChecklistModule) */}
@@ -165,6 +179,9 @@ function AuditOutcomeSection({ auditOutcome, onUpdate }) {
             </span>
             <span className="legend-item">
               <span className="legend-badge na">NA</span> Non Applicabile
+            </span>
+            <span className="legend-item">
+              <span className="legend-badge nv">NV</span> Non Verificato
             </span>
           </div>
         </div>

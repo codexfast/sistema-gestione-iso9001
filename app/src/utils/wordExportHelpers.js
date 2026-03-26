@@ -648,8 +648,8 @@ export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
     if (!checklist || !Object.keys(checklist).length)
         return xmlPara('Checklist non disponibile.', { ital: true });
 
-    const FILL = { CONF: 'D1FAE5', NC: 'FEE2E2', OSS: 'FEF3C7', OM: 'DBEAFE', 'N.A.': 'E5E7EB' };
-    const PCT  = [40, 12, 12, 12, 12, 12];
+    const FILL = { CONF: 'D1FAE5', NC: 'FEE2E2', OSS: 'FEF3C7', OM: 'DBEAFE', 'N.A.': 'E5E7EB', NV: 'EDE9FE' };
+    const PCT  = [34, 11, 11, 11, 11, 11, 11];
 
     const hasOpenPending = (pendingIssues || []).some((pi) => {
         const st = pi.status || pi.issue_status || 'open';
@@ -657,7 +657,7 @@ export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
     });
 
     const headerRow = xmlRow(
-        ['Elemento / Processo della norma', 'CONF', 'NC', 'OSS', 'OM', 'N.A.'].map((h, i) =>
+        ['Elemento / Processo della norma', 'CONF', 'NC', 'OSS', 'OM', 'N.A.', 'NV'].map((h, i) =>
             xmlCell(xmlPara(xmlRun(h, { bold: true, size: 18 }), { align: 'center' }),
                 { fill: 'E5E7EB', pct: PCT[i] })
         ),
@@ -676,6 +676,7 @@ export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
         xmlCell(xmlPara(''), { pct: PCT[3] }),
         xmlCell(xmlPara(''), { pct: PCT[4] }),
         xmlCell(xmlPara(''), { pct: PCT[5] }),
+        xmlCell(xmlPara(''), { pct: PCT[6] }),
     ]);
 
     const rows = [headerRow, apRow];
@@ -705,7 +706,8 @@ export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
                     else if (q.status === 'NC')                      col = 'NC';
                     else if (q.status === 'OSS')                     col = 'OSS';
                     else if (q.status === 'OM')                      col = 'OM';
-                    else if (q.status === 'NA' || q.status === 'NV') col = 'N.A.';
+                    else if (q.status === 'NA')                      col = 'N.A.';
+                    else if (q.status === 'NV')                      col = 'NV';
 
                     const ref   = q.clauseRef || q.id || '';
                     const title = (q.title || q.text || '').replace(/^\d+\.?\d*\.?\d*\s*-?\s*/, '');
@@ -713,7 +715,7 @@ export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
 
                     rows.push(xmlRow([
                         xmlCell(label, { pct: PCT[0] }),
-                        ...['CONF', 'NC', 'OSS', 'OM', 'N.A.'].map((k, i) =>
+                        ...['CONF', 'NC', 'OSS', 'OM', 'N.A.', 'NV'].map((k, i) =>
                             col === k
                                 ? xmlCell(xmlPara(xmlRun('X', { bold: true }), { align: 'center' }),
                                     { fill: FILL[k], pct: PCT[i + 1] })
