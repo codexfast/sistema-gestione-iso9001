@@ -19,7 +19,7 @@
  *
  *   4. injectOoxmlMarkers() sostituisce i marker nel XML del .docx:
  *         CHECKLIST_MARKER  → sezione rilievi pendenti + tutte le clausole
- *         RILIEVI_MARKER    → tabella sintesi CONF/NC/OSS/OM/N.A.
+ *         RILIEVI_MARKER    → tabella sintesi CONF/NC/OSS/OM/N.A./NV
  *
  * AGGIUNGERE UN NUOVO STANDARD:
  *   1. Ottieni il template: copia ISO9001-audit-report.docx, rinominalo e aprilo in Word
@@ -36,7 +36,9 @@ import {
     buildRileviSummaryOoxml,
     buildCustomChecklistSectionOoxml,
     buildCustomRileviSummaryOoxml,
+    buildWordInlineImageRun,
     calculateMetrics,
+    wordEmbeddableExtFromMime,
 } from './wordExportHelpers.js';
 
 // ─── Mappa standard → template ────────────────────────────────────────────────
@@ -191,6 +193,135 @@ function repairWordDocumentXmlMalformedAttrs(xml) {
     // w:val numerico rimasto senza virgolette
     s = s.replace(/\bw:val=(\d+)(?=[\s/>])/g, 'w:val="$1"');
     return s;
+}
+
+/** Data URL → mime + base64 (senza spazi). */
+function parseImageDataUrl(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== 'string') return null;
+    const m = /^data:([^;,]+);base64,([\s\S]+)$/i.exec(dataUrl.trim());
+    if (!m) return null;
+    return { mime: m[1].trim().toLowerCase(), base64: m[2].replace(/\s/g, '') };
+}
+
+/** Massimo indice numerico usato negli Id="rIdN" nel package (evita collisioni nuove relazioni). */
+function maxRIdNumericInZip(zip) {
+    let max = 0;
+    Object.keys(zip.files).forEach((p) => {
+        if (!/\/_rels\/.+\.rels$/.test(p)) return;
+        const t = zip.files[p]?.asText();
+        if (!t) return;
+        const re = /Id="rId(\d+)"/g;
+        let x;
+        while ((x = re.exec(t)) !== null) {
+            const n = parseInt(x[1], 10);
+            if (Number.isFinite(n) && n > max) max = n;
+        }
+    });
+    return max;
+}
+
+function relsPathForWordPart(partPath) {
+    const m = /^word\/([^/]+\.xml)$/.exec(partPath);
+    if (!m) return null;
+    return `word/_rels/${m[1]}.rels`;
+}
+
+function ensureRelationshipsXml(relsXml) {
+    if (relsXml && relsXml.includes('<Relationships')) return relsXml;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+}
+
+function appendImageRelationship(relsXml, rId, targetFromWordFolder) {
+    if (relsXml.includes(`Id="${rId}"`)) return relsXml;
+    const entry =
+        `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" ` +
+        `Target="${targetFromWordFolder}"/>`;
+    return relsXml.replace('</Relationships>', `${entry}</Relationships>`);
+}
+
+/**
+ * Sostituisce il paragrafo che contiene [LOGO] con lo stesso w:p (stile/allineamento) + run immagine.
+ */
+function replaceLogoMarkerParagraph(xml, markerIndex, imageRunsXml) {
+    let pStart = markerIndex - 1;
+    while (pStart >= 4) {
+        if (
+            xml[pStart] === '<' &&
+            xml[pStart + 1] === 'w' &&
+            xml[pStart + 2] === ':' &&
+            xml[pStart + 3] === 'p' &&
+            (xml[pStart + 4] === ' ' || xml[pStart + 4] === '>')
+        ) break;
+        pStart--;
+    }
+    const pEnd = xml.indexOf('</w:p>', markerIndex);
+    if (pStart < 4 || pEnd < 0) {
+        return xml.slice(0, markerIndex) + imageRunsXml + xml.slice(markerIndex + '[LOGO]'.length);
+    }
+    const oldPara = xml.slice(pStart, pEnd + 6);
+    const openM = oldPara.match(/^(<w:p[^>]*>)([\s\S]*)(<\/w:p>)$/);
+    if (!openM) return xml.slice(0, markerIndex) + imageRunsXml + xml.slice(markerIndex + '[LOGO]'.length);
+    let inner = openM[2];
+    let pPr = '';
+    if (inner.startsWith('<w:pPr')) {
+        const endPpr = inner.indexOf('</w:pPr>');
+        if (endPpr !== -1) {
+            pPr = inner.slice(0, endPpr + 8);
+            inner = inner.slice(endPpr + 8);
+        }
+    }
+    const replacement = `${openM[1]}${pPr}${imageRunsXml}${openM[3]}`;
+    return xml.slice(0, pStart) + replacement + xml.slice(pEnd + 6);
+}
+
+/**
+ * Sostituisce [LOGO] in document/header/footer con immagine da data URL (jpeg/png/gif).
+ * Usa un solo file in word/media/; ogni parte ottiene una relazione immagine dedicata.
+ */
+function injectCompanyLogoInZip(zip, dataUrl) {
+    const parsed = parseImageDataUrl(dataUrl);
+    if (!parsed) {
+        console.warn('[wordExport] Logo: data URL non valido.');
+        return;
+    }
+    const ext = wordEmbeddableExtFromMime(parsed.mime);
+    if (!ext) {
+        console.warn('[wordExport] Logo: formato non embeddabile in Word:', parsed.mime);
+        return;
+    }
+    const mediaRelTarget = `media/company_logo_export.${ext}`;
+    const mediaPath = `word/${mediaRelTarget}`;
+    zip.file(mediaPath, parsed.base64, { base64: true });
+    ensureImageContentTypesInZip(zip, [ext]);
+
+    let rSeed = maxRIdNumericInZip(zip);
+
+    const partPaths = Object.keys(zip.files).filter((p) =>
+        /^word\/(document|header\d+|footer\d+)\.xml$/.test(p)
+    );
+
+    for (const partPath of partPaths) {
+        let xml = zip.files[partPath]?.asText();
+        if (!xml || !xml.includes('[LOGO]')) continue;
+
+        rSeed += 1;
+        const rId = `rId${rSeed}`;
+        const relsPath = relsPathForWordPart(partPath);
+        if (!relsPath) continue;
+
+        let relsXml = zip.files[relsPath]?.asText();
+        relsXml = ensureRelationshipsXml(relsXml);
+        relsXml = appendImageRelationship(relsXml, rId, mediaRelTarget);
+        zip.file(relsPath, relsXml);
+
+        let imgIdLocal = 88001;
+        while (xml.includes('[LOGO]')) {
+            const drawingRun = buildWordInlineImageRun(rId, imgIdLocal++);
+            xml = replaceLogoMarkerParagraph(xml, xml.indexOf('[LOGO]'), drawingRun);
+        }
+        zip.file(partPath, repairWordDocumentXmlMalformedAttrs(xml));
+    }
 }
 
 function replaceMarker(xml, marker, replacementXml) {
@@ -462,6 +593,15 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
         await preloadImagesIntoAudit(auditForGen, getViewUrl);
     }
     injectOoxmlMarkers(processedZip, auditForGen, getViewUrl, options);
+
+    const logoUrl = auditForGen?.embedCompanyLogo?.dataUrl;
+    if (logoUrl) {
+        try {
+            injectCompanyLogoInZip(processedZip, logoUrl);
+        } catch (e) {
+            console.warn('[wordExport] Inserimento logo fallito:', e.message);
+        }
+    }
 
     return processedZip.generate({
         type:     'blob',

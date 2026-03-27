@@ -245,6 +245,37 @@ const ExportPanel = () => {
 
     // Costruisce getViewUrl con token (encodeURIComponent per sicurezza)
     const rawToken = apiService.getToken();
+
+    // Logo anagrafica azienda → placeholder [LOGO] in document/header template Word
+    let embedCompanyLogo = null;
+    const exportCompanyId = currentAudit?.metadata?.companyId;
+    if (exportCompanyId && rawToken) {
+      try {
+        const logoRes = await fetch(apiService.getCompanyLogoUrl(exportCompanyId), {
+          headers: { Authorization: `Bearer ${rawToken}` },
+        });
+        if (logoRes.ok) {
+          const blob = await logoRes.blob();
+          const mime = (blob.type || "").split(";")[0].trim().toLowerCase();
+          const okMime = ["image/jpeg", "image/jpg", "image/png", "image/gif"].includes(mime);
+          if (okMime) {
+            embedCompanyLogo = {
+              dataUrl: await new Promise((resolve, reject) => {
+                const fr = new FileReader();
+                fr.onload = () => resolve(fr.result);
+                fr.onerror = reject;
+                fr.readAsDataURL(blob);
+              }),
+            };
+            console.log("📋 [EXPORT] Logo azienda caricato per embedding Word");
+          }
+        }
+      } catch (err) {
+        console.warn("[EXPORT] Logo azienda non incluso nel Word:", err.message);
+      }
+    }
+    auditForExport.embedCompanyLogo = embedCompanyLogo;
+
     const getViewUrl = rawToken
       ? (id) => `${apiService.baseUrl}/attachments/${id}/view?token=${encodeURIComponent(rawToken)}`
       : null;

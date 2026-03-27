@@ -220,6 +220,18 @@ function xmlHyperlinkPara(url, displayText, opts = {}) {
 const IMAGE_EXTS = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif' };
 const IMAGE_MIME_TYPES = new Set(Object.keys(IMAGE_EXTS));
 
+/** Estensione media Word da Content-Type (solo formati embeddabili in modo affidabile). */
+export function wordEmbeddableExtFromMime(mime) {
+    if (!mime) return null;
+    const m = String(mime).split(';')[0].trim().toLowerCase();
+    return IMAGE_EXTS[m] || null;
+}
+
+/** Run OOXML con immagine inline (stesso schema delle foto in checklist). */
+export function buildWordInlineImageRun(rId, imgId, widthEmu = 1905000, heightEmu = 1428750) {
+    return xmlImageOoxml(rId, imgId, widthEmu, heightEmu);
+}
+
 /** Genera OOXML per un'immagine embedded (200x150px → 1905000x1428750 EMU) */
 function xmlImageOoxml(rId, imgId, widthEmu = 1905000, heightEmu = 1428750) {
     const name = `img${imgId}`;
@@ -689,7 +701,7 @@ export function buildRileviSummaryOoxml(checklist, pendingIssues = []) {
         rows.push(xmlRow([
             xmlCell(
                 xmlPara(xmlRun(stdLabel, { bold: true, size: 18 }), { align: 'center' }),
-                { span: 6, fill: 'DBEAFE', pct: 100 }
+                { span: 7, fill: 'DBEAFE', pct: 100 }
             ),
         ]));
 

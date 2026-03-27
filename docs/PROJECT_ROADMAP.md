@@ -1,8 +1,8 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 21 marzo 2026 (sera)
-> **Prossimo Step** (sessione successiva): (1) Test export Word: **NV** vs **N.A.** in colonne separate in `RILIEVI_MARKER` + verifica **logo** anagrafica nel placeholder **`[LOGO]`** intestazione. (2) Smoke pending issues in produzione (`GET /audits/:id/pending-issues` + riga **AP**). (3) **Fase 0.2** ISO 14001 da PDF **oppure** allineamento `DATABASE_SCHEMA.md` con `norm_excerpt`. (4) Backlog: ADR-006; migrazione `027_audit_locks` su DB prod se mancante.
+> **Ultimo Aggiornamento**: 27 marzo 2026
+> **Prossimo Step** (sessione successiva): (1) **Smoke manuale** export Word in produzione: colonne **NV** / **N.A.** in `RILIEVI_MARKER` + **`[LOGO]`** con azienda che ha logo in anagrafica. (2) Smoke **pending issues** (`GET /audits/:id/pending-issues` + riga **AP**). (3) **Fase 0.2** ISO 14001 da PDF **oppure** allineamento `DATABASE_SCHEMA.md` con `norm_excerpt`. (4) Backlog: ADR-006; migrazione `027_audit_locks` su DB prod se mancante.
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 

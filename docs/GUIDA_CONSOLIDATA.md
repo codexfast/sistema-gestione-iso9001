@@ -181,6 +181,14 @@ node scripts/repro-custom-export.mjs
 
 ## E. Punto di ripresa / idee
 
+### Chiusura sessione 27 marzo 2026
+
+**Fatto in codice:**
+- **`[LOGO]` in export Word:** prima dell’invio del DOCX, se l’audit ha `metadata.companyId` e il logo è fetchabile da `GET /companies/:id/logo` (JWT), JPEG/PNG/GIF vengono embedded in `document.xml` / `header*.xml` / `footer*.xml` che contengono il testo `[LOGO]` (rel + `word/media/company_logo_export.*`). `ExportPanel.prepareAuditForExport` imposta `embedCompanyLogo.dataUrl`; `wordExport.injectCompanyLogoInZip` esegue la sostituzione.
+- **Tabella `RILIEVI_MARKER`:** corretto `gridSpan` riga separatore standard (7 colonne dopo NV). Test automatici: `app/src/tests/wordExport.riepilogo.test.js` (NV vs N.A., riga AP).
+
+**Verifica manuale consigliata:** export su audit reale con logo JPG/PNG e con voci NV + N.A.; smoke browser **pending issues** + riga **AP** su produzione.
+
 ### Chiusura sessione 21 marzo 2026 (sera)
 
 **Stato:** interruzione richiesta dall’utente; nessun commit aggiuntivo in questa micro-sessione.
