@@ -16,6 +16,7 @@ import {
 import "./ExportPanel.css";
 
 const ExportPanel = () => {
+  const { user } = useAuth();
   const { currentAudit, audits, fsProvider, importBackup } = useStorage();
   const [isExporting, setIsExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState(null);
