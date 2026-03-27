@@ -2,7 +2,7 @@
 
 > **Data Inizio**: 13 gennaio 2026
 > **Ultimo Aggiornamento**: 27 marzo 2026
-> **Prossimo Step** (sessione successiva): (1) **Smoke manuale** export Word in produzione: colonne **NV** / **N.A.** in `RILIEVI_MARKER` + **`[LOGO]`** con azienda che ha logo in anagrafica. (2) Smoke **pending issues** (`GET /audits/:id/pending-issues` + riga **AP**). (3) **Fase 0.2** ISO 14001 da PDF **oppure** allineamento `DATABASE_SCHEMA.md` con `norm_excerpt`. (4) Backlog: ADR-006; migrazione `027_audit_locks` su DB prod se mancante.
+> **Prossimo Step** (sessione successiva): (0) Dopo deploy: smoke export Word — **verificatore** (fallback nome utente) e **titoli senza mojibake** (incluso sommario). (1) **Smoke manuale** colonne **NV** / **N.A.** in `RILIEVI_MARKER` + **`[LOGO]`** con azienda che ha logo in anagrafica. (2) Smoke **pending issues** (`GET /audits/:id/pending-issues` + riga **AP**). (3) **Fase 0.2** ISO 14001 da PDF **oppure** allineamento `DATABASE_SCHEMA.md` con `norm_excerpt`. (4) Backlog: ADR-006; migrazione `027_audit_locks` su DB prod se mancante; opzionale template **ISO 45001** dedicato (oggi copia da 9001).
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 
