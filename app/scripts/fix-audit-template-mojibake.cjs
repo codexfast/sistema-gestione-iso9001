@@ -25,14 +25,14 @@ function fixWordXmlMojibake(xml) {
 
 const PART_RE = /^word\/(document|header\d+|footer\d+|footnotes|endnotes)\.xml$/;
 const templatesDir = path.join(__dirname, '../public/templates');
-const files = ['ISO9001-audit-report.docx', 'ISO14001-audit-report.docx', 'ISO3834-audit-report.docx'];
+
+const files = fs
+    .readdirSync(templatesDir)
+    .filter((n) => n.endsWith('.docx') && !n.endsWith('.bak'))
+    .sort();
 
 for (const name of files) {
     const fp = path.join(templatesDir, name);
-    if (!fs.existsSync(fp)) {
-        console.warn('Salto (manca):', fp);
-        continue;
-    }
     const z = new PizZip(fs.readFileSync(fp));
     let n = 0;
     for (const p of Object.keys(z.files)) {
