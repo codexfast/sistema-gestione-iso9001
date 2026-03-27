@@ -273,26 +273,46 @@ export function repairDocxtemplaterFragmentedTags(xml) {
 /**
  * Trattini e apici spesso salvati nel .docx come sequenze errate (UTF-8 letto come CP1252).
  * Esempio reale nel template: U+2013 EN DASH appare come â + € + “ (E2 80 93 mal decodificati).
+ * Word spezza spesso la sequenza in più <w:t> (TOC, proofErr): es. <w:t>1 â</w:t>…<w:t>€" DATI</w:t>.
  */
+/** Chiusura/apertura run Word tra due metà della stessa sequenza mojibake. */
+const MOJIBAKE_W_RUN_BRIDGE =
+    '(?:<\\/w:t><\\/w:r>(?:<w:proofErr[^>]*\\/>)*<w:r(?:\\s[^>]*)?>(?:<w:rPr>[\\s\\S]*?<\\/w:rPr>)?<w:t(?:\\s[^>]*)?>)?';
+
 function fixWordXmlMojibake(xml) {
     if (!xml || typeof xml !== 'string') return xml;
     let s = xml;
-    // En dash (più comune nei titoli "1 – DATI...")
-    s = s.replace(/\u00E2\u20AC\u201C/g, '\u2013');
-    // Em dash
-    s = s.replace(/\u00E2\u20AC\u201D/g, '\u2014');
-    // Apostrofo / virgolette tipografiche comuni
-    s = s.replace(/\u00E2\u20AC\u2122/g, '\u2019');
+    const bridge = MOJIBAKE_W_RUN_BRIDGE;
+    const en = new RegExp(`\\u00E2${bridge}\\u20AC\\u201C`, 'g');
+    const em = new RegExp(`\\u00E2${bridge}\\u20AC\\u201D`, 'g');
+    const ap = new RegExp(`\\u00E2${bridge}\\u20AC\\u2122`, 'g');
+    s = s.replace(en, '\u2013');
+    s = s.replace(em, '\u2014');
+    s = s.replace(ap, '\u2019');
     s = s.replace(/\u00E2\u20AC\u0153/g, '\u201C');
     s = s.replace(/\u00E2\u20AC\u009D/g, '\u201D');
     return s;
 }
 
+/** Parti OOXML testuali da normalizzare (anche dopo injectOoxmlMarkers). */
+const WORD_XML_MOJIBAKE_PATH_RE =
+    /^word\/(document|header\d+|footer\d+|footnotes|endnotes)\.xml$/;
+
+function applyMojibakeFixToWordXmlPartsInZip(zip) {
+    if (!zip || !zip.files) return;
+    for (const p of Object.keys(zip.files)) {
+        if (!WORD_XML_MOJIBAKE_PATH_RE.test(p)) continue;
+        const f = zip.files[p];
+        if (!f || f.dir) continue;
+        const t0 = f.asText();
+        const t1 = fixWordXmlMojibake(t0);
+        if (t1 !== t0) zip.file(p, t1);
+    }
+}
+
 function preprocessDocxtemplaterPartsInZip(zip) {
     if (!zip || !zip.files) return;
-    const paths = Object.keys(zip.files).filter((p) =>
-        /^word\/(document|header\d+|footer\d+)\.xml$/.test(p)
-    );
+    const paths = Object.keys(zip.files).filter((p) => WORD_XML_MOJIBAKE_PATH_RE.test(p));
     for (const p of paths) {
         const f = zip.files[p];
         if (!f || f.dir) continue;
@@ -517,6 +537,7 @@ function injectOoxmlMarkers(zip, audit, getViewUrl, options = {}) {
         'w:top="720" w:right="720" w:bottom="720" w:left="720"$1'
     );
 
+    xml = fixWordXmlMojibake(xml);
     xml = repairWordDocumentXmlMalformedAttrs(xml);
     zip.file('word/document.xml', xml);
 
@@ -708,6 +729,8 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
             console.warn('[wordExport] Inserimento logo fallito:', e.message);
         }
     }
+
+    applyMojibakeFixToWordXmlPartsInZip(processedZip);
 
     return processedZip.generate({
         type:     'blob',
