@@ -139,9 +139,11 @@ function buildTemplateData(audit) {
         ossCount:    String(m.totalOSS),
         omCount:     String(m.totalOM),
         nvCount:     String(m.totalNV),
+        naCount:     String(m.totalNA),
         summaryText: outcome.emergingFindings?.summary ||
             'Totale: ' + m.total + ' | Risposte: ' + m.answered +
-            ' | NC: ' + m.totalNC + ' | OSS: ' + m.totalOSS + ' | OM: ' + m.totalOM,
+            ' | NC: ' + m.totalNC + ' | OSS: ' + m.totalOSS + ' | OM: ' + m.totalOM +
+            ' | N.A.: ' + m.totalNA + ' | NV: ' + m.totalNV,
     };
 }
 
@@ -193,6 +195,83 @@ function repairWordDocumentXmlMalformedAttrs(xml) {
     // w:val numerico rimasto senza virgolette
     s = s.replace(/\bw:val=(\d+)(?=[\s/>])/g, 'w:val="$1"');
     return s;
+}
+
+/**
+ * Word spezza spesso i segnaposto docxtemplater in più <w:r>/<w:t> (spell/grammar proofErr).
+ * docxtemplater vede solo testo continuo per run: {auditObject} spezzato non viene sostituito.
+ * Ricompone tag `{nome}` e le celle loop `{#participants}{role}` / `{name}{/participants}`.
+ */
+const SIMPLE_DOCXTEMPLATE_VAR_NAMES = [
+    'referenceDocuments', 'programCommunicatedDate', 'objectiveDescription', 'auditPartyTypeLabel',
+    'committenteName', 'fornitoreName', 'procedureCode', 'auditNumber', 'auditObject',
+    'clientName', 'processes', 'conclusions', 'summaryText',
+    'auditor', 'scope', 'auditDate', 'ncCount', 'ossCount', 'omCount', 'nvCount', 'naCount',
+];
+
+/** proofErr è elemento vuoto: <w:proofErr w:type="spellStart"/>. */
+/**
+ * Almeno un proofErr tra le parti: con * zero-proof si matchava il { del TOC fino ai veri placeholder.
+ * I tag spezzati da Word hanno spell/gram tra { e nome e tra nome e }.
+ */
+const PROOF_ERR_REQ = '(?:\\s*<w:proofErr[^>]*/>)+';
+/** rPr non annidato: *? globale può saltare al </w:rPr> sbagliato se l’XML ha rPr sbilanciati nel TOC. */
+const RPR_BLK = '(?:<w:rPr>(?:(?!</w:rPr>).)*</w:rPr>)';
+
+export function repairDocxtemplaterFragmentedTags(xml) {
+    if (!xml || typeof xml !== 'string') return xml;
+    let out = xml;
+    for (const v of SIMPLE_DOCXTEMPLATE_VAR_NAMES) {
+        const esc = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(
+            '<w:r(\\s[^>]*)?>' + RPR_BLK + '?<w:t(?:\\s[^>]*)?>\\{\\s*</w:t></w:r>' +
+            PROOF_ERR_REQ +
+            '<w:r(?:\\s[^>]*)?>' + RPR_BLK + '?<w:t(?:\\s[^>]*)?>' + esc + '</w:t></w:r>' +
+            PROOF_ERR_REQ +
+            '<w:r(?:\\s[^>]*)?>' + RPR_BLK + '?<w:t(?:\\s[^>]*)?>\\}</w:t></w:r>',
+            'g'
+        );
+        out = out.replace(re, (_m, rAttrs) => {
+            const attrs = rAttrs || '';
+            return `<w:r${attrs}><w:t xml:space="preserve">{${v}}</w:t></w:r>`;
+        });
+    }
+    const reParticipantsOpen = new RegExp(
+        '<w:r(\\s[^>]*)?><w:t(?:\\s[^>]*)?>\\{#</w:t></w:r>' + PROOF_ERR_REQ +
+        '<w:r(?:\\s[^>]*)?><w:t(?:\\s[^>]*)?>participants\\}\\{</w:t></w:r>' + PROOF_ERR_REQ +
+        '<w:r(?:\\s[^>]*)?><w:t(?:\\s[^>]*)?>role\\}</w:t></w:r>',
+        'g'
+    );
+    out = out.replace(reParticipantsOpen, (_m, rAttrs) => {
+        const attrs = rAttrs || '';
+        return `<w:r${attrs}><w:t xml:space="preserve">{#participants}{role}</w:t></w:r>`;
+    });
+    const reParticipantsClose = new RegExp(
+        '<w:r(\\s[^>]*)?><w:t(?:\\s[^>]*)?>\\{name\\}\\{/</w:t></w:r>' + PROOF_ERR_REQ +
+        '<w:r(?:\\s[^>]*)?><w:t(?:\\s[^>]*)?>participants</w:t></w:r>' + PROOF_ERR_REQ +
+        '<w:r(?:\\s[^>]*)?><w:t(?:\\s[^>]*)?>\\}</w:t></w:r>',
+        'g'
+    );
+    out = out.replace(reParticipantsClose, (_m, rAttrs) => {
+        const attrs = rAttrs || '';
+        return `<w:r${attrs}><w:t xml:space="preserve">{name}{/participants}</w:t></w:r>`;
+    });
+    return out;
+}
+
+function preprocessDocxtemplaterPartsInZip(zip) {
+    if (!zip || !zip.files) return;
+    const paths = Object.keys(zip.files).filter((p) =>
+        /^word\/(document|header\d+|footer\d+)\.xml$/.test(p)
+    );
+    for (const p of paths) {
+        const f = zip.files[p];
+        if (!f || f.dir) continue;
+        let t = f.asText();
+        t = repairDocxtemplaterFragmentedTags(t);
+        t = repairWordDocumentXmlMalformedAttrs(t);
+        zip.file(p, t);
+    }
 }
 
 /** Data URL → mime + base64 (senza spazi). */
@@ -568,11 +647,8 @@ async function generateDocxBlob(audit, getViewUrl, options = {}) {
 
     const zip = new PizZip(arrayBuffer);
     normalizeNegativeTableIndentsInZip(zip);
+    preprocessDocxtemplaterPartsInZip(zip);
     const docPath = 'word/document.xml';
-    if (zip.files[docPath]) {
-        const fixed = repairWordDocumentXmlMalformedAttrs(zip.files[docPath].asText());
-        zip.file(docPath, fixed);
-    }
     const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks:    true,

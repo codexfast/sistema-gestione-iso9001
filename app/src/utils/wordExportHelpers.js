@@ -420,7 +420,7 @@ function buildClauseTableOoxml(questions = [], auditAttachments = [], getViewUrl
         ]));
 
         // Stralcio normativo (solo se presente nel DB — tipico ISO 14001)
-        const qId = q.questionId;
+        const qId = q.questionId != null ? q.questionId : q.id;
         const excerpt = normExcerpts && qId != null ? (normExcerpts[Number(qId)] || normExcerpts[String(qId)]) : null;
         if (excerpt && excerpt.trim()) {
             allRows.push(buildNormExcerptRow(excerpt.trim(), C));

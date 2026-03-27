@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { useStorage } from "../contexts/StorageContext";
 import apiService from "../services/apiService";
 import {
@@ -57,6 +58,16 @@ const ExportPanel = () => {
    */
   const prepareAuditForExport = async () => {
     const auditForExport = { ...currentAudit };
+    const auditorFb = user?.full_name?.trim();
+    if (
+      auditorFb &&
+      !String(auditForExport.metadata?.auditorName || "").trim()
+    ) {
+      auditForExport.metadata = {
+        ...auditForExport.metadata,
+        auditorName: auditorFb,
+      };
+    }
     // Priorità a auditId numerico (integer DB) — stesso ordine di useAttachmentManager.js
     const auditId = currentAudit.metadata?.auditId || currentAudit.metadata?.id || currentAudit.id;
 
