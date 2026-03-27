@@ -103,6 +103,17 @@ function buildTemplateData(audit) {
     const m       = calculateMetrics(audit.checklist);
     const seq     = (meta.auditNumber || '').split('-')[1] || '01';
 
+    const isAuditorPlaceholder = (v) => {
+        const t = String(v || '').trim().toLowerCase();
+        return !t || t === 'non specificato' || t === 'n/d' || t === 'n.d.' || t === 'nd';
+    };
+    const pickAuditorName = () => {
+        for (const v of [meta.auditorName, meta.auditors?.[0], meta.auditor]) {
+            if (!isAuditorPlaceholder(v)) return String(v).trim();
+        }
+        return 'N/D';
+    };
+
     const auditPartyType = meta.auditPartyType || 'first_party';
     const auditPartyTypeLabel = auditPartyType === 'second_party'
         ? 'Seconda parte (fornitore)'
@@ -126,7 +137,7 @@ function buildTemplateData(audit) {
             : (gd.referenceDocuments || 'UNI EN ISO 9001:2015'),
         processes:              gd.processes     || 'Tutti i processi aziendali',
         programCommunicatedDate: formatDate(gd.programCommunicatedDate),
-        auditor:                meta.auditorName || meta.auditors?.[0] || meta.auditor || 'N/D',
+        auditor:                pickAuditorName(),
         objectiveDescription:   obj.description  ||
             'Verificare il grado di implementazione del Sistema di Gestione della Qualit\u00e0 ' +
             'secondo la norma UNI EN ISO 9001:2015.',
@@ -259,6 +270,24 @@ export function repairDocxtemplaterFragmentedTags(xml) {
     return out;
 }
 
+/**
+ * Trattini e apici spesso salvati nel .docx come sequenze errate (UTF-8 letto come CP1252).
+ * Esempio reale nel template: U+2013 EN DASH appare come â + € + “ (E2 80 93 mal decodificati).
+ */
+function fixWordXmlMojibake(xml) {
+    if (!xml || typeof xml !== 'string') return xml;
+    let s = xml;
+    // En dash (più comune nei titoli "1 – DATI...")
+    s = s.replace(/\u00E2\u20AC\u201C/g, '\u2013');
+    // Em dash
+    s = s.replace(/\u00E2\u20AC\u201D/g, '\u2014');
+    // Apostrofo / virgolette tipografiche comuni
+    s = s.replace(/\u00E2\u20AC\u2122/g, '\u2019');
+    s = s.replace(/\u00E2\u20AC\u0153/g, '\u201C');
+    s = s.replace(/\u00E2\u20AC\u009D/g, '\u201D');
+    return s;
+}
+
 function preprocessDocxtemplaterPartsInZip(zip) {
     if (!zip || !zip.files) return;
     const paths = Object.keys(zip.files).filter((p) =>
@@ -268,6 +297,7 @@ function preprocessDocxtemplaterPartsInZip(zip) {
         const f = zip.files[p];
         if (!f || f.dir) continue;
         let t = f.asText();
+        t = fixWordXmlMojibake(t);
         t = repairDocxtemplaterFragmentedTags(t);
         t = repairWordDocumentXmlMalformedAttrs(t);
         zip.file(p, t);

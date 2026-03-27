@@ -1,4 +1,4 @@
-﻿/**
+/**
  * generateTemplate.js
  * Script Node.js da eseguire UNA VOLTA per creare il template Word ISO 9001.
  *
@@ -185,7 +185,7 @@ function createSection1() {
 
     return [
         new Paragraph({
-            text: '1 â€“ DATI GENERALI',
+            text: '1 \u2013 DATI GENERALI',
             style: 'Titolo1',
             spacing: { before: 0, after: 300 }
         }),

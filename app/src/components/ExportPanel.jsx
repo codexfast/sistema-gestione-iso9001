@@ -60,10 +60,17 @@ const ExportPanel = () => {
   const prepareAuditForExport = async () => {
     const auditForExport = { ...currentAudit };
     const auditorFb = user?.full_name?.trim();
-    if (
-      auditorFb &&
-      !String(auditForExport.metadata?.auditorName || "").trim()
-    ) {
+    const isAuditorPlaceholder = (v) => {
+      const t = String(v || "").trim().toLowerCase();
+      return (
+        !t ||
+        t === "non specificato" ||
+        t === "n/d" ||
+        t === "n.d." ||
+        t === "nd"
+      );
+    };
+    if (auditorFb && isAuditorPlaceholder(auditForExport.metadata?.auditorName)) {
       auditForExport.metadata = {
         ...auditForExport.metadata,
         auditorName: auditorFb,
