@@ -181,6 +181,18 @@ node scripts/repro-custom-export.mjs
 
 ## E. Punto di ripresa / idee
 
+### Chiusura sessione 21 marzo 2026 (sera)
+
+**Stato:** interruzione richiesta dall’utente; nessun commit aggiuntivo in questa micro-sessione.
+
+**Già in codice (da verificare in prossima sessione):**
+- Riepilogo audit UI + tabella `RILIEVI_MARKER` in Word: conteggio **NV** separato da **N.A.** (branch di lavoro precedente già su `main` se mergiato).
+
+**Ripresa operativa (ordine suggerito):**
+1. **Test funzionale Word:** su un audit di prova, impostare almeno una voce **NV** e una **N.A.**, esportare il DOCX e confermare colonne distinte in `RILIEVI_MARKER`.
+2. **Logo report:** in anagrafica aziende il campo logo è valorizzato ma in export il placeholder **`[LOGO]`** in intestazione non mostra l’immagine — diagnosticare in `wordExport.js` / `wordExportHelpers.js` / `ExportPanel` (URL logo vs blob, header OOXML, sostituzione marker).
+3. Poi smoke **pending issues** + roadmap (0.2 ISO 14001 / `DATABASE_SCHEMA` `norm_excerpt`) come già indicato sotto.
+
 ### Chiusura sessione 22 marzo 2026
 
 **Consegnato su `main` (GitHub + Netlify al prossimo deploy):**
