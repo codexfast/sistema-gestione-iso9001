@@ -181,6 +181,10 @@ node scripts/repro-custom-export.mjs
 
 ## E. Punto di ripresa / idee
 
+### Chiusura sessione 28 marzo 2026
+
+- **Lista audit all’avvio (tutte le piattaforme):** il primo download dopo l’avvio non usa più `GET /audits` senza paginazione (limite backend 50). Usa la stessa funzione della riconciliazione (`fetchAllServerAudits`, pagine da 200) **solo se** online e presente JWT (`apiService.getToken()`), così il DB/server è la fonte completa del menu audit anche senza attendere login o i 45s di intervallo.
+
 ### Chiusura sessione 27 marzo 2026
 
 **Fatto in codice:**

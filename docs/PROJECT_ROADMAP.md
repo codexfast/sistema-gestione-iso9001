@@ -1,8 +1,8 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 27 marzo 2026
-> **Prossimo Step** (sessione successiva): (0) Dopo deploy: smoke export Word — **verificatore** (fallback nome utente) e **titoli senza mojibake** (incluso sommario). (1) **Smoke manuale** colonne **NV** / **N.A.** in `RILIEVI_MARKER` + **`[LOGO]`** con azienda che ha logo in anagrafica. (2) Smoke **pending issues** (`GET /audits/:id/pending-issues` + riga **AP**). (3) **Fase 0.2** ISO 14001 da PDF **oppure** allineamento `DATABASE_SCHEMA.md` con `norm_excerpt`. (4) Backlog: ADR-006; migrazione `027_audit_locks` su DB prod se mancante; opzionale template **ISO 45001** dedicato (oggi copia da 9001).
+> **Ultimo Aggiornamento**: 28 marzo 2026
+> **Prossimo Step** (sessione successiva): (0) Dopo deploy: smoke lista audit mobile/desktop (stesso utente, >50 audit se possibile). (1) Smoke export Word — **verificatore** e **titoli senza mojibake**. (2) Smoke **NV** / **N.A.** + **`[LOGO]`**. (3) Smoke **pending issues** + riga **AP**. (4) **Fase 0.2** ISO 14001 / `norm_excerpt`; backlog ADR-006, lock DB, template ISO 45001.
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 

@@ -699,19 +699,14 @@ export function StorageProvider({ children, useMockData = false }) {
         // CARICAMENTO: Leggi da IndexedDB (cache locale)
         const localAudits = await fsProvider.loadAllAudits();
         
-        // DOWNLOAD DAL SERVER: Sincronizzazione bidirezionale
+        // DOWNLOAD DAL SERVER: stessa pipeline della riconciliazione (tutte le pagine).
+        // Il backend default limit=50 su GET /audits senza query: senza paginazione il menu
+        // risultava troncato fino al prossimo reconcile/login (ambiguità desktop vs mobile).
         let serverAudits = [];
-        if (navigator.onLine) {
+        if (navigator.onLine && apiService.getToken()) {
           try {
-            console.log("🌐 [DOWNLOAD] Scarico audit dal server...");
-            const apiService = (await import('../services/apiService')).default;
-            const converter = await import('../utils/auditConverter');
-            
-            const response = await apiService.getAudits();
-            const backendAudits = response.data || [];
-            
-            // CONVERTI: Backend (snake_case) → Frontend (camelCase + nested)
-            serverAudits = converter.convertAuditsFromBackend(backendAudits);
+            console.log("🌐 [DOWNLOAD] Scarico tutti gli audit dal server (paginato)...");
+            serverAudits = await fetchAllServerAudits();
             console.log(`✅ [DOWNLOAD] Scaricati ${serverAudits.length} audit dal server`);
 
             // PULIZIA QUEUE STANTIA: rimuove dalla sync_queue le operazioni
@@ -951,7 +946,7 @@ export function StorageProvider({ children, useMockData = false }) {
     }
 
     loadAuditsFromIndexedDB();
-  }, [fsProvider, useMockData]); // hasInitialized NON deve essere dependency (causa loop)
+  }, [fsProvider, useMockData, fetchAllServerAudits]); // hasInitialized NON deve essere dependency (causa loop)
 
   // === RELOAD AUDIT DOPO LOGIN ===
   useEffect(() => {
