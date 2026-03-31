@@ -179,6 +179,82 @@ node scripts/repro-custom-export.mjs
 
 ---
 
+## E. Flusso 2 — SAL / Sopralluoghi + Evidenze documentali + Import + RAG (retrieval)
+
+Questa sezione consolida le decisioni operative per supportare **due flussi** coerenti nello stesso prodotto, senza perdere scalabilità/robustezza:
+
+- **Flusso 1 — Audit di sistema**: checklist, esiti (C/NC/OSS/OM/NA/NV), pending issues, report Word.
+- **Flusso 2 — SAL/Sopralluoghi**: avanzamento implementazione requisiti (es. ISO 9001/14001/45001) + evidenze documentali + stati (discusso/in corso/da validare/completato).
+
+### Golden rules (da rispettare sempre)
+
+- **Record vs Retrieval**: il **DB relazionale** rimane il *system of record* (entità, permessi, stati, collegamenti, metadati strutturati). Il **RAG** è solo un *layer di retrieval* (ricerca semantica / suggerimenti), **mai** l’unica fonte di verità.
+- **AI asincrona e auditabile**: estrazioni/analisi AI devono essere job asincroni con `extractor_version`, `confidence`, log e possibilità di revisione umana (*da validare*).
+- **Multi-tenant hard**: ogni entità e documento è isolato per `organization_id` (indici e vincoli).
+- **Incremental delivery**: rilasci a *vertical slice* (valore end-to-end) con feature flag/dark launch per ridurre rischi.
+- **Mobile first per audit**: su mobile priorità a compilazione sul campo; funzioni “pesanti” (import massivo, gestione documentale avanzata) restano desktop finché non sono stabilissime.
+
+### SAL: legenda requisiti multi-standard (dal documento SAL cliente)
+
+Nel file `Check List Audit/CLIENTE - SAL documentale iso 14001 - 9001 - 45001.docx` è presente una legenda colori che mappa l’applicabilità dei requisiti:
+
+- **NERO**: requisito comune a tutti gli schemi (9001 + 14001 + 45001)
+- **BLU**: requisito specifico ISO 9001
+- **VERDE**: requisito specifico ISO 14001
+- **ROSSO**: requisito specifico ISO 45001
+- **VIOLA**: requisito specifico 14001 + 45001
+
+In DB questo non deve restare “colore”: va modellato come `applicable_standards` o equivalente.
+
+### Import massivo (CSV/Excel) — best practice
+
+Use case tipico: import anagrafiche personale / elenco qualifiche / elenco WPS da file forniti dal cliente.
+
+- **Workflow**: upload file → **dry-run** (anteprima mapping + validazione) → import asincrono → report (errori scaricabili).
+- **Idempotenza**: evitare duplicati tramite chiavi naturali (`organization_id` + codice/email/matricola).
+- **Chunking**: import a blocchi (es. 200 righe) con commit per blocco e report dettagliato.
+- **Audit trail**: registrare chi ha importato, quando, e cosa è stato creato/aggiornato.
+
+### Mobile vs Desktop (policy operativa)
+
+- **Mobile (primario)**:
+  - audit sul campo (checklist + note + foto)
+  - consultazione rapida (elenchi + scadenze)
+  - upload “leggero” (foto/camera) quando supportato e stabile
+- **Desktop (primario)**:
+  - import CSV/Excel massivo (mapping colonne + preview)
+  - gestione documentale complessa (PDF multipagina, versioni, collegamenti WPS/WPQR/WPQ)
+  - amministrazione (utenti/ruoli/standard/template)
+
+Nota: “allegati da e-mail” è da trattare come step successivo (inbox server-side o share-sheet), non come integrazione diretta immediata con Gmail/Outlook.
+
+### RAG: quando introdurlo e a cosa serve
+
+Il RAG è **utile** quando iniziamo a gestire:
+- normative esterne (testo lungo, multi-versione)
+- procedure/istruzioni operative clienti
+- evidenze (PDF/DOCX) che devono essere “trovabili” e collegabili ai requisiti
+
+**Uso corretto del RAG**:
+- ricerca semantica (trova dove si parla di un requisito)
+- suggerimento link documento → requisito
+- supporto all’estrazione guidata (es. “estrai campi WPQR/WPQR-like”)
+
+**Uso scorretto** (vietato): decidere “conforme/non conforme” solo da output AI senza evidenza + validazione.
+
+### Multi-agenti: come accelerare senza perdere coerenza
+
+Strategia consigliata: task paralleli con output “mergeabile”, ma con un’unica guida di integrazione.
+
+- **Agente A (normativa/requirements)**: estrarre clausole e requisiti in forma strutturata (codice, titolo, testo, applicabilità).
+- **Agente B (DB/API)**: progettare schema tabelle + migrazioni + endpoint (senza UI).
+- **Agente C (UI/UX)**: implementare schermate SAL + import wizard + dashboard scadenze.
+- **Agente D (AI/RAG)**: pipeline ingestion/chunking/estrazione (job asincroni + audit trail).
+
+Regola: ogni task produce un branch/PR e aggiorna **questa sezione** con “cosa è stato introdotto” e “definition of done”.
+
+---
+
 ## E. Punto di ripresa / idee
 
 ### Chiusura sessione 28 marzo 2026

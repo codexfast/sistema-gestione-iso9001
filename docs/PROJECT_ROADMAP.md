@@ -2,7 +2,7 @@
 
 > **Data Inizio**: 13 gennaio 2026
 > **Ultimo Aggiornamento**: 28 marzo 2026
-> **Prossimo Step** (sessione successiva): (0) Dopo deploy: smoke lista audit mobile/desktop (stesso utente, >50 audit se possibile). (1) Smoke export Word — **verificatore** e **titoli senza mojibake**. (2) Smoke **NV** / **N.A.** + **`[LOGO]`**. (3) Smoke **pending issues** + riga **AP**. (4) **Fase 0.2** ISO 14001 / `norm_excerpt`; backlog ADR-006, lock DB, template ISO 45001.
+> **Prossimo Step** (sessione successiva): (0) Dopo deploy: smoke lista audit mobile/desktop (stesso utente, >50 audit se possibile). (1) Smoke export Word — **verificatore** e **titoli senza mojibake**. (2) Smoke **NV** / **N.A.** + **`[LOGO]`**. (3) Smoke **pending issues** + riga **AP**. (4) Avvio “Flusso 2” (SAL/Sopralluoghi): definizione schema requisiti+stati + evidenze documentali + import CSV/Excel (senza AI). (5) Introduzione RAG come layer di retrieval (job asincrono) dopo che il document registry è stabile; backlog ADR-006, lock DB, template ISO 45001.
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
 
@@ -18,6 +18,13 @@
 | 2 | **Audit di terza parte** | Camellini / Mason | Norme del committente | Report audit con ref. normative committente |
 | 3 | **Consulenza / SAL** | Camellini | ISO 9001 / 14001 / 45001 | Tabella avanzamento requisiti (Discusso/In corso/Completato) |
 | 4 | **Rapporto di Prova** | Mason | ISO 3834 | Report con misure, prove, foto obbligatorie |
+
+### Regola di prioritizzazione (urgenze clienti)
+
+Quando emerge un’urgenza (es. modulo **VT** o **MT**):
+- si implementa come **vertical slice** con dati + UI minima + test + feature flag/dark launch
+- si evita di introdurre debito strutturale: si appoggia sempre al “Document Registry” + “Requirements/Status” (se già avviati) o si crea lo scheletro minimo riusabile
+- l’obiettivo è rilasciare valore senza cambiare direzione: la roadmap resta valida, cambia solo l’ordine delle slice
 
 ### I 2 clienti attuali
 
