@@ -146,6 +146,7 @@ function buildTemplateData(audit) {
             name: p.name || '',
         })),
         conclusions: outcome.conclusions || 'Nessuna conclusione documentata.',
+        cCount:      String(m.totalC),
         ncCount:     String(m.totalNC),
         ossCount:    String(m.totalOSS),
         omCount:     String(m.totalOM),
@@ -217,7 +218,7 @@ const SIMPLE_DOCXTEMPLATE_VAR_NAMES = [
     'referenceDocuments', 'programCommunicatedDate', 'objectiveDescription', 'auditPartyTypeLabel',
     'committenteName', 'fornitoreName', 'procedureCode', 'auditNumber', 'auditObject',
     'clientName', 'processes', 'conclusions', 'summaryText',
-    'auditor', 'scope', 'auditDate', 'ncCount', 'ossCount', 'omCount', 'nvCount', 'naCount',
+    'auditor', 'scope', 'auditDate', 'cCount', 'ncCount', 'ossCount', 'omCount', 'nvCount', 'naCount',
 ];
 
 /** proofErr è elemento vuoto: <w:proofErr w:type="spellStart"/>. */
