@@ -480,55 +480,97 @@ localStorage.getItem('authToken');
 
 ---
 
-## 🚀 PROSSIME AZIONI (prossima sessione)
+## 🚀 PROSSIME AZIONI — Sessione 05/04/2026
 
-### Sessione immediata — Inizio Fase 1: DB multi-tenant
+### Decisioni architetturali prese in questa sessione (NON riaprire)
+
+1. **Architettura unificata 3 layer** approvata: Core Platform / Domain Modules / UI Components.
+2. **HLS discovery**: ISO 9001 + 14001 + 45001 condividono struttura sezioni 4–10. Stesso motore checklist per tutti.
+3. **6 entità universali** del Domain Model: Organization, Document, Person, Qualification, Risk, Objective, Action.
+4. **Pipeline AI import** documenti normativi: PDF → OCR → LLM extraction → validazione → DB.
+5. **Sprint plan A–F** approvato. Vedere `docs/PROJECT_ROADMAP.md §Architettura Unificata`.
+
+---
+
+### Sprint A — Core Foundation (PROSSIMO DA AVVIARE)
 
 ```
 PRIMA DI SCRIVERE CODICE:
-1. Leggere docs/PROJECT_ROADMAP.md §Fase 1 per schema tabelle
-2. Leggere docs/DATABASE_SCHEMA.md per tabelle esistenti e vincoli
-3. Proporre all'utente la migration SQL e aspettare approvazione esplicita
-4. Solo dopo approvazione: eseguire migration su DB di test (organization_id=99)
-5. Poi adattare backend middleware RBAC
-6. Poi adattare frontend con pagina Anagrafica Aziende
+1. Leggere docs/PROJECT_ROADMAP.md §Architettura Unificata per schema tabelle universali
+2. Leggere docs/DATABASE_SCHEMA.md per tabelle esistenti e vincoli di schema
+3. Proporre migration SQL all'utente e aspettare approvazione esplicita
+4. Solo dopo approvazione: eseguire migration su DB produzione
+5. Implementare API CRUD per le nuove tabelle
+6. Implementare componente <DataGrid /> universale con export Excel (libreria: xlsx/SheetJS)
 ```
 
-**Tabelle nuove da creare (già progettate in PROJECT_ROADMAP.md §Fase 1)**:
-- `companies` (aziende auditate — clienti degli auditor)
-- `auditor_orgs` (studi di consulenza — nostri clienti)
-- `user_org_roles` (ruoli per utente per organizzazione)
-- `subscriptions` (abbonamenti per standard)
+**Tabelle da creare (schema completo in PROJECT_ROADMAP.md)**:
+- `document_registry` — tutti i documenti gestiti (qualunque sistema/norma)
+- `personnel_qualifications` — qualifiche con scadenza (ISO 9606, ISO 9712, ISO 14731)
+- `risks_register` — registro rischi e opportunità (§6.1 HLS)
+- `objectives` — obiettivi misurabili (§6.2 HLS)
+- `actions` — azioni correttive/preventive (§10.2 HLS, fonte: audit/rischi/SAL/incidenti)
+- `welding_procedures` — WPS ISO 15609-1 (specifico ISO 3834)
+- `wpqr_records` — WPQR collegati a WPS
+- `projects` — commesse ISO 3834
 
-**Modifiche tabelle esistenti**:
-- `audits.company_id` FK → `companies.id` (nullable, retrocompatibile)
-- `users.auditor_org_id` FK → `auditor_orgs.id`
+**Componente universale da costruire**:
+- `<DataGrid />` — griglia dati con colonne configurabili, ordinamento, filtri, paginazione, export Excel
+- Riusato da: Document Registry, Qualifiche, WPS/WPQR, Commesse, Rischi, Obiettivi, Azioni
 
 ---
 
-### Sessione precedente — Test E2E su Netlify (commit `9894ed5`)
+### Sprint B — Alert Engine + Document Browser (dopo A)
 
-```
-1. Aprire https://systemgest.netlify.app
-2. Creare nuovo audit con ISO 9001 + ISO 14001 selezionati nel modal
-3. Verificare DevTools → IndexedDB → audit.metadata.selectedStandards = ["ISO_9001","ISO_14001"]
-4. Aprire accordion Checklist → verificare che appaia TAB "ISO 9001:2015" + TAB "ISO 14001:2015"
-5. Selezionare Dati Generali → 1.1 → aggiungere ISO 14001 da checkbox → verificare tab in Checklist
-6. Rispondere a domande ISO 14001 → verifica sync su backend
-   curl https://www.fr-busato.it:8443/api/v1/audits/{id}/statistics -H "Authorization: Bearer TOKEN"
-7. Ricaricare pagina → verificare che risposte ISO 14001 siano ripristinate
-```
-
-### Sprint successivo — Export Word ISO 14001
-
-```
-1. Leggere: FASE_8_EXPORT_WORD.md (spec segnaposto e pattern OOXML)
-2. Aprire: app/src/utils/wordExport.js
-3. Trovare la funzione che genera le righe della tabella checklist (ISO 9001)
-4. Duplicare/parametrizzare per accettare anche ISO_14001
-5. Verificare output scaricando il .docx prodotto
-```
+- Cron job backend (node-schedule): scadenze qualifiche, documenti, NC aperte, abbonamenti
+- Nodemailer: configurazione SMTP + template email alert
+- `<DocumentBrowser />`: navigazione cartelle virtuali, filtri, semaforo scadenze
+- Tabella `notifications_config`: configurazione destinatari e soglie per organizzazione
 
 ---
 
-*Aggiornare questo file ad ogni sessione con: nuovi bug risolti, decisioni prese, stato backlog.*
+### Sprint C — Modulo SAL (dopo B)
+
+- SAL = Stato Avanzamento Lavori (Scenario 3 — Camellini)
+- Migration: `document_type = 'sal'` in `audits`
+- Nuovo componente `<SALModule />`: griglia requisiti × stati, colori per standard
+- Word export SAL con legenda colori (nero/blu/verde/rosso/viola)
+- Riferimento cliente: `Check List Audit/CLIENTE - SAL documentale iso 14001 - 9001 - 45001.docx`
+
+---
+
+### Sprint D — Modulo Welding ISO 3834 (dopo B)
+
+- Registro WPS/WPQR con `<DataGrid />`
+- Gestione qualifiche saldatori con alert scadenza
+- Gestione commesse con riesame requisiti e tecnico
+- RDP (Rapporto di Prova) — PREREQUISITO: fix foto embedded Word (pic:cNvPr id duplicati)
+
+---
+
+### Sprint E — AI Import Pipeline (dopo D)
+
+- Upload batch PDF con rilevamento tipo documento
+- OCR (pdf-parse + Tesseract.js fallback per documenti scansionati)
+- LLM extraction con schema Zod per tipo documento
+- UI anteprima con confidence score per campo
+- Record importati con `import_status = 'ai_draft'` fino a conferma umana
+
+**Tipi documento con schema noto**: patentini ISO 9606, ISO 9712 NDT, WPS, WPQR, Dichiarazioni CE macchine, certificati taratura
+
+---
+
+### Debiti tecnici aperti (non bloccanti per Sprint A)
+
+| Debito | Priorità | Note |
+|---|---|---|
+| Fix foto embedded Word | 🔴 | Blocca modulo RDP per Mason — pic:cNvPr id duplicati |
+| Auth mobile ADR-004 | 🟡 | Loop login Android PWA |
+| ISO 45001 domande da norma PDF | 🟡 | Norma disponibile in `docs/Normative/` |
+| `norm_excerpt` in checklist_questions | 🟡 | Alta priorità per report professionali |
+| Token monouso allegati Word | 🟢 | Sicurezza JWT in link Word |
+| React Router (navigazione URL) | 🟢 | Da introdurre per scalabilità navigazione |
+
+---
+
+*Aggiornato: 05 aprile 2026 — Sessione architettura unificata piattaforma SGQ*

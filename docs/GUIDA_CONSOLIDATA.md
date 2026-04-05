@@ -255,6 +255,125 @@ Regola: ogni task produce un branch/PR e aggiorna **questa sezione** con “cosa
 
 ---
 
+## F. Architettura Unificata della Piattaforma (sessione 05/04/2026)
+
+### Contesto della decisione
+
+Sessione dedicata all'analisi sistematica dell'intera architettura. Obiettivo: verificare la coerenza del flusso di sviluppo, identificare debolezze, e stabilire un'architettura unificata scalabile per tutti i sistemi normativi (ISO 9001, 14001, 45001, ISO 3834) e tutti i clienti (Camellini + Mason).
+
+### Scoperta chiave: HLS — High Level Structure
+
+ISO 9001, 14001 e 45001 condividono la stessa struttura normativa (sezioni 4–10). Questo non è una coincidenza: ISO ha definito l'HLS appositamente per integrare i sistemi di gestione. Conseguenza pratica: **lo stesso motore di checklist, rischi, obiettivi e azioni funziona per tutti e tre gli standard** senza duplicare codice.
+
+ISO 3834 ha struttura diversa (specifica di processo, non di sistema) ma condivide le stesse entità: personale qualificato, documenti controllati, non conformità, azioni correttive.
+
+### 4 scenari d'uso e 2 clienti attuali
+
+| Scenario | Cliente | Norma | Output |
+|---|---|---|---|
+| S1 — Audit di sistema | Camellini | ISO 9001/14001/45001 | Report audit + checklist |
+| S2 — Audit terza parte | Camellini/Mason | Norme committente | Report con ref. normative |
+| S3 — SAL/Consulenza | Camellini | ISO 9001/14001/45001 | Tabella avanzamento requisiti |
+| S4 — Rapporto di Prova | Mason | ISO 3834-2/3 | Report con prove e foto obbligatorie |
+
+### Categorie documentali per sistema (da gestire nel Document Registry)
+
+**ISO 9001 / 14001 / 45001 (struttura HLS comune):**
+- Politica del sistema, campo di applicazione
+- Aspetti/pericoli significativi (specifici per 14001 e 45001)
+- Obblighi di conformità (requisiti legali)
+- Rischi e opportunità (§6.1)
+- Obiettivi e KPI (§6.2)
+- Competenze personale (§7.2)
+- Controllo documenti e registrazioni (§7.5) — conservazione minima 3-5 anni
+- Pianificazione e controllo operativi (§8)
+- Piano di emergenza (§8.2)
+- Monitoraggio e misurazione (§9.1)
+- Risultati audit interno (§9.2)
+- Verbale riesame di direzione (§9.3)
+- Non conformità e azioni correttive (§10.2)
+
+**ISO 3834 (specifiche processo saldatura):**
+- Qualifiche saldatori (ISO 9606-1..5) — scadenza 2/3 anni
+- Qualifiche operatori (ISO 14732)
+- Qualifica coordinatore saldatura (ISO 14731) — Mason stesso
+- Certificazioni NDT personale (ISO 9712: VT/MT/PT/UT/RT) — scadenza 5 anni
+- WPS — Welding Procedure Specifications (ISO 15609-1..6)
+- WPQR — Qualification Records (ISO 15614-1..14)
+- Elenco attrezzature essenziali (§9.2)
+- Piani manutenzione attrezzature
+- Taratura strumenti (ISO 17662) — scadenza annuale
+- Certificati materiali base e materiali d'apporto
+- Registrazioni per commessa (riesame requisiti, riesame tecnico, piano saldatura)
+- Rapporti ispezione (VT/MT/UT/RT) per commessa
+- Registrazioni PWHT se applicabili
+- Rapporti non conformità e riparazioni
+
+### Navigazione Document Registry — struttura cartelle virtuale
+
+```
+📁 [AZIENDA]
+├── 📁 Documenti Sistema (ISO 9001/14001/45001)
+│   ├── 📁 Politiche e Procedure
+│   ├── 📁 Rischi e Opportunità
+│   ├── 📁 Obiettivi
+│   ├── 📁 Audit Interni
+│   └── 📁 Riesami di Direzione
+├── 📁 Personale e Qualifiche (con alert scadenza)
+│   ├── 📁 Qualifiche Saldatori (ISO 9606)
+│   ├── 📁 Qualifiche NDT (ISO 9712)
+│   └── 📁 Coordinatore Saldatura (ISO 14731)
+├── 📁 Procedure di Saldatura
+│   ├── 📁 WPS
+│   └── 📁 WPQR
+├── 📁 Attrezzature
+│   ├── 📁 Elenco e Manutenzione
+│   └── 📁 Tarature (con alert scadenza annuale)
+└── 📁 Commesse ISO 3834
+    └── 📁 [CODICE COMMESSA]
+        ├── Riesame Requisiti
+        ├── Piano Saldatura
+        ├── Rapporti Ispezione
+        └── NC e Riparazioni
+```
+
+### Alert Engine — scadenze da monitorare automaticamente
+
+| Tipo | Trigger | Preavviso |
+|---|---|---|
+| Patentino saldatore | `expiry_date` | 60/30/7 giorni 🔴 critico |
+| Certificazione NDT | `expiry_date` (5 anni) | 90/30 giorni 🔴 critico |
+| Taratura strumento | `expiry_date` (annuale) | 30 giorni 🟡 |
+| Documento in scadenza | `expiry_date` | 60/30 giorni 🟡 |
+| NC aperta | `due_date` superata | immediato 🔴 |
+| Requisito SAL in ritardo | `due_date` < oggi | 7 giorni 🟡 |
+| Abbonamento standard | `valid_to` | 30 giorni 🟡 |
+
+### Pipeline AI import documenti
+
+Ogni documento normativo ha struttura definita dalla norma → estrazione deterministica possibile:
+
+```
+Upload PDF (batch) → rilevamento tipo → estrazione testo (pdf-parse / OCR Tesseract)
+  → LLM structured extraction (schema Zod per tipo) → preview con confidence score
+  → validazione utente (campi incerti evidenziati) → commit DB
+  → record in stato 'ai_draft' → diventa 'active' solo dopo conferma umana
+```
+
+**Regola golden**: solo record con `import_status = 'active'` o `'verified'` appaiono negli elenchi ufficiali e nelle esportazioni per enti certificatori.
+
+### DataGrid universale — requisiti del componente
+
+Il componente `<DataGrid />` deve essere riutilizzabile per tutti i moduli:
+- Colonne configurabili (testo, data, badge colorato, semaforo scadenza, link)
+- Ordinamento e filtri per colonna
+- Paginazione server-side (per grandi dataset)
+- Export Excel (libreria: `xlsx` / SheetJS — già compatibile browser)
+- Selezione multipla + azioni batch
+- Slot per azioni riga (modifica, elimina, download PDF originale)
+
+---
+
 ## E. Punto di ripresa / idee
 
 ### Chiusura sessione 28 marzo 2026

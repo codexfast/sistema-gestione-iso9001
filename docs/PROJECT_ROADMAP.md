@@ -1,7 +1,7 @@
 # Roadmap — Sistema Gestione ISO 9001 / SaaS Multi-Tenant
 
 > **Data Inizio**: 13 gennaio 2026
-> **Ultimo Aggiornamento**: 28 marzo 2026
+> **Ultimo Aggiornamento**: 05 aprile 2026
 > **Prossimo Step** (sessione successiva): (0) Dopo deploy: smoke lista audit mobile/desktop (stesso utente, >50 audit se possibile). (1) Smoke export Word — **verificatore** e **titoli senza mojibake**. (2) Smoke **NV** / **N.A.** + **`[LOGO]`**. (3) Smoke **pending issues** + riga **AP**. (4) Avvio “Flusso 2” (SAL/Sopralluoghi): definizione schema requisiti+stati + evidenze documentali + import CSV/Excel (senza AI). (5) Introduzione RAG come layer di retrieval (job asincrono) dopo che il document registry è stabile; backlog ADR-006, lock DB, template ISO 45001.
 > **Backlog**: Lettura blob da IndexedDB per embedding foto nel report Word (allegati solo locali)
 > **Riferimenti**: [docs/GUIDA_CONSOLIDATA.md](GUIDA_CONSOLIDATA.md) (esperienza operativa) | [docs/adr/ADR-006-auto-reconcile-cache-sync.md](adr/ADR-006-auto-reconcile-cache-sync.md) | [docs/DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (schema DB)
@@ -391,6 +391,168 @@ custom_questions  (id, checklist_id FK, question_text, expected_answer, weight, 
 
 ---
 
+## 🏛️ Architettura Unificata della Piattaforma (decisione 05/04/2026)
+
+### Scoperta fondamentale: le norme condividono la struttura HLS
+
+ISO 9001, ISO 14001 e ISO 45001 sono costruite sulla stessa **High Level Structure (Annex SL)** — sezioni 4–10 identiche, contenuto diverso. Questo significa che lo stesso motore di checklist funziona per tutti e tre gli standard. ISO 3834 ha struttura diversa (specifica di processo) ma condivide le stesse entità fondamentali.
+
+### 6 entità universali — Domain Model
+
+Ogni sistema di gestione (qualunque norma) ruota attorno a queste 6 entità:
+
+```
+ORGANIZZAZIONE
+    ├── ha REQUISITI (dalla norma) → verificati da AUDIT → producono RILIEVI
+    ├── gestisce DOCUMENTI (§7.5) con versione, approvazione, scadenza
+    ├── impiega PERSONE con QUALIFICHE (scadenza, norma di riferimento)
+    ├── identifica RISCHI → definisce OBIETTIVI misurabili
+    └── RILIEVI + RISCHI → generano AZIONI chiuse da EVIDENZE
+```
+
+### 3 Layer architetturali
+
+```
+LAYER 3 — UI (React): moduli specifici per scenario che usano componenti universali
+           [AuditModule] [SALModule] [WeldingModule] [RDPModule]
+           [DocumentBrowser] [AlertDashboard] [DataGrid] [ExportButton]
+
+LAYER 2 — Dominio (Node.js): logica specifica per standard + motori trasversali
+           AuditEngine | SALEngine | WeldingEngine | RDPEngine
+           AlertEngine | ExportEngine | RAGEngine | ImportEngine
+
+LAYER 1 — Core Platform (DB SQL Server): entità universali condivise
+           organizations, standards, document_registry, personnel_qualifications,
+           risks_register, objectives, actions, welding_procedures, wpqr_records, projects
+```
+
+### Nuove tabelle DB universali (da creare in Sprint A)
+
+```sql
+document_registry (
+  id, company_id, standard_id, doc_type, doc_code, title,
+  revision, status,            -- 'vigente'|'in_revisione'|'obsoleto'|'in_approvazione'
+  issue_date, expiry_date,     -- semaforo alert: >60gg verde, 30-60 giallo, <30 rosso
+  responsible, retention_years,
+  attachment_id FK attachments,
+  extraction_confidence DECIMAL(3,2),  -- 0.0-1.0 da AI import
+  import_status                -- 'ai_draft'|'verified'|'active'
+)
+
+personnel_qualifications (
+  id, company_id, person_name, person_id FK users NULL,
+  qualification_type,          -- 'iso9606_1'|'iso9712_vt'|'iso14731_iwt'|'iso14732'
+  certificate_number,
+  standard_ref,                -- es. 'ISO 9606-1'
+  welding_process,             -- es. '141' (TIG), '111' (elettrodo)
+  material_group,              -- es. '1.1' (ISO/TR 15608)
+  position_range,              -- es. 'PA PF'
+  issue_date, expiry_date,
+  issuing_body,
+  attachment_id FK attachments,
+  extraction_confidence DECIMAL(3,2),
+  import_status
+)
+
+risks_register (
+  id, company_id, standard_id, clause_ref,
+  risk_type,                   -- 'risk'|'opportunity'
+  description, context,
+  probability INT,             -- 1-5
+  impact INT,                  -- 1-5
+  score AS (probability * impact),
+  mitigation_action, owner, due_date, status
+)
+
+objectives (
+  id, company_id, standard_id, clause_ref,
+  description, target_value, unit, current_value,
+  measurement_frequency, due_date, status, responsible
+)
+
+actions (
+  id, company_id, standard_id,
+  source_type,                 -- 'audit_nc'|'risk'|'sal_gap'|'incident'|'management_review'
+  source_id,                   -- FK al record sorgente
+  description, responsible, due_date,
+  status,                      -- 'aperta'|'in_corso'|'verificata'|'chiusa'
+  evidence_text, attachment_id FK attachments,
+  created_at, closed_at
+)
+
+-- Specifiche ISO 3834
+welding_procedures (           -- WPS
+  id, company_id, wps_code, revision,
+  welding_process,             -- codice ISO 4063 (es. 141, 111, 135)
+  material_group,              -- ISO/TR 15608
+  filler_material, shielding_gas,
+  joint_type, position,
+  thickness_range_min, thickness_range_max,
+  preheat_temp, interpass_temp, pwht,
+  qualification_standard,      -- es. 'ISO 15614-1'
+  status, attachment_id
+)
+
+wpqr_records (                 -- WPQR collegato a WPS
+  id, wps_id FK welding_procedures,
+  wpqr_code, test_date, issuing_body,
+  vt_result, rt_result, ut_result, mt_result, pt_result,
+  tensile_result, bend_result, impact_result, hardness_result,
+  validity_range_description,
+  expiry_date NULL,
+  attachment_id
+)
+
+projects (                     -- Commesse ISO 3834
+  id, company_id, project_code, client_name, client_company_id FK companies NULL,
+  description, start_date, end_date,
+  applicable_wps_ids,          -- JSON array di wps ids
+  status,                      -- 'offerta'|'in_corso'|'completato'|'archiviato'
+  requirements_review_date, technical_review_date
+)
+```
+
+### Pipeline di importazione documentale assistita da AI
+
+Ogni documento normativo ha struttura definita dalla norma → estrazione deterministica:
+
+```
+PDF upload (batch) → rilevamento tipo documento → estrazione testo (pdf-parse / OCR)
+  → LLM extraction con schema Zod → preview con confidence score per campo
+  → validazione utente (campi incerti in giallo) → commit in DB + alert engine aggiornato
+```
+
+**Tipi documento supportati (con schema di estrazione noto):**
+
+| Tipo | Norma | Campi chiave estratti |
+|---|---|---|
+| Patentino saldatore | ISO 9606-1 | nome, processo, gruppo mat., posizione, scadenza |
+| Qualifica operatore | ISO 14732 | nome, processo, scadenza |
+| Cert. NDT | ISO 9712 | nome, metodo (VT/MT/PT/UT/RT), livello (1/2/3), scadenza |
+| WPS | ISO 15609-1 | codice, processo, materiale, posizione, parametri |
+| WPQR | ISO 15614-1 | riferimento WPS, prove eseguite, range validità |
+| Dichiarazione CE macchine | Dir. 2006/42/CE | modello, S/N, direttive, scadenza verifica |
+| Cert. taratura strumento | ISO 17662 | strumento, valore, incertezza, scadenza |
+
+**Regola AI-import**: ogni record importato ha `import_status = 'ai_draft'` fino a conferma umana. Solo record `'verified'` o `'active'` appaiono negli elenchi ufficiali e nelle esportazioni per enti certificatori.
+
+---
+
+### Piano Sprint — da avviare dalla prossima sessione
+
+| Sprint | Contenuto | Output concreto | Stima |
+|---|---|---|---|
+| **A — Core Foundation** | Migration tabelle universali + API CRUD + `<DataGrid />` con export Excel | Struttura DB e griglia dati funzionante per tutti i moduli | 1 settimana |
+| **B — Alert Engine + Document Browser** | Cron job backend + Nodemailer + `<DocumentBrowser />` navigazione cartelle | Notifiche email scadenze + esplorazione documenti per tipo | 1 settimana |
+| **C — Modulo SAL** | SAL tracker requisiti × stati + Word export SAL + colori standard | Camellini può fare SAL digitale per ISO 9001/14001/45001 | 1-2 settimane |
+| **D — Modulo Welding (ISO 3834)** | WPS/WPQR registry + qualifiche saldatori con alert + gestione commesse | Mason ha il registro completo ISO 3834 con scadenze | 2 settimane |
+| **E — AI Import Pipeline** | Upload batch PDF + LLM extraction + preview validazione | Import massivo patentini, WPS, WPQR, dichiarazioni CE | 1-2 settimane |
+| **F — RAG** | Indicizzazione vettoriale documenti + norm_excerpt + ricerca semantica | Ricerca "trova tutte le NC legate a clausola 8.4" | dopo Sprint E |
+
+**Regola di sequenza**: ogni sprint è indipendente e consegna valore, ma A è prerequisito di tutti. B è prerequisito di C e D. E è prerequisito di F.
+
+---
+
 ## Note Architetturali Permanenti
 
 | Decisione | Motivazione |
@@ -410,5 +572,5 @@ custom_questions  (id, checklist_id FK, question_text, expected_answer, weight, 
 
 ---
 
-**Ultimo Aggiornamento**: 08 marzo 2026
-**Prossimo Step**: ISO 14001 checklist completa da norma PDF (task 0.2)
+**Ultimo Aggiornamento**: 05 aprile 2026
+**Prossimo Step**: Sprint A — Core Foundation (migration tabelle universali + DataGrid + export Excel)
