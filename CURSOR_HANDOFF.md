@@ -480,9 +480,9 @@ localStorage.getItem('authToken');
 
 ---
 
-## 🚀 PROSSIME AZIONI — Sessione 05/04/2026
+## 🚀 PROSSIME AZIONI — Sessione 06/04/2026
 
-### Decisioni architetturali prese in questa sessione (NON riaprire)
+### Decisioni architetturali prese (NON riaprire)
 
 1. **Architettura unificata 3 layer** approvata: Core Platform / Domain Modules / UI Components.
 2. **HLS discovery**: ISO 9001 + 14001 + 45001 condividono struttura sezioni 4–10. Stesso motore checklist per tutti.
@@ -492,27 +492,43 @@ localStorage.getItem('authToken');
 
 ---
 
-### Sprint A — Core Foundation (PROSSIMO DA AVVIARE)
+### ✅ Sprint A — Step 1 COMPLETATO (05/04/2026)
+
+| Artefatto | Stato | Note |
+|---|---|---|
+| `database/migrations/029_document_registry.sql` | ✅ creato | Script SQL idempotente |
+| `backend/scripts/run-migration-029.js` | ✅ creato ed eseguito | Tabella creata su DB prod |
+| DB: tabella `document_registry` | ✅ in produzione | 22 col, 6 FK, 4 indici |
+| `backend/src/controllers/document.controller.js` | ✅ deployato | CRUD + stats + soft-delete |
+| `backend/src/routes/document.routes.js` | ✅ deployato | 6 endpoint |
+| `backend/src/server.js` | ✅ deployato | Route registrata |
+| Smoke test `/api/v1/documents` | ✅ 401 atteso | Route attiva e auth OK |
+
+**Nota tecnica**: `database.json` (production) usato per le migration — NON `.env` (ha `#` in password che dotenv interpreta come commento).
+
+---
+
+### Sprint A — Step 2 (PROSSIMO — prima cosa da fare alla prossima sessione)
 
 ```
-PRIMA DI SCRIVERE CODICE:
-1. Leggere docs/PROJECT_ROADMAP.md §Architettura Unificata per schema tabelle universali
-2. Leggere docs/DATABASE_SCHEMA.md per tabelle esistenti e vincoli di schema
-3. Proporre migration SQL all'utente e aspettare approvazione esplicita
-4. Solo dopo approvazione: eseguire migration su DB produzione
-5. Implementare API CRUD per le nuove tabelle
-6. Implementare componente <DataGrid /> universale con export Excel (libreria: xlsx/SheetJS)
+Costruire il componente React <DocumentRegistry /> per la UI.
+Passi:
+1. Creare app/src/components/DocumentRegistry/DocumentRegistry.jsx
+   - Tabella/griglia documenti con colonne: Codice, Titolo, Tipo, Stato, Scadenza, Azienda
+   - Colore semaforo: verde=vigente, giallo=in_scadenza_30gg, rosso=scaduto/obsoleto
+   - Pulsanti: Nuovo, Modifica, Archivia (soft delete)
+   - Filtri: per tipo documento, per stato, per azienda
+2. Creare app/src/components/DocumentRegistry/DocumentForm.jsx
+   - Form modale per creazione/modifica documento
+   - Campi: doc_type (select), doc_code, title, revision, status, issue_date, expiry_date, responsible, notes
+3. Integrare in app/src/services/apiService.js i metodi:
+   - getDocuments(filters), getDocumentStats(), createDocument(data), updateDocument(id, data), archiveDocument(id)
+4. Aggiungere voce "Documenti" nel menu di navigazione principale
 ```
 
-**Tabelle da creare (schema completo in PROJECT_ROADMAP.md)**:
-- `document_registry` — tutti i documenti gestiti (qualunque sistema/norma)
-- `personnel_qualifications` — qualifiche con scadenza (ISO 9606, ISO 9712, ISO 14731)
-- `risks_register` — registro rischi e opportunità (§6.1 HLS)
-- `objectives` — obiettivi misurabili (§6.2 HLS)
-- `actions` — azioni correttive/preventive (§10.2 HLS, fonte: audit/rischi/SAL/incidenti)
-- `welding_procedures` — WPS ISO 15609-1 (specifico ISO 3834)
-- `wpqr_records` — WPQR collegati a WPS
-- `projects` — commesse ISO 3834
+**Librerie già disponibili nel frontend**: Axios (API), nessuna griglia dedicata → usare tabella HTML + CSS o valutare `react-table` (già nel progetto?).
+
+**Attenzione**: NON modificare funzionalità esistenti (audit, NC, checklist). Solo aggiungere nuova sezione.
 
 **Componente universale da costruire**:
 - `<DataGrid />` — griglia dati con colonne configurabili, ordinamento, filtri, paginazione, export Excel
@@ -573,4 +589,4 @@ PRIMA DI SCRIVERE CODICE:
 
 ---
 
-*Aggiornato: 05 aprile 2026 — Sessione architettura unificata piattaforma SGQ*
+*Aggiornato: 05 aprile 2026 — Sprint A step 1 completato (DB + API document_registry in produzione)*
