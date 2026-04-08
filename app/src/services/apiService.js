@@ -906,6 +906,43 @@ class ApiService {
             return false;
         }
     }
+
+    // ==========================================
+    // DOCUMENT REGISTRY ENDPOINTS (Sprint A)
+    // ==========================================
+
+    /**
+     * Lista documenti con filtri opzionali.
+     * params: { company_id, standard_id, doc_type, status, expiring_days, search, page, limit }
+     */
+    async getDocuments(params = {}) {
+        const query = new URLSearchParams(
+            Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null))
+        ).toString();
+        return this.get(`/documents${query ? '?' + query : ''}`);
+    }
+
+    /** Statistiche registro (vigenti, scaduti, in_scadenza_30gg, ecc.) */
+    async getDocumentStats() {
+        return this.get('/documents/stats');
+    }
+
+    async getDocument(id) {
+        return this.get(`/documents/${id}`);
+    }
+
+    async createDocument(data) {
+        return this.post('/documents', data);
+    }
+
+    async updateDocument(id, data) {
+        return this.put(`/documents/${id}`, data);
+    }
+
+    /** Soft delete: porta il documento a status='obsoleto' */
+    async archiveDocument(id) {
+        return this.delete(`/documents/${id}`);
+    }
 }
 
 /**

@@ -8,6 +8,7 @@ import ChecklistAdminPage from "./components/ChecklistAdminPage";
 import UsersAdminPage from "./components/UsersAdminPage";
 import ReportTemplatesAdminPage from "./components/ReportTemplatesAdminPage";
 import CustomChecklistsPage from "./components/CustomChecklistsPage";
+import DocumentRegistry from "./components/DocumentRegistry";
 import Login from "./components/Login";
 import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -151,6 +152,32 @@ function AppContent() {
     );
   }
 
+  // Vista Registro Documenti (Sprint A)
+  if (viewMode === "documents") {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="container header-flex">
+            <h1>SGQ — Sistema di Gestione</h1>
+            <div className="user-info">
+              <span className="user-name">👤 {user.full_name || user.name}</span>
+              <span className={`user-role role-${user.role}`}>{user.role}</span>
+              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
+            </div>
+          </div>
+        </header>
+        <main className="container">
+          <DocumentRegistry onBack={() => setViewMode("audit")} />
+        </main>
+        <footer className="app-footer">
+          <div className="container">
+            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   // Vista Anagrafica Aziende (Fase 1)
   if (viewMode === "companies") {
     return (
@@ -188,6 +215,9 @@ function AppContent() {
               <nav className="app-nav">
                 <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
                   🏢 Anagrafica Aziende
+                </button>
+                <button type="button" className="nav-link" onClick={() => setViewMode("documents")}>
+                  📄 Documenti
                 </button>
                 {isAdmin && (
                   <>
@@ -251,6 +281,9 @@ function AppContent() {
             <nav className="app-nav">
               <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
                 🏢 Aziende
+              </button>
+              <button type="button" className="nav-link" onClick={() => setViewMode("documents")}>
+                📄 Documenti
               </button>
               {isAdmin && (
                 <>

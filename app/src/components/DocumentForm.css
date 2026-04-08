@@ -1,0 +1,177 @@
+/**
+ * DocumentForm Modal Styles
+ */
+
+/* Overlay */
+.docform-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+/* Modale */
+.docform-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* Header */
+.docform-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.docform-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1e3a5f;
+  font-weight: 700;
+}
+
+.docform-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.docform-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Body (scrollabile) */
+.docform-body {
+  padding: 20px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Riga doppia */
+.docform-row {
+  display: flex;
+  gap: 14px;
+}
+
+.docform-row .docform-field { flex: 1; }
+.docform-row .docform-field-sm { flex: 0 0 140px; }
+.docform-row .docform-field-xs { flex: 0 0 110px; }
+
+/* Campo singolo */
+.docform-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.docform-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.docform-field input,
+.docform-field select,
+.docform-field textarea {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #111827;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+
+.docform-field input:focus,
+.docform-field select:focus,
+.docform-field textarea:focus {
+  outline: none;
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+}
+
+.docform-field input:disabled,
+.docform-field select:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.docform-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+/* Errore */
+.docform-error {
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+/* Footer */
+.docform-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.btn-cancel {
+  padding: 8px 18px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.btn-cancel:hover:not(:disabled) { background: #f3f4f6; }
+
+.btn-save {
+  padding: 8px 20px;
+  background: #1e3a5f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-save:hover:not(:disabled) { background: #2c5282; }
+.btn-save:disabled,
+.btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .docform-row { flex-direction: column; }
+  .docform-row .docform-field-sm,
+  .docform-row .docform-field-xs { flex: none; }
+}
