@@ -514,7 +514,26 @@ UI DocumentRegistry deployata su Netlify: griglia documenti, filtri, semaforo sc
 
 ---
 
-### 🚀 SPRINT 0 — Navigation Foundation (DA AVVIARE ORA)
+### ✅ SPRINT 0 — Navigation Foundation COMPLETATO (08/04/2026)
+
+| Artefatto | Stato | Note |
+|---|---|---|
+| `app/src/contexts/RouterContext.jsx` | ✅ creato | Router custom su History API, zero dipendenze npm |
+| `app/src/layouts/AppLayout.jsx` + `.css` | ✅ creato | Sidebar desktop 230px + bottom nav mobile 5 voci |
+| `app/src/pages/HomePage.jsx` + `.css` | ✅ creato | Dashboard "Cosa fare oggi": alert scadenze, NC, accesso rapido |
+| `app/src/components/ModuleLocked.jsx` + `.css` | ✅ creato | Schermata elegante per moduli non ancora attivi |
+| `app/src/App.jsx` | ✅ riscritto | Rimosso pattern viewMode → Routes con URL semantici |
+| Build Vite | ✅ 0 errori | 235 moduli, warning chunk size preesistente |
+| Commit `cacfa6b` + push | ✅ su main | Netlify auto-deploy attivo |
+
+**Nota tecnica**: npm non riesce a installare su Google Drive (I/O lento per molti file piccoli).
+Il RouterContext custom è equivalente a React Router per tutte le funzionalità necessarie ora.
+Se si vorrà migrare a `react-router-dom` in futuro, basta eseguire `npm install react-router-dom`
+da una cartella locale (es. `C:\progetti\sgq-app`) e poi ricopiare `node_modules`.
+
+---
+
+### 🚀 SPRINT 1 — Document Registry UX (PROSSIMO — prima cosa da fare)
 
 **Obiettivo**: sostituire il pattern `viewMode` con React Router v6 + sidebar persistente.
 Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
@@ -543,6 +562,28 @@ Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 ```
 
 **Nota**: i componenti esistenti mantengono il prop `onBack` — nelle route viene passato `() => navigate(-1)`.
+
+---
+
+---
+
+### 🚀 SPRINT 1 — Document Registry UX (PROSSIMO — prima cosa da fare)
+
+**Obiettivo**: migliorare la fruibilità del DocumentRegistry con approccio Apple.
+Il backend (API + DB) è già completo e funzionante. Solo frontend.
+
+**Passi**:
+1. **Vista "Priorità"** come tab default — mostra solo documenti scaduti e in scadenza entro 60gg.
+   La tab "Catalogo" mostra tutto il registro (griglia completa).
+2. **Form wizard 2 passi** invece di 12 campi tutti insieme:
+   - Passo 1: Tipo documento + Titolo + Codice + Azienda (campi essenziali)
+   - Passo 2: Date + Norma + Responsabile + Note (campi opzionali)
+3. **Inline confirmation** per archiviazione (sostituisce `window.confirm` — anti-pattern)
+4. **Export Excel** lista documenti filtrata (libreria SheetJS già nel progetto o `xlsx`)
+5. **Rimuovere il pulsante "← Indietro"** dalla header di DocumentRegistry —
+   la sidebar è sufficiente per navigare. Riduce rumore visivo.
+
+**Attenzione**: NON toccare il backend (controller, route, migration) — funziona correttamente.
 
 ---
 
@@ -627,4 +668,4 @@ Passi:
 
 ---
 
-*Aggiornato: 08 aprile 2026 — Vision vincolante congelata. Sprint 0 Navigation Foundation in corso.*
+*Aggiornato: 08 aprile 2026 — Sprint 0 completato. Navigation Foundation in produzione. Prossimo: Sprint 1 DocumentRegistry UX.*
