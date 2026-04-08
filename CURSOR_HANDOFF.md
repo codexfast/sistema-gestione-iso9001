@@ -508,7 +508,45 @@ localStorage.getItem('authToken');
 
 ---
 
-### Sprint A — Step 2 (PROSSIMO — prima cosa da fare alla prossima sessione)
+### ✅ Sprint A — Step 2 COMPLETATO (08/04/2026)
+
+UI DocumentRegistry deployata su Netlify: griglia documenti, filtri, semaforo scadenze, form modale crea/modifica, soft-delete (→ obsoleto), stats bar.
+
+---
+
+### 🚀 SPRINT 0 — Navigation Foundation (DA AVVIARE ORA)
+
+**Obiettivo**: sostituire il pattern `viewMode` con React Router v6 + sidebar persistente.
+Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
+
+**Passi**:
+1. `npm install react-router-dom` nella cartella `app/`
+2. Creare `app/src/layouts/AppLayout.jsx` + CSS — sidebar desktop (240px) + bottom nav mobile
+3. Creare `app/src/pages/HomePage.jsx` + CSS — dashboard "Cosa fare oggi" (alert scadenze, NC aperte, prossimi audit)
+4. Creare `app/src/components/ModuleLocked.jsx` + CSS — placeholder per moduli non ancora attivi
+5. Riscrivere `app/src/App.jsx` — sostituire viewMode con `<BrowserRouter><Routes>` con route per ogni sezione
+6. Build + smoke + commit + push
+
+**Route map**:
+```
+/           → HomePage (dashboard alert)
+/audit      → Dashboard (audit corrente — comportamento invariato)
+/documents  → DocumentRegistry
+/qualifiche → ModuleLocked (attivo in Sprint 2)
+/saldatura  → ModuleLocked (attivo in Sprint 5)
+/companies  → CompaniesPage
+/settings   → redirect a /settings/users (solo admin)
+/settings/users
+/settings/checklist
+/settings/templates
+/settings/custom-checklists
+```
+
+**Nota**: i componenti esistenti mantengono il prop `onBack` — nelle route viene passato `() => navigate(-1)`.
+
+---
+
+### Sprint A — Step 2 (COMPLETATO — archiviato)
 
 ```
 Costruire il componente React <DocumentRegistry /> per la UI.
@@ -589,4 +627,4 @@ Passi:
 
 ---
 
-*Aggiornato: 05 aprile 2026 — Sprint A step 1 completato (DB + API document_registry in produzione)*
+*Aggiornato: 08 aprile 2026 — Vision vincolante congelata. Sprint 0 Navigation Foundation in corso.*

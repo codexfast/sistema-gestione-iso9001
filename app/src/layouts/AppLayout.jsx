@@ -1,0 +1,214 @@
+/**
+ * AppLayout — Layout principale dell'applicazione
+ *
+ * Desktop: header top + sidebar sinistra fissa (240px) + area contenuto
+ * Mobile:  header compatto + bottom navigation (5 voci)
+ *
+ * Approccio Apple:
+ * - Sidebar sempre visibile su desktop: l'utente sa sempre dove si trova
+ * - Bottom nav su mobile: pollice raggiunge tutte le voci principali
+ * - Voce attiva evidenziata con colore primario
+ * - Sezioni raggruppate con etichetta
+ */
+
+import React, { useState } from "react";
+import { NavLink, useRouter, useNavigate } from "../contexts/RouterContext";
+import { useAuth } from "../contexts/AuthContext";
+import "./AppLayout.css";
+
+// ─── Definizione navigazione ──────────────────────────────────────────────────
+
+function buildNavItems(user) {
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const canManage = ["admin", "auditor", "superadmin"].includes(user?.role);
+
+  return [
+    // Gruppo principale
+    {
+      group: null,
+      items: [
+        { to: "/",        icon: "🏠", label: "Home",    exact: true },
+        { to: "/audit",   icon: "🔍", label: "Audit" },
+      ],
+    },
+    // Modulo SGQ
+    {
+      group: "SGQ",
+      items: [
+        { to: "/documents",   icon: "📄", label: "Documenti" },
+        { to: "/qualifiche",  icon: "🎓", label: "Qualifiche",  locked: true },
+        { to: "/rischi",      icon: "⚠️",  label: "Rischi & Obiettivi", locked: true },
+        { to: "/azioni",      icon: "✅",  label: "Azioni",     locked: true },
+        { to: "/sal",         icon: "📊", label: "SAL",         locked: true },
+      ],
+    },
+    // Modulo Saldatura
+    {
+      group: "Saldatura",
+      items: [
+        { to: "/saldatura", icon: "🔧", label: "ISO 3834", locked: true },
+      ],
+    },
+    // Gestione (solo admin/auditor)
+    ...(canManage ? [{
+      group: "Gestione",
+      items: [
+        { to: "/companies",   icon: "🏢", label: "Aziende" },
+        ...(isAdmin ? [
+          { to: "/settings/users",    icon: "👥", label: "Utenti" },
+          { to: "/settings/checklist",icon: "📋", label: "Checklist" },
+        ] : []),
+        { to: "/settings/templates",        icon: "📝", label: "Template report" },
+        { to: "/settings/custom-checklists",icon: "📋", label: "Checklist personalizzate" },
+      ],
+    }] : []),
+  ];
+}
+
+// ─── Bottom navigation (mobile — max 5 voci) ─────────────────────────────────
+
+function BottomNav({ navItems }) {
+  const { path } = useRouter();
+  // Seleziona le 5 voci più importanti per il mobile
+  const mobileItems = [
+    { to: "/",          icon: "🏠", label: "Home",     exact: true },
+    { to: "/audit",     icon: "🔍", label: "Audit" },
+    { to: "/documents", icon: "📄", label: "Documenti" },
+    { to: "/companies", icon: "🏢", label: "Aziende" },
+    { to: "/settings/users", icon: "⚙️", label: "Impostazioni" },
+  ];
+
+  return (
+    <nav className="bottom-nav" role="navigation" aria-label="Navigazione principale">
+      {mobileItems.map((item) => {
+        const isActive = item.exact ? path === item.to : path.startsWith(item.to) && item.to !== "/";
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            exact={item.exact}
+            className={`bottom-nav-item${isActive ? " active" : ""}`}
+            activeClassName=""
+          >
+            <span className="bottom-nav-icon">{item.icon}</span>
+            <span className="bottom-nav-label">{item.label}</span>
+          </NavLink>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ─── Sidebar (desktop) ────────────────────────────────────────────────────────
+
+function Sidebar({ navGroups, collapsed, onToggle }) {
+  return (
+    <aside className={`sidebar${collapsed ? " sidebar-collapsed" : ""}`} aria-label="Menu laterale">
+      {/* Logo / titolo */}
+      <div className="sidebar-logo">
+        {!collapsed && (
+          <>
+            <span className="sidebar-logo-icon">⚙️</span>
+            <span className="sidebar-logo-text">SGQ Studio</span>
+          </>
+        )}
+        <button
+          className="sidebar-toggle"
+          onClick={onToggle}
+          title={collapsed ? "Espandi menu" : "Comprimi menu"}
+          aria-label={collapsed ? "Espandi menu" : "Comprimi menu"}
+        >
+          {collapsed ? "▶" : "◀"}
+        </button>
+      </div>
+
+      {/* Gruppi di navigazione */}
+      <nav className="sidebar-nav">
+        {navGroups.map((group, gi) => (
+          <div key={gi} className="sidebar-group">
+            {group.group && !collapsed && (
+              <span className="sidebar-group-label">{group.group}</span>
+            )}
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                exact={item.exact}
+                className={`sidebar-item${item.locked ? " sidebar-item-locked" : ""}`}
+                activeClassName="active"
+              >
+                <span className="sidebar-item-icon">{item.icon}</span>
+                {!collapsed && (
+                  <>
+                    <span className="sidebar-item-label">{item.label}</span>
+                    {item.locked && <span className="sidebar-lock">🔒</span>}
+                  </>
+                )}
+                {collapsed && item.locked && (
+                  <span className="sidebar-lock-sm">🔒</span>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+// ─── Layout principale ────────────────────────────────────────────────────────
+
+function AppLayout({ children }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const navGroups = buildNavItems(user);
+
+  return (
+    <div className={`app-layout${sidebarCollapsed ? " sidebar-is-collapsed" : ""}`}>
+      {/* Sidebar desktop */}
+      <Sidebar
+        navGroups={navGroups}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+      />
+
+      {/* Area destra: header + contenuto + footer */}
+      <div className="layout-right">
+        {/* Header */}
+        <header className="layout-header">
+          <div className="layout-header-left">
+            <h1 className="layout-title" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
+              SGQ — Sistema di Gestione
+            </h1>
+          </div>
+          <div className="layout-header-right">
+            <div className="user-chip">
+              <span className="user-chip-name">👤 {user?.full_name || user?.name || user?.email}</span>
+              <span className={`user-chip-role role-${user?.role}`}>{user?.role}</span>
+            </div>
+            <button onClick={logout} className="btn-logout" title="Esci">
+              🚪 Esci
+            </button>
+          </div>
+        </header>
+
+        {/* Contenuto principale */}
+        <main className="layout-main">
+          {children}
+        </main>
+
+        {/* Footer */}
+        <footer className="layout-footer">
+          <p>© {new Date().getFullYear()} QS Studio — Sistema Gestione ISO 9001/14001/45001</p>
+        </footer>
+      </div>
+
+      {/* Bottom navigation mobile */}
+      <BottomNav navGroups={navGroups} />
+    </div>
+  );
+}
+
+export default AppLayout;

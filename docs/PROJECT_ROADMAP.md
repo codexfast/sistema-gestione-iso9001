@@ -572,5 +572,85 @@ PDF upload (batch) → rilevamento tipo documento → estrazione testo (pdf-pars
 
 ---
 
-**Ultimo Aggiornamento**: 05 aprile 2026
-**Prossimo Step**: Sprint A — Core Foundation (migration tabelle universali + DataGrid + export Excel)
+## 🏛️ VISION VINCOLANTE — Decisione strategica 08/04/2026
+
+> Questa sezione è **congelata**. Le decisioni qui riportate non si riaprono.
+> Ogni modifica richiede approvazione esplicita del product owner.
+
+### Modello di business definitivo
+
+```
+QS Studio (superadmin — proprietari della piattaforma)
+│
+├── Auditor/Consulente  (es. Camellini, Mason — WRITE su tutto)
+│   │  Pagano per ogni azienda che gestiscono
+│   │  Possono essere: auditor puri, consulenti implementazione, coordinatori saldatura
+│   │
+│   ├── Azienda A  (cliente — può acquistare moduli in autonomia, ha WRITE sui propri dati)
+│   ├── Azienda B
+│   └── Azienda C
+│
+└── Azienda autonoma  (acquista direttamente — gestisce da sola con write completo)
+```
+
+**Fatturazione**: per azienda attiva nell'archivio (= ha dati + occupa spazio server).  
+Un auditor che gestisce 10 aziende → 10 licenze. Prezzo varia per modulo attivato.
+
+**Modulo Reclami**: i reclami e le NC li inserisce **l'azienda** che acquista il modulo (non solo il consulente).
+
+### Strategia Mobile / Desktop
+
+| Dispositivo | Attività | Moduli accessibili |
+|---|---|---|
+| **Mobile Android (PWA)** | Campo: audit, ispezioni VT/MT/PT, foto, checklist offline | Audit, Alert (sola lettura), Documenti (sola consultazione) |
+| **Tablet** | Audit con più spazio, consultazione documenti in cantiere | Audit + consultazione |
+| **Desktop** | Gestione documentale, form, report, configurazione | Tutti i moduli |
+
+**Regola progettuale**: le schermate di gestione dati (form, tabelle complesse, configurazione) sono **desktop-first**. Il mobile rimane ottimizzato per il **campo**.
+
+### Architettura UI — Navigation Foundation
+
+- **React Router v6**: URL semantici, deep linking, back button browser
+- **Layout fisso**: sidebar sinistra su desktop (240px), bottom navigation su mobile (5 voci)
+- **Home Dashboard**: "Cosa fare oggi" — alert scadenze, NC aperte, prossimi audit
+- **Feature flags**: ogni modulo ha un flag di licenza. Se non attivo → schermata `<ModuleLocked />`
+
+### Moduli licenziabili
+
+| Modulo | Target | Contenuto |
+|---|---|---|
+| **AUDIT** | Auditor / Consulenti | Audit ISO 9001/14001/45001, checklist, NC, report Word |
+| **SGQ** | Aziende / Consulenti | Documenti, Qualifiche, Rischi, Obiettivi, Azioni, SAL |
+| **RECLAMI** | Aziende | Reclami clienti (inserimento da azienda), NC interne, follow-up |
+| **SALDATURA** | Coordinatori / Aziende | WPS/WPQR, qualifiche saldatori, NDT, commesse ISO 3834 |
+| **ALERT** | Incluso in tutti | Email automatiche scadenze, dashboard semaforo |
+| **AI** | Add-on futuro | Import batch PDF, estrazione dati, ricerca semantica |
+
+### Roadmap Sprint definitiva
+
+| Sprint | Nome | Contenuto | Prerequisito |
+|---|---|---|---|
+| **0** | Navigation Foundation | React Router v6, sidebar, home dashboard, ModuleLocked | — |
+| **1** | Document Registry UX | Redesign UX (vista Priorità, wizard form, export Excel) | Sprint 0 |
+| **2** | Qualifiche + Alert Engine | Personnel qualifications, cron email scadenze | Sprint 0 |
+| **3** | NC & Azioni Correttive | Loop audit→azione→verifica, workflow status | Sprint 0 |
+| **4** | SAL (Riesame Direzione) | Griglia requisiti×stati, report Word verbale | Sprint 3 |
+| **5** | Saldatura ISO 3834 | WPS/WPQR, qualifiche saldatori, commesse | Sprint 2 |
+| **6** | Rischi + Obiettivi | Risk register §6.1, obiettivi §6.2 | Sprint 3 |
+| **7** | Reclami + Fornitori | Reclami clienti, valutazione fornitori | Sprint 3 |
+| **8** | Licensing Engine | Feature flags, pannello abbonamenti, UI locked | Sprint 0 |
+| **9** | AI Import Pipeline | OCR+LLM batch PDF, confidence score, revisione umana | Sprint 1 |
+
+### Copertura normativa per modulo SGQ
+
+| Norma | Requisiti coperti dal modulo SGQ |
+|---|---|
+| ISO 9001:2015 | §7.5 Documenti, §7.2 Competenze, §8.7+§10.2 NC/Azioni, §8.2.1 Reclami, §8.4 Fornitori, §9.1 Monitoraggio, §9.3 Riesame, §6.1 Rischi, §6.2 Obiettivi |
+| ISO 14001:2015 | + Aspetti ambientali, Obblighi conformità, Piani emergenza, Monitoraggio ambientale |
+| ISO 45001:2018 | + Identificazione pericoli, Incidenti/infortuni, Valutazione rischi H&S |
+| ISO 3834 | Modulo Saldatura separato: WPS/WPQR, Qualifiche 9606/9712, Commesse, Trattamenti termici |
+
+---
+
+**Ultimo Aggiornamento**: 08 aprile 2026
+**Prossimo Step**: Sprint 0 — Navigation Foundation (React Router v6 + sidebar + home dashboard)

@@ -1,0 +1,290 @@
+/**
+ * HomePage Styles — Dashboard "Cosa fare oggi"
+ */
+
+.home-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 24px 40px;
+}
+
+/* ─── Saluto ─────────────────────────────────────────────────────────────── */
+
+.home-greeting {
+  margin-bottom: 28px;
+}
+
+.greeting-text {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+
+.greeting-sub {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ─── Sezioni ────────────────────────────────────────────────────────────── */
+
+.home-section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.section-title-urgent { color: #dc2626; border-color: #fecaca; }
+.section-title-warning { color: #d97706; border-color: #fde68a; }
+
+/* ─── Alert cards ────────────────────────────────────────────────────────── */
+
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.alert-card {
+  border-radius: 10px;
+  border: 1px solid;
+  overflow: hidden;
+}
+
+.alert-card-red   { background: #fff5f5; border-color: #fecaca; }
+.alert-card-orange{ background: #fffbeb; border-color: #fde68a; }
+.alert-card-blue  { background: #eff6ff; border-color: #bfdbfe; }
+
+.alert-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.alert-card-icon { font-size: 1.3rem; flex-shrink: 0; }
+
+.alert-card-meta {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.alert-card-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.count-red    { background: #dc2626; color: #fff; }
+.count-orange { background: #d97706; color: #fff; }
+.count-blue   { background: #2563eb; color: #fff; }
+
+.alert-card-chevron { font-size: 0.7rem; color: #94a3b8; }
+
+.alert-card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px 8px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.alert-card-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 0.85rem;
+}
+
+.alert-item-label { color: #1e293b; font-weight: 500; }
+.alert-item-sub   { color: #dc2626; font-size: 0.78rem; white-space: nowrap; }
+.alert-item-more  { padding: 6px 0; color: #64748b; font-size: 0.8rem; font-style: italic; }
+
+.alert-card-action {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  text-align: left;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.alert-card-action:hover { background: rgba(37,99,235,0.06); }
+
+/* ─── In scadenza ────────────────────────────────────────────────────────── */
+
+.expiring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.expiring-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.expiring-item:hover { background: #fef3c7; }
+.expiring-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.expiring-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.expiring-title { font-size: 0.88rem; font-weight: 600; color: #1e293b; }
+.expiring-date  { font-size: 0.78rem; color: #92400e; }
+
+/* ─── Statistiche ────────────────────────────────────────────────────────── */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.stat-box {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: box-shadow 0.15s;
+}
+
+.stat-box-clickable {
+  cursor: pointer;
+}
+
+.stat-box-clickable:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  border-color: #93c5fd;
+}
+
+.stat-box-locked {
+  opacity: 0.5;
+  background: #f8fafc;
+}
+
+.stat-box-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+.stat-box-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-box-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.stat-box-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.stat-box-sub {
+  font-size: 0.75rem;
+  color: #d97706;
+}
+
+/* ─── Accesso rapido ─────────────────────────────────────────────────────── */
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 100px;
+  transition: all 0.15s;
+}
+
+.quick-action-btn:hover {
+  background: #f0f9ff;
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.1);
+}
+
+.qa-icon  { font-size: 1.5rem; }
+.qa-label { font-size: 0.8rem; font-weight: 600; color: #1e293b; white-space: nowrap; }
+
+/* ─── All OK ─────────────────────────────────────────────────────────────── */
+
+.home-all-ok {
+  text-align: center;
+  padding: 32px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+}
+
+.all-ok-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.home-all-ok p { margin: 0; color: #166534; font-weight: 600; }
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .home-page { padding: 16px 16px 80px; }
+  .greeting-text { font-size: 1.3rem; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .alerts-grid { grid-template-columns: 1fr; }
+}

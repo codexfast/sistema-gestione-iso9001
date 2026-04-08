@@ -1,0 +1,141 @@
+/**
+ * ModuleLocked Styles
+ */
+
+.module-locked {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 24px;
+  min-height: 60vh;
+}
+
+.module-locked-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 36px 40px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+
+/* Icona */
+.module-locked-icon-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.module-locked-icon {
+  display: block;
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.module-locked-badge {
+  position: absolute;
+  top: -6px;
+  right: -32px;
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+/* Testi */
+.module-locked-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px;
+}
+
+.module-locked-desc {
+  font-size: 0.92rem;
+  color: #475569;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+/* Features */
+.module-locked-features {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.features-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0 0 10px;
+}
+
+.module-locked-features ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.module-locked-features li {
+  font-size: 0.875rem;
+  color: #334155;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.feature-check {
+  color: #16a34a;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ETA */
+.module-locked-eta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #eff6ff;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.eta-label {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.eta-value {
+  font-size: 0.85rem;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+/* CTA */
+.cta-note {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .module-locked-card { padding: 24px 20px; }
+  .module-locked-title { font-size: 1.2rem; }
+}

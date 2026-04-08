@@ -1,40 +1,59 @@
+/**
+ * App.jsx — Entry point principale
+ *
+ * Architettura Sprint 0:
+ * - RouterProvider: URL semantici via History API (zero dipendenze npm)
+ * - AuthProvider + StorageProvider: contesti esistenti invariati
+ * - AppLayout: sidebar desktop + bottom nav mobile
+ * - Routes: mappa URL → componente
+ *
+ * Il pattern viewMode è stato rimosso. La navigazione avviene
+ * tramite URL (navigate('/audit'), navigate('/documents') ecc.)
+ */
+
 import React, { useEffect } from "react";
-import { StorageProvider, useStorage } from "./contexts/StorageContext";
+import { RouterProvider, Routes, Route, useNavigate } from "./contexts/RouterContext";
+import { StorageProvider } from "./contexts/StorageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/SharedComponents";
+import AppLayout from "./layouts/AppLayout";
+
+// Pagine e componenti
+import HomePage from "./pages/HomePage";
 import Dashboard from "./components/Dashboard";
+import DocumentRegistry from "./components/DocumentRegistry";
 import CompaniesPage from "./components/CompaniesPage";
 import ChecklistAdminPage from "./components/ChecklistAdminPage";
 import UsersAdminPage from "./components/UsersAdminPage";
 import ReportTemplatesAdminPage from "./components/ReportTemplatesAdminPage";
 import CustomChecklistsPage from "./components/CustomChecklistsPage";
-import DocumentRegistry from "./components/DocumentRegistry";
+import ModuleLocked from "./components/ModuleLocked";
 import Login from "./components/Login";
-import WorkspaceManager from "./components/WorkspaceManager";
 import ConnectionStatus from "./components/ConnectionStatus";
 import AuditLockBanner from "./components/AuditLockBanner";
+
 import { useCheckpointSaver } from "./hooks/useCheckpointSaver";
 import { checkAndMigrateStorage } from "./utils/storageVersion";
+import { useStorage } from "./contexts/StorageContext";
 import "./App.css";
 
-/**
- * AppContent - Componente interno con accesso a StorageContext e Auth
- */
+// ─── Wrapper per componenti che usano onBack ──────────────────────────────────
+
+function BackWrapper({ children }) {
+  const navigate = useNavigate();
+  return React.cloneElement(children, { onBack: () => navigate(-1) || navigate("/") });
+}
+
+// ─── Contenuto app autenticato ────────────────────────────────────────────────
+
 function AppContent() {
-  const { currentAudit, fsProvider, audits } = useStorage();
-  const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [settingsExpanded, setSettingsExpanded] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState("audit"); // 'audit' | 'companies' | 'checklist-admin' | 'users-admin'
-  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
-  const canManageTemplates = ["admin", "auditor", "superadmin"].includes(user?.role);
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { currentAudit, fsProvider } = useStorage();
 
-  // Auto-save checkpoint ogni 30 secondi quando workspace collegato
-  const checkpoint = useCheckpointSaver(currentAudit, fsProvider, {
-    intervalMs: 30000,
-    enabled: true,
-  });
+  // Auto-save checkpoint ogni 30 secondi
+  useCheckpointSaver(currentAudit, fsProvider, { intervalMs: 30000, enabled: true });
 
-  // Mostra login se non autenticato
+  // Schermata di caricamento
   if (authLoading) {
     return (
       <div className="app-loading">
@@ -44,324 +63,107 @@ function AppContent() {
     );
   }
 
+  // Login
   if (!isAuthenticated) {
     return <Login />;
   }
 
-  // Vista Admin — Gestione utenti e standard
-  if (viewMode === "users-admin") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
-            <div className="user-info">
-              <span className="user-name">👤 {user.full_name || user.name}</span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <UsersAdminPage onBack={() => setViewMode("audit")} />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // Vista Checklist personalizzate (admin/auditor)
-  if (viewMode === "custom-checklists") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
-            <div className="user-info">
-              <span className="user-name">👤 {user.full_name || user.name}</span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <CustomChecklistsPage onBack={() => setViewMode("audit")} />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // Vista Template report (admin/auditor)
-  if (viewMode === "report-templates") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
-            <div className="user-info">
-              <span className="user-name">👤 {user.full_name || user.name}</span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <ReportTemplatesAdminPage onBack={() => setViewMode("audit")} />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // Vista Admin — Gestione Stralci Normativi Checklist
-  if (viewMode === "checklist-admin") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ ? Sistema di Gestione</h1>
-            <div className="user-info">
-              <span className="user-name">👤 {user.full_name || user.name}</span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <ChecklistAdminPage onBack={() => setViewMode("audit")} />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // Vista Registro Documenti (Sprint A)
-  if (viewMode === "documents") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ — Sistema di Gestione</h1>
-            <div className="user-info">
-              <span className="user-name">👤 {user.full_name || user.name}</span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <DocumentRegistry onBack={() => setViewMode("audit")} />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // Vista Anagrafica Aziende (Fase 1)
-  if (viewMode === "companies") {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ ? Sistema di Gestione</h1>
-            <div className="user-info">
-              <span className="user-name">👤 {user.full_name || user.name}</span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">🚪 Esci</button>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <CompaniesPage onBack={() => setViewMode("audit")} />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>© {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001</p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // Se nessun audit selezionato E ci sono audit disponibili → mostra selector full-screen
-  if (!currentAudit && audits.length > 0) {
-    return (
-      <div className="app app-selector-mode">
-        <header className="app-header">
-          <div className="container header-flex">
-            <h1>SGQ ? Sistema di Gestione</h1>
-            <div className="header-right">
-              <nav className="app-nav">
-                <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
-                  🏢 Anagrafica Aziende
-                </button>
-                <button type="button" className="nav-link" onClick={() => setViewMode("documents")}>
-                  📄 Documenti
-                </button>
-                {isAdmin && (
-                  <>
-                    <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("users-admin")}>
-                      👥 Utenti e standard
-                    </button>
-                    <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("checklist-admin")}>
-                      📋 Gestione Checklist
-                    </button>
-                  </>
-                )}
-                {canManageTemplates && (
-                  <>
-                    <button type="button" className="nav-link" onClick={() => setViewMode("custom-checklists")}>
-                      📋 Checklist personalizzate
-                    </button>
-                    <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
-                      📄 Template report
-                    </button>
-                  </>
-                )}
-              </nav>
-              <div className="user-info">
-              <span className="user-name">
-                👤 {user.full_name || user.name}
-              </span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">
-                🚪 Esci
-              </button>
-            </div>
-            </div>
-          </div>
-        </header>
-        <main className="container">
-          <Dashboard />
-        </main>
-        <footer className="app-footer">
-          <div className="container">
-            <p>
-              © {new Date().getFullYear()} - Sistema Gestione ISO
-              9001/14001/45001 - Tutti i diritti riservati
-            </p>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
+  // App autenticata con layout e routing
   return (
-    <div className="app">
-      {/* Connection Status Indicator */}
+    <AppLayout>
       <ConnectionStatus />
       <AuditLockBanner />
 
-      <header className="app-header">
-        <div className="container header-flex">
-          <h1>SGQ ? Sistema di Gestione</h1>
+      <Routes>
+        {/* Home dashboard */}
+        <Route path="/" element={<HomePage />} />
 
-          <div className="header-right">
-            <nav className="app-nav">
-              <button type="button" className="nav-link" onClick={() => setViewMode("companies")}>
-                🏢 Aziende
-              </button>
-              <button type="button" className="nav-link" onClick={() => setViewMode("documents")}>
-                📄 Documenti
-              </button>
-              {isAdmin && (
-                <>
-                  <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("users-admin")}>
-                    👥 Utenti e standard
-                  </button>
-                  <button type="button" className="nav-link nav-link-admin" onClick={() => setViewMode("checklist-admin")}>
-                    📋 Checklist
-                  </button>
-                </>
-              )}
-              {canManageTemplates && (
-                <>
-                  <button type="button" className="nav-link" onClick={() => setViewMode("custom-checklists")}>
-                    📋 Checklist personalizzate
-                  </button>
-                  <button type="button" className="nav-link" onClick={() => setViewMode("report-templates")}>
-                    📄 Template report
-                  </button>
-                </>
-              )}
-            </nav>
-            {/* Workspace Manager - Compact mode (status banner) solo quando audit selezionato */}
-            {currentAudit && (
-              <WorkspaceManager compact={true} audit={currentAudit} />
-            )}
+        {/* Modulo Audit (comportamento invariato) */}
+        <Route path="/audit" element={<Dashboard />} />
 
-            {/* Checkpoint indicator */}
-            {checkpoint.lastCheckpointTime && (
-              <div className="checkpoint-indicator">
-                ✅ Auto-salvato alle{" "}
-                {checkpoint.lastCheckpointTime.toLocaleTimeString("it-IT")}
-              </div>
-            )}
+        {/* Modulo SGQ — Documenti */}
+        <Route
+          path="/documents"
+          element={
+            <BackWrapper>
+              <DocumentRegistry />
+            </BackWrapper>
+          }
+        />
 
-            {/* User info */}
-            <div className="user-info">
-              <span className="user-name">
-                👤 {user.full_name || user.name}
-              </span>
-              <span className={`user-role role-${user.role}`}>{user.role}</span>
-              <button onClick={logout} className="btn-logout" title="Logout">
-                🚪
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+        {/* Moduli SGQ bloccati (Sprint 2-7) */}
+        <Route path="/qualifiche" element={<ModuleLocked module="qualifiche" />} />
+        <Route path="/rischi"     element={<ModuleLocked module="rischi" />} />
+        <Route path="/azioni"     element={<ModuleLocked module="azioni" />} />
+        <Route path="/sal"        element={<ModuleLocked module="sal" />} />
 
-      <main className="container">
-        <Dashboard />
-      </main>
+        {/* Modulo Saldatura bloccato (Sprint 5) */}
+        <Route path="/saldatura" element={<ModuleLocked module="saldatura" />} />
 
-      <footer className="app-footer">
-        <div className="container">
-          <p>
-            © {new Date().getFullYear()} - Sistema Gestione ISO 9001/14001/45001
-            - Tutti i diritti riservati
-          </p>
-        </div>
-      </footer>
-    </div>
+        {/* Gestione aziende */}
+        <Route
+          path="/companies"
+          element={
+            <BackWrapper>
+              <CompaniesPage />
+            </BackWrapper>
+          }
+        />
+
+        {/* Impostazioni admin */}
+        <Route
+          path="/settings/users"
+          element={
+            <BackWrapper>
+              <UsersAdminPage />
+            </BackWrapper>
+          }
+        />
+        <Route
+          path="/settings/checklist"
+          element={
+            <BackWrapper>
+              <ChecklistAdminPage />
+            </BackWrapper>
+          }
+        />
+        <Route
+          path="/settings/templates"
+          element={
+            <BackWrapper>
+              <ReportTemplatesAdminPage />
+            </BackWrapper>
+          }
+        />
+        <Route
+          path="/settings/custom-checklists"
+          element={
+            <BackWrapper>
+              <CustomChecklistsPage />
+            </BackWrapper>
+          }
+        />
+      </Routes>
+    </AppLayout>
   );
 }
 
+// ─── Root ─────────────────────────────────────────────────────────────────────
+
 function App() {
-  // Controlla versione storage all'avvio
   useEffect(() => {
     checkAndMigrateStorage();
   }, []);
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <StorageProvider>
-          <AppContent />
-        </StorageProvider>
-      </AuthProvider>
+      <RouterProvider>
+        <AuthProvider>
+          <StorageProvider>
+            <AppContent />
+          </StorageProvider>
+        </AuthProvider>
+      </RouterProvider>
     </ErrorBoundary>
   );
 }
