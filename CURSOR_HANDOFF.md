@@ -567,23 +567,33 @@ Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 
 ---
 
-### 🚀 SPRINT 1 — Document Registry UX (PROSSIMO — prima cosa da fare)
+### ✅ SPRINT 1 — Document Registry UX COMPLETATO (09/04/2026)
 
-**Obiettivo**: migliorare la fruibilità del DocumentRegistry con approccio Apple.
-Il backend (API + DB) è già completo e funzionante. Solo frontend.
+| Artefatto | Stato | Note |
+|---|---|---|
+| `DocumentRegistry.jsx` | ✅ riscritto | Tab Priorità/Catalogo, export CSV, inline confirm, rimosso onBack |
+| `DocumentRegistry.css` | ✅ riscritto | Priority cards, tab switcher, catalog toolbar, inline confirm styles |
+| `DocumentForm.jsx` | ✅ riscritto | Wizard 2 passi per nuovo doc, form completo in modifica |
+| `DocumentForm.css` | ✅ aggiornato | Step indicator, doc-type chip grid, divider, required asterisk |
+| Build Vite | ✅ 0 errori | 235 moduli |
+| Commit `fe25fb7` + push | ✅ su main | Netlify auto-deploy attivo |
+
+**Nota tecnica**: export CSV usa BOM UTF-8 (`\uFEFF`) — apre correttamente in Excel italiano con separatore `;`.
+
+---
+
+### 🚀 SPRINT 2 — Alert Engine (PROSSIMO — prima cosa da fare)
+
+**Obiettivo**: notifiche email automatiche per scadenze imminenti.
 
 **Passi**:
-1. **Vista "Priorità"** come tab default — mostra solo documenti scaduti e in scadenza entro 60gg.
-   La tab "Catalogo" mostra tutto il registro (griglia completa).
-2. **Form wizard 2 passi** invece di 12 campi tutti insieme:
-   - Passo 1: Tipo documento + Titolo + Codice + Azienda (campi essenziali)
-   - Passo 2: Date + Norma + Responsabile + Note (campi opzionali)
-3. **Inline confirmation** per archiviazione (sostituisce `window.confirm` — anti-pattern)
-4. **Export Excel** lista documenti filtrata (libreria SheetJS già nel progetto o `xlsx`)
-5. **Rimuovere il pulsante "← Indietro"** dalla header di DocumentRegistry —
-   la sidebar è sufficiente per navigare. Riduce rumore visivo.
+1. **Cron job backend** (`node-schedule`): ogni giorno alle 08:00 controlla `document_registry` per scadenze entro 30gg
+2. **Nodemailer**: configurazione SMTP + template email alert con lista documenti in scadenza
+3. **Tabella `notifications_config`**: destinatari e soglie per organizzazione (migration 030)
+4. **Badge alert** nell'AppLayout sidebar: mostra conteggio documenti urgenti in tempo reale
+5. **Pagina Settings → Alert**: UI per configurare email e soglie per ogni azienda
 
-**Attenzione**: NON toccare il backend (controller, route, migration) — funziona correttamente.
+**Attenzione**: NON toccare DocumentRegistry o DocumentForm — funzionano correttamente.
 
 ---
 
