@@ -169,9 +169,108 @@
 .btn-save:disabled,
 .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ─── Wizard step indicator ───────────────────────────────────────────────── */
+
+.wizard-steps {
+  display: flex;
+  align-items: center;
+  padding: 14px 22px 0;
+  gap: 0;
+}
+
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.wizard-step.step-active { opacity: 1; }
+
+.step-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: background 0.2s, color 0.2s;
+}
+.wizard-step.step-active .step-dot {
+  background: #1e3a5f;
+  color: #fff;
+}
+
+.step-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: #e5e7eb;
+  margin: 0 10px;
+}
+
+/* ─── Doc type chip grid (passo 1) ─────────────────────────────────────────── */
+
+.doc-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.doc-type-chip {
+  padding: 6px 14px;
+  background: #f3f4f6;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.83rem;
+  color: #374151;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.doc-type-chip:hover { background: #e5e7eb; }
+.doc-type-chip-active {
+  background: #eff6ff;
+  border-color: #1e3a5f;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+/* ─── Divisore nel form modifica ───────────────────────────────────────────── */
+
+.docform-divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 4px 0;
+}
+
+/* ─── required asterisk ─────────────────────────────────────────────────────── */
+
+.required { color: #dc2626; margin-left: 2px; }
+
+/* ─── Passo contenuto ─────────────────────────────────────────────────────── */
+
+.docform-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .docform-row { flex-direction: column; }
   .docform-row .docform-field-sm,
   .docform-row .docform-field-xs { flex: none; }
+  .wizard-steps { padding: 12px 16px 0; }
+  .step-label { display: none; }
 }
