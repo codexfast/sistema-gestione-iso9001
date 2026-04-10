@@ -11,14 +11,15 @@
  * - Sezioni raggruppate con etichetta
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { NavLink, useRouter, useNavigate } from "../contexts/RouterContext";
 import { useAuth } from "../contexts/AuthContext";
+import apiService from "../services/apiService";
 import "./AppLayout.css";
 
 // ─── Definizione navigazione ──────────────────────────────────────────────────
 
-function buildNavItems(user) {
+function buildNavItems(user, alertCount = 0) {
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const canManage = ["admin", "auditor", "superadmin"].includes(user?.role);
 
@@ -35,7 +36,7 @@ function buildNavItems(user) {
     {
       group: "SGQ",
       items: [
-        { to: "/documents",   icon: "📄", label: "Documenti" },
+        { to: "/documents",   icon: "📄", label: "Documenti", badge: alertCount > 0 ? alertCount : null },
         { to: "/qualifiche",  icon: "🎓", label: "Qualifiche",  locked: true },
         { to: "/rischi",      icon: "⚠️",  label: "Rischi & Obiettivi", locked: true },
         { to: "/azioni",      icon: "✅",  label: "Azioni",     locked: true },
@@ -141,8 +142,14 @@ function Sidebar({ navGroups, collapsed, onToggle }) {
                 {!collapsed && (
                   <>
                     <span className="sidebar-item-label">{item.label}</span>
+                    {item.badge && (
+                      <span className="sidebar-badge">{item.badge > 99 ? "99+" : item.badge}</span>
+                    )}
                     {item.locked && <span className="sidebar-lock">🔒</span>}
                   </>
+                )}
+                {collapsed && item.badge && (
+                  <span className="sidebar-badge-sm">{item.badge > 9 ? "9+" : item.badge}</span>
                 )}
                 {collapsed && item.locked && (
                   <span className="sidebar-lock-sm">🔒</span>
@@ -162,8 +169,25 @@ function AppLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [alertCount, setAlertCount] = useState(0);
 
-  const navGroups = buildNavItems(user);
+  // Polling badge alert ogni 5 minuti
+  const loadAlertCount = useCallback(async () => {
+    try {
+      const res = await apiService.getAlertCount();
+      setAlertCount(res.total || 0);
+    } catch {
+      // non bloccante
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAlertCount();
+    const interval = setInterval(loadAlertCount, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [loadAlertCount]);
+
+  const navGroups = buildNavItems(user, alertCount);
 
   return (
     <div className={`app-layout${sidebarCollapsed ? " sidebar-is-collapsed" : ""}`}>

@@ -3,7 +3,7 @@
 
 // Versione cache: aggiornare BUILD_DATE ad ogni deploy per invalidare cache vecchie
 // Netlify inietta automaticamente hash nei bundle JS/CSS — questo invalida l'app shell
-const BUILD_DATE = '2026-04-10T03:27:51.169Z';
+const BUILD_DATE = '2026-04-10T19:04:19.789Z';
 const CACHE_NAME = `sgq-iso9001-${BUILD_DATE}`;
 const API_CACHE = 'sgq-api-v1';
 

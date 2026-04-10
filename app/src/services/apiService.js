@@ -943,6 +943,18 @@ class ApiService {
     async archiveDocument(id) {
         return this.delete(`/documents/${id}`);
     }
+
+    // ─── Alert Engine ────────────────────────────────────────────────────────
+
+    /** Conteggio alert urgenti per badge sidebar */
+    async getAlertCount() {
+        return this.get('/alerts/count');
+    }
+
+    /** Lista dettagliata alert urgenti per HomePage */
+    async getAlerts(days = 30) {
+        return this.get(`/alerts?days=${days}`);
+    }
 }
 
 /**

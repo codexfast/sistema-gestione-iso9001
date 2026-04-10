@@ -51,3 +51,11 @@ coverage/
 
 # Database backups (contengono dati sensibili)
 database/backups/
+
+# File Google Drive
+*.gdoc
+*.gsheet
+*.gslides
+*.gform
+.cursor/mcp.json
+.cursorrrules

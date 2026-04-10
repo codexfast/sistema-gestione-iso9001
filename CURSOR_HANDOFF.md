@@ -582,18 +582,50 @@ Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 
 ---
 
+### ✅ SPRINT 1 — Bug fix post-test deputy (10/04/2026)
+
+| Bug | Priorità | Fix applicato |
+|---|---|---|
+| BUG-001: wizard step 2 non mostrato | 🔴 Critico | Rimosso tag `<form>`, submit ora esclusivamente via `onClick` |
+| BUG-002: tab Priorità sempre "Tutto in ordine" | 🔴 Critico | Risolto a cascata dal BUG-001 |
+| BUG-003: inline confirm stile diverso da spec | 🟡 Medio | Tabella Catalogo ora usa stesso pannello giallo della tab Priorità |
+| BUG-004: data mostra `0020/05/2026` | 🟢 Basso | Parsing ISO string diretto (YYYY-MM-DD) senza `new Date()` |
+
+Commit fix: `0300277`
+
+---
+
 ### 🚀 SPRINT 2 — Alert Engine (PROSSIMO — prima cosa da fare)
 
-**Obiettivo**: notifiche email automatiche per scadenze imminenti.
+**Obiettivo**: badge alert in sidebar + cron job email giornaliero per scadenze documenti.
 
 **Passi**:
-1. **Cron job backend** (`node-schedule`): ogni giorno alle 08:00 controlla `document_registry` per scadenze entro 30gg
-2. **Nodemailer**: configurazione SMTP + template email alert con lista documenti in scadenza
-3. **Tabella `notifications_config`**: destinatari e soglie per organizzazione (migration 030)
-4. **Badge alert** nell'AppLayout sidebar: mostra conteggio documenti urgenti in tempo reale
-5. **Pagina Settings → Alert**: UI per configurare email e soglie per ogni azienda
+1. **Migration 030**: tabella `notifications_config` (destinatari email + soglie per organizzazione)
+2. **Backend `alert.controller.js`**: endpoint `GET /alerts/count` (badge) + `GET /alerts` (lista)
+3. **Backend `alertScheduler.js`**: cron job `node-schedule` — ogni giorno ore 08:00, query scaduti/in scadenza, email con `nodemailer`
+4. **Frontend badge**: `AppLayout.jsx` → voce "Documenti" mostra badge rosso con conteggio urgenti
+5. **Nuovi package**: `node-schedule` + `nodemailer` → installare su VPS dopo deploy
 
-**Attenzione**: NON toccare DocumentRegistry o DocumentForm — funzionano correttamente.
+**Attenzione**: NON toccare DocumentRegistry, DocumentForm, backend esistente — funzionano correttamente.
+
+---
+
+### 🚀 SPRINT 2B — Gestione file allegati (dopo Sprint 2)
+
+**Decisione architetturale (10/04/2026)**:
+
+- **Storage**: filesystem VPS — cartella `/uploads/{org_id}/{company_id}/{doc_id}/`
+- **Formati accettati**: qualsiasi, eccetto eseguibili (`.exe .bat .cmd .ps1 .sh .msi`) per sicurezza server
+- **Dimensione**: nessun limite fisso — configurabile per organizzazione, bounded solo dallo spazio disco VPS
+- **Lettura**: PDF → viewer browser nativo; altri formati → download, l'OS sceglie l'app
+- **Modifica**: flusso check-out (download + lock) → modifica locale con editor utente → check-in (upload nuova revisione)
+- **Cancellazione fisica**: non prevista — i documenti obsoleti restano per il periodo di retention
+
+**Passi**:
+1. Migration 031: `file_path`, `file_size`, `mime_type`, `version` su tabella `attachments` + collegamento a `document_registry`
+2. Backend: endpoint upload (multer, nessun filtro MIME tranne blacklist eseguibili) + download autenticato
+3. Frontend: pulsante "📄 Visualizza/Scarica" + dialog "🔄 Nuova revisione" con file picker
+4. Configurazione Nginx: `client_max_body_size` adeguato allo spazio disco disponibile
 
 ---
 
