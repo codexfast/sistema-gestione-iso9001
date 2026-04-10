@@ -44,9 +44,17 @@ const DOC_STATUS_LABELS = {
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("it-IT", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-  });
+  // Estrae YYYY-MM-DD evitando problemi di timezone/parsing ISO
+  const s = typeof dateStr === "string" ? dateStr : String(dateStr);
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, y, m, d] = match;
+    return `${d}/${m}/${y}`;
+  }
+  // Fallback per formati non standard
+  const dt = new Date(dateStr);
+  if (isNaN(dt.getTime())) return "—";
+  return dt.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function daysUntil(dateStr) {
@@ -384,11 +392,12 @@ function CatalogView({
                       </td>
                       <td className="col-company">{doc.company_name || "—"}</td>
                       <td className="col-responsible">{doc.responsible || "—"}</td>
-                      <td className="col-actions">
+                      <td className="col-actions" style={isConfirming ? { minWidth: 220 } : {}}>
                         {isConfirming ? (
-                          <div className="inline-confirm-row">
-                            <button className="btn-confirm-yes-sm" onClick={() => onConfirmArchive(doc.id)}>Sì</button>
-                            <button className="btn-confirm-no-sm" onClick={onCancelArchive}>No</button>
+                          <div className="inline-confirm">
+                            <span className="inline-confirm-text">Archiviare?</span>
+                            <button className="btn-confirm-yes" onClick={() => onConfirmArchive(doc.id)}>Sì</button>
+                            <button className="btn-confirm-no" onClick={onCancelArchive}>No</button>
                           </div>
                         ) : (
                           <>

@@ -3,6 +3,10 @@
  * Sprint 1 UX:
  *   - Nuovo documento: wizard 2 passi (essenziali → dettagli)
  *   - Modifica: form completo in una sola schermata
+ *
+ * Fix BUG-001: footer spostato fuori dal tag <form> per evitare
+ * submit involontaria al click di "Avanti →" in alcuni browser.
+ * La submit ora è gestita esplicitamente tramite onClick.
  */
 
 import React, { useState, useEffect } from "react";
@@ -34,7 +38,7 @@ function toDateInput(val) {
   return val.substring(0, 10);
 }
 
-// ─── Indicatore step (solo wizard nuovo documento) ────────────────────────────
+// ─── Indicatore step ──────────────────────────────────────────────────────────
 
 function StepIndicator({ step }) {
   return (
@@ -86,9 +90,9 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
   const handleChange = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  // Validazione passo 1 (wizard)
   const step1Valid = form.title.trim().length > 0;
 
+  // Avanza dal passo 1 al passo 2 — NON salva nulla
   const handleNext = () => {
     if (!step1Valid) { setError("Il titolo è obbligatorio."); return; }
     setError(null);
@@ -97,8 +101,8 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
 
   const handleBack = () => { setError(null); setStep(1); };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Salvataggio effettivo (chiamato solo dal pulsante "Crea" o "Salva modifiche")
+  const handleSave = async () => {
     if (!form.title.trim()) { setError("Il titolo è obbligatorio."); return; }
     setSaving(true);
     setError(null);
@@ -157,6 +161,7 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
           value={form.title}
           onChange={handleChange("title")}
           autoFocus={!isEdit}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleNext(); } }}
         />
       </div>
 
@@ -168,6 +173,7 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
             placeholder="es. PG-01, WPS-141-001"
             value={form.doc_code}
             onChange={handleChange("doc_code")}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleNext(); } }}
           />
         </div>
         {companies.length > 0 && (
@@ -187,7 +193,6 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
 
   const renderStep2orEdit = () => (
     <div className="docform-step-content">
-      {/* Se modifica: mostra anche tipo, titolo, codice, azienda nella stessa schermata */}
       {isEdit && (
         <>
           <div className="docform-field">
@@ -318,20 +323,25 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
     </div>
   );
 
+  // ─── Render ────────────────────────────────────────────────────────────────
+  // Il footer è FUORI dal tag <form> per evitare submit involontaria.
+  // La submit è gestita esclusivamente tramite onClick su "Crea documento" / "Salva modifiche".
+
   return (
     <div className="docform-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="docform-modal">
+
         {/* Header */}
         <div className="docform-header">
           <h3>{isEdit ? `Modifica — ${doc.title}` : "Nuovo documento"}</h3>
-          <button className="docform-close" onClick={onClose} aria-label="Chiudi">✕</button>
+          <button className="docform-close" type="button" onClick={onClose} aria-label="Chiudi">✕</button>
         </div>
 
         {/* Indicatore wizard (solo nuovo) */}
         {!isEdit && <StepIndicator step={step} />}
 
-        {/* Corpo */}
-        <form className="docform-body" onSubmit={handleSubmit} noValidate>
+        {/* Corpo — div invece di form, niente submit automatica */}
+        <div className="docform-body">
           {!isEdit
             ? (step === 1 ? renderStep1() : renderStep2orEdit())
             : renderStep2orEdit()
@@ -339,38 +349,51 @@ function DocumentForm({ doc, companies, standards, onSave, onClose }) {
 
           {/* Errore */}
           {error && <div className="docform-error">⚠️ {error}</div>}
+        </div>
 
-          {/* Footer */}
-          <div className="docform-footer">
-            {!isEdit && step === 2 ? (
-              <>
-                <button type="button" className="btn-cancel" onClick={handleBack}>← Indietro</button>
-                <button type="submit" className="btn-save" disabled={saving}>
-                  {saving ? "Salvataggio..." : "Crea documento"}
-                </button>
-              </>
-            ) : !isEdit && step === 1 ? (
-              <>
-                <button type="button" className="btn-cancel" onClick={onClose}>Annulla</button>
-                <button
-                  type="button"
-                  className="btn-save"
-                  onClick={handleNext}
-                  disabled={!step1Valid}
-                >
-                  Avanti →
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" className="btn-cancel" onClick={onClose} disabled={saving}>Annulla</button>
-                <button type="submit" className="btn-save" disabled={saving}>
-                  {saving ? "Salvataggio..." : "Salva modifiche"}
-                </button>
-              </>
-            )}
-          </div>
-        </form>
+        {/* Footer — fuori dal body scrollabile, fuori da qualsiasi form */}
+        <div className="docform-footer">
+          {!isEdit && step === 1 && (
+            <>
+              <button type="button" className="btn-cancel" onClick={onClose}>Annulla</button>
+              <button
+                type="button"
+                className="btn-save"
+                onClick={handleNext}
+                disabled={!step1Valid}
+              >
+                Avanti →
+              </button>
+            </>
+          )}
+          {!isEdit && step === 2 && (
+            <>
+              <button type="button" className="btn-cancel" onClick={handleBack}>← Indietro</button>
+              <button
+                type="button"
+                className="btn-save"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Salvataggio..." : "Crea documento"}
+              </button>
+            </>
+          )}
+          {isEdit && (
+            <>
+              <button type="button" className="btn-cancel" onClick={onClose} disabled={saving}>Annulla</button>
+              <button
+                type="button"
+                className="btn-save"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Salvataggio..." : "Salva modifiche"}
+              </button>
+            </>
+          )}
+        </div>
+
       </div>
     </div>
   );
