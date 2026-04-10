@@ -1,4 +1,5 @@
 # 🤖 CURSOR AI AGENT — Handoff Document
+
 # Sistema Gestione ISO 9001 / 14001 / 45001
 
 > **Data handoff**: 2026-03-04 (sessione odierna)
@@ -19,12 +20,12 @@
 **Ordine di lettura obbligatorio all'inizio di ogni sessione**:
 
 1. Questo file (`CURSOR_HANDOFF.md`) — stato, decisioni, trappole
-2. [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) — stack, infrastruttura, regole operative
-3. [`docs/PROJECT_ROADMAP.md`](docs/PROJECT_ROADMAP.md) — stato componenti, backlog
-4. [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — schema DB critico
-5. [`docs/BACKEND_API.md`](docs/BACKEND_API.md) — endpoint attivi
-6. [`docs/GUIDA_CONSOLIDATA.md`](docs/GUIDA_CONSOLIDATA.md) — esperienza operativa (deploy, Word, sync); storico in `docs/archive/sessions/`
-7. [`docs/open_points.md`](docs/open_points.md) — bug aperti + risolti con root cause
+2. `[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)` — stack, infrastruttura, regole operative
+3. `[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md)` — stato componenti, backlog
+4. `[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)` — schema DB critico
+5. `[docs/BACKEND_API.md](docs/BACKEND_API.md)` — endpoint attivi
+6. `[docs/GUIDA_CONSOLIDATA.md](docs/GUIDA_CONSOLIDATA.md)` — esperienza operativa (deploy, Word, sync); storico in `docs/archive/sessions/`
+7. `[docs/open_points.md](docs/open_points.md)` — bug aperti + risolti con root cause
 
 ---
 
@@ -51,26 +52,30 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 
 ### ✅ Completato in sessione 04/03/2026 — FASE 0 CHIUSA (commit `c4da815`)
 
-| Fix/Feature | File | Descrizione |
-|---|---|---|
-| Auto-init checklist ISO 14001/45001 | `AuditAccordionLayout.jsx` | `STANDARD_INIT_MAP` scalabile — fix checklist vuota dopo reload (bug 0.2) |
-| Retry rilievi pendenti | `PendingIssuesCascade.jsx` + `.css` | Pulsante Riprova per errori transitori rate-limiter/rete (bug 0.1) |
-| Backend committato | `audit.controller.js` | Fix multi-standard già deployato, ora anche su git (commit `696df52`) |
-| Word export multi-standard | `wordExportHelpers.js` | Intestazioni per standard, `extractSectionNum` corretto per ISO 14001 |
-| ExportPanel titolo dinamico | `ExportPanel.jsx` | Titolo mostra standard effettivi (es. "ISO_9001 + ISO_14001") |
-| ADR-004 auth mobile | — | **GIÀ IMPLEMENTATA** — `apiService.js` usa già localStorage + Bearer token |
-| Rilievi pendenti reali in Word | `ExportPanel.jsx` | **GIÀ IMPLEMENTATA** — usa `checkReaudit` + `getNcResponses` |
+
+| Fix/Feature                         | File                                | Descrizione                                                                |
+| ----------------------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| Auto-init checklist ISO 14001/45001 | `AuditAccordionLayout.jsx`          | `STANDARD_INIT_MAP` scalabile — fix checklist vuota dopo reload (bug 0.2)  |
+| Retry rilievi pendenti              | `PendingIssuesCascade.jsx` + `.css` | Pulsante Riprova per errori transitori rate-limiter/rete (bug 0.1)         |
+| Backend committato                  | `audit.controller.js`               | Fix multi-standard già deployato, ora anche su git (commit `696df52`)      |
+| Word export multi-standard          | `wordExportHelpers.js`              | Intestazioni per standard, `extractSectionNum` corretto per ISO 14001      |
+| ExportPanel titolo dinamico         | `ExportPanel.jsx`                   | Titolo mostra standard effettivi (es. "ISO_9001 + ISO_14001")              |
+| ADR-004 auth mobile                 | —                                   | **GIÀ IMPLEMENTATA** — `apiService.js` usa già localStorage + Bearer token |
+| Rilievi pendenti reali in Word      | `ExportPanel.jsx`                   | **GIÀ IMPLEMENTATA** — usa `checkReaudit` + `getNcResponses`               |
+
 
 **Commit history sessione**: `531dc1a` → `696df52` → `c4da815`
 
 ### ✅ Completato in sessione 03/03/2026 (commit `6317215`)
 
-| Fix | File | Descrizione |
-|---|---|---|
-| auditConverter array/string | `auditConverter.js` | `standards` gestito sia come stringa CSV (lista) che array oggetti (dettaglio) |
-| Checkbox standard | `GeneralDataSection.jsx` | Normalizza `ISO_9001_2015` → `ISO_9001` per match corretto con `selectedStandards` |
-| Blocco deselezione | `GeneralDataSection.jsx` + `AuditAccordionLayout.jsx` | Standard con dati esistenti non deselezionabili (prop `standardsWithData`) |
-| Sync multi-standard | `syncService.js` + `audit.controller.js` | Invia `standard_ids:[1,2]` — aggiorna `audit_standards` per tutti gli standard |
+
+| Fix                         | File                                                  | Descrizione                                                                        |
+| --------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| auditConverter array/string | `auditConverter.js`                                   | `standards` gestito sia come stringa CSV (lista) che array oggetti (dettaglio)     |
+| Checkbox standard           | `GeneralDataSection.jsx`                              | Normalizza `ISO_9001_2015` → `ISO_9001` per match corretto con `selectedStandards` |
+| Blocco deselezione          | `GeneralDataSection.jsx` + `AuditAccordionLayout.jsx` | Standard con dati esistenti non deselezionabili (prop `standardsWithData`)         |
+| Sync multi-standard         | `syncService.js` + `audit.controller.js`              | Invia `standard_ids:[1,2]` — aggiorna `audit_standards` per tutti gli standard     |
+
 
 **Deploy backend eseguito**: `audit.controller.js` caricato via pscp + `systemctl restart sgq-backend` (systemd gestisce il backend, NON usare `fuser` da solo).
 
@@ -78,20 +83,22 @@ File Allegati                   → /var/www/sgq-backend/uploads/{year}/{month}/
 
 ### ✅ Completato e Deployato su VPS + Netlify
 
-| Area | Componenti/File chiave |
-|---|---|
-| Auth JWT | `auth.controller.js`, `AuthContext.jsx`, `apiService.js` |
-| Audit CRUD | `audit.controller.js`, `AuditSelector.jsx`, `Dashboard.jsx` |
-| Checklist ISO 9001:2015 | 35 domande da DB (standard_id=1, questionId 87–121) |
+
+| Area                     | Componenti/File chiave                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| Auth JWT                 | `auth.controller.js`, `AuthContext.jsx`, `apiService.js`                            |
+| Audit CRUD               | `audit.controller.js`, `AuditSelector.jsx`, `Dashboard.jsx`                         |
+| Checklist ISO 9001:2015  | 35 domande da DB (standard_id=1, questionId 87–121)                                 |
 | Checklist ISO 14001:2015 | 46 domande da DB (standard_id=2, questionId 122–167, sezioni `14001_s4`/`14001_s5`) |
-| 6 stati conformità | C / NC / OSS / OM / NA / NV — CHECK constraint fisso in DB |
-| Sync offline-first | `syncService.js`, `IndexedDBProvider.js`, `StorageContext.jsx` |
-| Allegati | `AttachmentSection.jsx`, `AttachmentPreview.jsx`, `attachment.controller.js` |
-| Rilievi pendenti | `PendingIssuesCascade.jsx`, `pending_issues` table (migration 018) |
-| Re-audit | `checkReaudit` endpoint deployato, `AuditSelector.jsx` chiama l'API |
-| Export Word | `wordExport.js` — template-based su `ISO9001-audit-report.docx` |
-| Multi-standard UI | Tab checklist ISO 9001 + ISO 14001 nell'accordion |
-| Fix selezione standard | `norms→selectedStandards`, accordion `_2015`/`_2018`, `standard_id` intero in sync |
+| 6 stati conformità       | C / NC / OSS / OM / NA / NV — CHECK constraint fisso in DB                          |
+| Sync offline-first       | `syncService.js`, `IndexedDBProvider.js`, `StorageContext.jsx`                      |
+| Allegati                 | `AttachmentSection.jsx`, `AttachmentPreview.jsx`, `attachment.controller.js`        |
+| Rilievi pendenti         | `PendingIssuesCascade.jsx`, `pending_issues` table (migration 018)                  |
+| Re-audit                 | `checkReaudit` endpoint deployato, `AuditSelector.jsx` chiama l'API                 |
+| Export Word              | `wordExport.js` — template-based su `ISO9001-audit-report.docx`                     |
+| Multi-standard UI        | Tab checklist ISO 9001 + ISO 14001 nell'accordion                                   |
+| Fix selezione standard   | `norms→selectedStandards`, accordion `_2015`/`_2018`, `standard_id` intero in sync  |
+
 
 ### 🔲 Backlog ordinato per priorità
 
@@ -103,30 +110,36 @@ Tutti i bug e feature di Fase 0 sono chiusi. Nessun task ALTA in sospeso.
 
 #### 🟡 MEDIA
 
-| # | Task | File coinvolti | Note |
-|---|---|---|---|
-| 5 | **SyncService offline allegati** | `syncService.js`, `IndexedDBProvider.js` (v3), `useAttachmentManager.js` | Store `attachments` mancante in IndexedDB |
-| 6 | **Seed ISO 45001** | `database/migrations/019_seed_iso45001.sql` | Stesso pattern di `migration-012.js` |
+
+| #   | Task                             | File coinvolti                                                           | Note                                      |
+| --- | -------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------- |
+| 5   | **SyncService offline allegati** | `syncService.js`, `IndexedDBProvider.js` (v3), `useAttachmentManager.js` | Store `attachments` mancante in IndexedDB |
+| 6   | **Seed ISO 45001**               | `database/migrations/019_seed_iso45001.sql`                              | Stesso pattern di `migration-012.js`      |
+
 
 #### 🟡 MEDIA — Nuovi requisiti (03/03/2026)
 
-| # | Task | File coinvolti | Note |
-|---|---|---|---|
-| 6 | **Audit locking — accesso concorrente** | `audit.controller.js`, nuovo `AuditLockBanner.jsx` | Due utenti non possono modificare lo stesso audit contemporaneamente → pessimistic lock con TTL + notifica visiva |
-| 7 | **Offline resilience Android** | `syncService.js`, `IndexedDBProvider.js`, `useAttachmentManager.js` | Su Android: quota 50MB IndexedDB, Service Worker limitato, File API assente → gestione esplicita errori + feedback utente |
+
+| #   | Task                                    | File coinvolti                                                      | Note                                                                                                                      |
+| --- | --------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 6   | **Audit locking — accesso concorrente** | `audit.controller.js`, nuovo `AuditLockBanner.jsx`                  | Due utenti non possono modificare lo stesso audit contemporaneamente → pessimistic lock con TTL + notifica visiva         |
+| 7   | **Offline resilience Android**          | `syncService.js`, `IndexedDBProvider.js`, `useAttachmentManager.js` | Su Android: quota 50MB IndexedDB, Service Worker limitato, File API assente → gestione esplicita errori + feedback utente |
+
 
 #### 🟢 BASSA
 
-| # | Task | Note |
-|---|---|---|
-| 8 | Multi-tab sync logout | `AuthContext.jsx` — `window.addEventListener('storage', ...)` |
-| 9 | Auto-logout inattività 4h | `AuthContext.jsx` — `setTimeout` reset su eventi utente |
-| 10 | CSP header | `app/index.html` |
-| 11 | Refresh token automatico | interceptor Axios 401 → `POST /auth/refresh` |
-| 12 | Email alert NC scadute | cron job backend |
-| 13 | Nginx porta 443 | prerequisito per Office Online preview Word/Excel |
-| 14 | Allineamento `/audits` vs `/audits/sync` | `/audits` usa `standard_ids[]`, `/audits/sync` usa `standard_id` singolo |
-| 15 | Deprecare `audits.standard_id` | → solo `audit_standards` junction table |
+
+| #   | Task                                     | Note                                                                     |
+| --- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| 8   | Multi-tab sync logout                    | `AuthContext.jsx` — `window.addEventListener('storage', ...)`            |
+| 9   | Auto-logout inattività 4h                | `AuthContext.jsx` — `setTimeout` reset su eventi utente                  |
+| 10  | CSP header                               | `app/index.html`                                                         |
+| 11  | Refresh token automatico                 | interceptor Axios 401 → `POST /auth/refresh`                             |
+| 12  | Email alert NC scadute                   | cron job backend                                                         |
+| 13  | Nginx porta 443                          | prerequisito per Office Online preview Word/Excel                        |
+| 14  | Allineamento `/audits` vs `/audits/sync` | `/audits` usa `standard_ids[]`, `/audits/sync` usa `standard_id` singolo |
+| 15  | Deprecare `audits.standard_id`           | → solo `audit_standards` junction table                                  |
+
 
 ---
 
@@ -136,9 +149,10 @@ Tutti i bug e feature di Fase 0 sono chiusi. Nessun task ALTA in sospeso.
 
 **Problema**: Android PWA standalone blocca cookie httpOnly (SameSite policy) → loop login infinito.  
 **Soluzione adottata**: JWT anche in `localStorage` + `Authorization: Bearer` header.  
-**Dettaglio completo**: [`docs/adr/ADR-004-mobile-auth-localstorage.md`](docs/adr/ADR-004-mobile-auth-localstorage.md)
+**Dettaglio completo**: `[docs/adr/ADR-004-mobile-auth-localstorage.md](docs/adr/ADR-004-mobile-auth-localstorage.md)`
 
 **TODO da implementare**:
+
 - `auth.controller.js` → aggiungere `token` in response body (mantenere cookie per desktop)
 - `apiService.js` → `login()` salva in `localStorage`; interceptor aggiunge `Authorization: Bearer`
 - `AuthContext.jsx` → `validateStoredToken()` legge da localStorage; `logout()` pulisce localStorage
@@ -149,7 +163,7 @@ Tutti i bug e feature di Fase 0 sono chiusi. Nessun task ALTA in sospeso.
 
 **Preview allegati**: `fetch()` con header Authorization → blob → `URL.createObjectURL()`  
 **NON** usare `<img src="...?token=">` per CORS su porta 8443 da Netlify.  
-**Dettaglio completo**: [`docs/adr/ADR-005-attachment-storage-strategy.md`](docs/adr/ADR-005-attachment-storage-strategy.md)
+**Dettaglio completo**: `[docs/adr/ADR-005-attachment-storage-strategy.md](docs/adr/ADR-005-attachment-storage-strategy.md)`
 
 ```javascript
 // ✅ CORRETTO
@@ -177,6 +191,7 @@ setTimeout(() => URL.revokeObjectURL(url), 10000);
 ### Template Word — uno per sistema (decisione 04/03/2026)
 
 Ogni standard avrà **il proprio template** e la propria tab nell'UI:
+
 - ISO 9001 → `ISO9001-audit-report.docx` (versione attuale da ripristinare a solo ISO 9001)
 - ISO 14001 → template da estrarre da file sorgente utente
 - ISO 45001 → template da estrarre da file sorgente utente
@@ -193,13 +208,14 @@ Lib:      docxtemplater + pizzip    ← NON il package npm "docx"
 Pattern:  {segnaposto} per scalari, CHECKLIST_MARKER/RILIEVI_MARKER per OOXML injection
 ```
 
-Vedere [`FASE_8_EXPORT_WORD.md`](FASE_8_EXPORT_WORD.md) per la spec completa.
+Vedere `[FASE_8_EXPORT_WORD.md](FASE_8_EXPORT_WORD.md)` per la spec completa.
 
 ---
 
 ### Coerenza standard_id (contesto tecnico decisioni 01/03/2026)
 
 4 bug corretti in commit `9894ed5` (dettaglio in `docs/archive/sessions/SESSION_NOTES_20260301.md`):
+
 1. `formData.norms` non mappato a `selectedStandards` nel modal creazione
 2. Accordion accordion checklist ISO 14001 non visibile con codice `ISO_14001_2015`
 3. `backendToFrontend` restituiva formato inconsistente senza sfruttare junction table
@@ -237,13 +253,15 @@ display_order, is_mandatory, is_active, created_at, updated_at, standard_id
 
 **Migration history** (vedi `docs/DATABASE_SCHEMA.md`):
 
-| Migration | Descrizione | Stato |
-|---|---|---|
-| 001-010 | Schema base, checklist, multi-standard | ✅ Eseguita |
-| 011-016 | Response history, trigger, email log | ✅ Eseguita |
-| 017 | `attachments.question_id` + `attachment_uuid` | ✅ Eseguita |
-| 018 | Tabella `pending_issues` con FK NO ACTION su `source_response_id` | ✅ Eseguita |
-| 019 | Seed ISO 45001 `checklist_questions` | 🔲 Da creare |
+
+| Migration | Descrizione                                                       | Stato        |
+| --------- | ----------------------------------------------------------------- | ------------ |
+| 001-010   | Schema base, checklist, multi-standard                            | ✅ Eseguita   |
+| 011-016   | Response history, trigger, email log                              | ✅ Eseguita   |
+| 017       | `attachments.question_id` + `attachment_uuid`                     | ✅ Eseguita   |
+| 018       | Tabella `pending_issues` con FK NO ACTION su `source_response_id` | ✅ Eseguita   |
+| 019       | Seed ISO 45001 `checklist_questions`                              | 🔲 Da creare |
+
 
 ---
 
@@ -287,12 +305,14 @@ GET    /standards/:id/questions           → domande checklist
 
 ## 🖥️ INFRASTRUTTURA
 
-| Risorsa | Dettaglio |
-|---|---|
-| SSH | `ssh spascarella@www.fr-busato.it -p 1122` pwd: `Sistemi@2026` |
-| Backend path | `/var/www/sgq-backend/` |
-| Log backend | `/var/www/sgq-backend/app.log` |
-| Upload path | `/var/www/sgq-backend/uploads/{year}/{month}/` |
+
+| Risorsa      | Dettaglio                                                      |
+| ------------ | -------------------------------------------------------------- |
+| SSH          | `ssh spascarella@www.fr-busato.it -p 1122` pwd: `Sistemi@2026` |
+| Backend path | `/var/www/sgq-backend/`                                        |
+| Log backend  | `/var/www/sgq-backend/app.log`                                 |
+| Upload path  | `/var/www/sgq-backend/uploads/{year}/{month}/`                 |
+
 
 ### Restart Backend (NO `;` dopo `fuser`)
 
@@ -402,6 +422,7 @@ ARCHITETTURA_ESRS_PWA_PER_AI_AGENT.md  ← data model audit completo
 ## 🏛️ VISIONE STRATEGICA — SaaS Multi-Tenant (decisione 03/03/2026)
 
 ### Modello di business
+
 ```
 QS Studio (admin globale)
   └── Auditor/Studio consulenza (nostro cliente, paga abbonamento per standard)
@@ -409,23 +430,30 @@ QS Studio (admin globale)
 ```
 
 ### Approccio di sviluppo: Dark Launch (feature flag per tab)
+
 Ogni nuovo modulo (standard, anagrafica, checklist libera) viene sviluppato come **tab nascosta**:
+
 - Visibile solo agli admin QS Studio durante sviluppo e test
 - Rilasciata agli auditor solo quando stabile e collaudata
 - Zero interruzioni all'operatività corrente
 
 ### Roadmap fasi (dettaglio in `docs/PROJECT_ROADMAP.md`)
-| Fase | Contenuto | Stima |
-|---|---|---|
-| **0** | Chiusura bug minori correnti | 1-2 settimane |
-| **1** | DB multi-tenant + RBAC + anagrafica aziende | 6-8 settimane |
-| **2** | UI a tab per standard + feature flags + nuova UX | 6-8 settimane |
-| **3** | Sistema licenze/abbonamenti per standard | 3-4 settimane |
-| **4** | Checklist libera + gap analysis + query conformità | 6-8 settimane |
-| **5** | Workflow implementazione SGQ (post-audit) | 8-12 settimane |
+
+
+| Fase  | Contenuto                                          | Stima          |
+| ----- | -------------------------------------------------- | -------------- |
+| **0** | Chiusura bug minori correnti                       | 1-2 settimane  |
+| **1** | DB multi-tenant + RBAC + anagrafica aziende        | 6-8 settimane  |
+| **2** | UI a tab per standard + feature flags + nuova UX   | 6-8 settimane  |
+| **3** | Sistema licenze/abbonamenti per standard           | 3-4 settimane  |
+| **4** | Checklist libera + gap analysis + query conformità | 6-8 settimane  |
+| **5** | Workflow implementazione SGQ (post-audit)          | 8-12 settimane |
+
 
 ### Decisione architetturale: backend systemd
+
 Il backend gira come **servizio systemd** (`sgq-backend.service`).
+
 - ✅ Restart corretto: `sudo systemctl restart sgq-backend.service`
 - ❌ NON usare `fuser -k 3000/tcp` da solo — systemd lo rilancia immediatamente
 - Comando completo: `echo 'Sistemi@2026' | sudo -S systemctl restart sgq-backend.service`
@@ -434,21 +462,23 @@ Il backend gira come **servizio systemd** (`sgq-backend.service`).
 
 ## ⚠️ TRAPPOLE CRITICHE (da NON ripetere)
 
-| Trappola | Dettaglio |
-|---|---|
-| `tail -N file` dopo `fuser` | NON funziona su questa shell SSH → usare `cat` |
-| Concatenare restart con `;` | `fuser -k 3000/tcp ; nohup...` → il nohup non parte → comandi su righe separate |
-| Restart con fuser diretto | Il backend gira su **systemd** → `fuser -k` viene ignorato (systemd rilancia) → usare `systemctl restart` |
-| SSH da shell Cursor | La porta 1122 può essere bloccata dalla rete — se timeout, usare PowerShell esterno o verificare con `Test-NetConnection -Port 1122` |
-| `clause_number` in query | La colonna NON esiste → usare `section_code` (errore 500 commit `a298190`) |
-| `<img src="...?token=">` | CORS blocca su porta 8443 da Netlify → usare `fetch()` + blob |
-| Package npm `docx` | Il progetto usa `docxtemplater` + `pizzip` — sono diversi! |
-| Modificare conformity_status | CHECK constraint fisso: solo `C NC OSS OM NA NV NULL` |
-| `question_type` minuscolo | Il DB usa MAIUSCOLO: `'TEXT'` non `'text'` |
-| `checklist_sections.section_code` | `VARCHAR(10)` → max 10 char: `'14001_s4'` ok, `'iso14001_s4'` no |
-| Migration 010 doppia esecuzione | Il DB ha già le 35 domande ISO 9001 — verificare con COUNT prima di rieseguire |
-| `standard_id` vs `standard_ids` | `/audits` (create) usa array `standard_ids: [1,2]`; `/audits/sync` usa scalare `standard_id: 1` |
-| Rate limiter 429 | Dopo molte request → attendere 15 min o riavviare backend |
+
+| Trappola                          | Dettaglio                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `tail -N file` dopo `fuser`       | NON funziona su questa shell SSH → usare `cat`                                                                                       |
+| Concatenare restart con `;`       | `fuser -k 3000/tcp ; nohup...` → il nohup non parte → comandi su righe separate                                                      |
+| Restart con fuser diretto         | Il backend gira su **systemd** → `fuser -k` viene ignorato (systemd rilancia) → usare `systemctl restart`                            |
+| SSH da shell Cursor               | La porta 1122 può essere bloccata dalla rete — se timeout, usare PowerShell esterno o verificare con `Test-NetConnection -Port 1122` |
+| `clause_number` in query          | La colonna NON esiste → usare `section_code` (errore 500 commit `a298190`)                                                           |
+| `<img src="...?token=">`          | CORS blocca su porta 8443 da Netlify → usare `fetch()` + blob                                                                        |
+| Package npm `docx`                | Il progetto usa `docxtemplater` + `pizzip` — sono diversi!                                                                           |
+| Modificare conformity_status      | CHECK constraint fisso: solo `C NC OSS OM NA NV NULL`                                                                                |
+| `question_type` minuscolo         | Il DB usa MAIUSCOLO: `'TEXT'` non `'text'`                                                                                           |
+| `checklist_sections.section_code` | `VARCHAR(10)` → max 10 char: `'14001_s4'` ok, `'iso14001_s4'` no                                                                     |
+| Migration 010 doppia esecuzione   | Il DB ha già le 35 domande ISO 9001 — verificare con COUNT prima di rieseguire                                                       |
+| `standard_id` vs `standard_ids`   | `/audits` (create) usa array `standard_ids: [1,2]`; `/audits/sync` usa scalare `standard_id: 1`                                      |
+| Rate limiter 429                  | Dopo molte request → attendere 15 min o riavviare backend                                                                            |
+
 
 ---
 
@@ -494,15 +524,17 @@ localStorage.getItem('authToken');
 
 ### ✅ Sprint A — Step 1 COMPLETATO (05/04/2026)
 
-| Artefatto | Stato | Note |
-|---|---|---|
-| `database/migrations/029_document_registry.sql` | ✅ creato | Script SQL idempotente |
-| `backend/scripts/run-migration-029.js` | ✅ creato ed eseguito | Tabella creata su DB prod |
-| DB: tabella `document_registry` | ✅ in produzione | 22 col, 6 FK, 4 indici |
-| `backend/src/controllers/document.controller.js` | ✅ deployato | CRUD + stats + soft-delete |
-| `backend/src/routes/document.routes.js` | ✅ deployato | 6 endpoint |
-| `backend/src/server.js` | ✅ deployato | Route registrata |
-| Smoke test `/api/v1/documents` | ✅ 401 atteso | Route attiva e auth OK |
+
+| Artefatto                                        | Stato                | Note                       |
+| ------------------------------------------------ | -------------------- | -------------------------- |
+| `database/migrations/029_document_registry.sql`  | ✅ creato             | Script SQL idempotente     |
+| `backend/scripts/run-migration-029.js`           | ✅ creato ed eseguito | Tabella creata su DB prod  |
+| DB: tabella `document_registry`                  | ✅ in produzione      | 22 col, 6 FK, 4 indici     |
+| `backend/src/controllers/document.controller.js` | ✅ deployato          | CRUD + stats + soft-delete |
+| `backend/src/routes/document.routes.js`          | ✅ deployato          | 6 endpoint                 |
+| `backend/src/server.js`                          | ✅ deployato          | Route registrata           |
+| Smoke test `/api/v1/documents`                   | ✅ 401 atteso         | Route attiva e auth OK     |
+
 
 **Nota tecnica**: `database.json` (production) usato per le migration — NON `.env` (ha `#` in password che dotenv interpreta come commento).
 
@@ -516,15 +548,17 @@ UI DocumentRegistry deployata su Netlify: griglia documenti, filtri, semaforo sc
 
 ### ✅ SPRINT 0 — Navigation Foundation COMPLETATO (08/04/2026)
 
-| Artefatto | Stato | Note |
-|---|---|---|
-| `app/src/contexts/RouterContext.jsx` | ✅ creato | Router custom su History API, zero dipendenze npm |
-| `app/src/layouts/AppLayout.jsx` + `.css` | ✅ creato | Sidebar desktop 230px + bottom nav mobile 5 voci |
-| `app/src/pages/HomePage.jsx` + `.css` | ✅ creato | Dashboard "Cosa fare oggi": alert scadenze, NC, accesso rapido |
-| `app/src/components/ModuleLocked.jsx` + `.css` | ✅ creato | Schermata elegante per moduli non ancora attivi |
-| `app/src/App.jsx` | ✅ riscritto | Rimosso pattern viewMode → Routes con URL semantici |
-| Build Vite | ✅ 0 errori | 235 moduli, warning chunk size preesistente |
-| Commit `cacfa6b` + push | ✅ su main | Netlify auto-deploy attivo |
+
+| Artefatto                                      | Stato       | Note                                                           |
+| ---------------------------------------------- | ----------- | -------------------------------------------------------------- |
+| `app/src/contexts/RouterContext.jsx`           | ✅ creato    | Router custom su History API, zero dipendenze npm              |
+| `app/src/layouts/AppLayout.jsx` + `.css`       | ✅ creato    | Sidebar desktop 230px + bottom nav mobile 5 voci               |
+| `app/src/pages/HomePage.jsx` + `.css`          | ✅ creato    | Dashboard "Cosa fare oggi": alert scadenze, NC, accesso rapido |
+| `app/src/components/ModuleLocked.jsx` + `.css` | ✅ creato    | Schermata elegante per moduli non ancora attivi                |
+| `app/src/App.jsx`                              | ✅ riscritto | Rimosso pattern viewMode → Routes con URL semantici            |
+| Build Vite                                     | ✅ 0 errori  | 235 moduli, warning chunk size preesistente                    |
+| Commit `cacfa6b` + push                        | ✅ su main   | Netlify auto-deploy attivo                                     |
+
 
 **Nota tecnica**: npm non riesce a installare su Google Drive (I/O lento per molti file piccoli).
 Il RouterContext custom è equivalente a React Router per tutte le funzionalità necessarie ora.
@@ -539,6 +573,7 @@ da una cartella locale (es. `C:\progetti\sgq-app`) e poi ricopiare `node_modules
 Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 
 **Passi**:
+
 1. `npm install react-router-dom` nella cartella `app/`
 2. Creare `app/src/layouts/AppLayout.jsx` + CSS — sidebar desktop (240px) + bottom nav mobile
 3. Creare `app/src/pages/HomePage.jsx` + CSS — dashboard "Cosa fare oggi" (alert scadenze, NC aperte, prossimi audit)
@@ -547,6 +582,7 @@ Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 6. Build + smoke + commit + push
 
 **Route map**:
+
 ```
 /           → HomePage (dashboard alert)
 /audit      → Dashboard (audit corrente — comportamento invariato)
@@ -569,14 +605,16 @@ Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 
 ### ✅ SPRINT 1 — Document Registry UX COMPLETATO (09/04/2026)
 
-| Artefatto | Stato | Note |
-|---|---|---|
-| `DocumentRegistry.jsx` | ✅ riscritto | Tab Priorità/Catalogo, export CSV, inline confirm, rimosso onBack |
-| `DocumentRegistry.css` | ✅ riscritto | Priority cards, tab switcher, catalog toolbar, inline confirm styles |
-| `DocumentForm.jsx` | ✅ riscritto | Wizard 2 passi per nuovo doc, form completo in modifica |
-| `DocumentForm.css` | ✅ aggiornato | Step indicator, doc-type chip grid, divider, required asterisk |
-| Build Vite | ✅ 0 errori | 235 moduli |
-| Commit `fe25fb7` + push | ✅ su main | Netlify auto-deploy attivo |
+
+| Artefatto               | Stato        | Note                                                                 |
+| ----------------------- | ------------ | -------------------------------------------------------------------- |
+| `DocumentRegistry.jsx`  | ✅ riscritto  | Tab Priorità/Catalogo, export CSV, inline confirm, rimosso onBack    |
+| `DocumentRegistry.css`  | ✅ riscritto  | Priority cards, tab switcher, catalog toolbar, inline confirm styles |
+| `DocumentForm.jsx`      | ✅ riscritto  | Wizard 2 passi per nuovo doc, form completo in modifica              |
+| `DocumentForm.css`      | ✅ aggiornato | Step indicator, doc-type chip grid, divider, required asterisk       |
+| Build Vite              | ✅ 0 errori   | 235 moduli                                                           |
+| Commit `fe25fb7` + push | ✅ su main    | Netlify auto-deploy attivo                                           |
+
 
 **Nota tecnica**: export CSV usa BOM UTF-8 (`\uFEFF`) — apre correttamente in Excel italiano con separatore `;`.
 
@@ -584,12 +622,14 @@ Senza questo, ogni modulo aggiunto rende App.jsx sempre più ingestibile.
 
 ### ✅ SPRINT 1 — Bug fix post-test deputy (10/04/2026)
 
-| Bug | Priorità | Fix applicato |
-|---|---|---|
-| BUG-001: wizard step 2 non mostrato | 🔴 Critico | Rimosso tag `<form>`, submit ora esclusivamente via `onClick` |
-| BUG-002: tab Priorità sempre "Tutto in ordine" | 🔴 Critico | Risolto a cascata dal BUG-001 |
-| BUG-003: inline confirm stile diverso da spec | 🟡 Medio | Tabella Catalogo ora usa stesso pannello giallo della tab Priorità |
-| BUG-004: data mostra `0020/05/2026` | 🟢 Basso | Parsing ISO string diretto (YYYY-MM-DD) senza `new Date()` |
+
+| Bug                                            | Priorità   | Fix applicato                                                      |
+| ---------------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| BUG-001: wizard step 2 non mostrato            | 🔴 Critico | Rimosso tag `<form>`, submit ora esclusivamente via `onClick`      |
+| BUG-002: tab Priorità sempre "Tutto in ordine" | 🔴 Critico | Risolto a cascata dal BUG-001                                      |
+| BUG-003: inline confirm stile diverso da spec  | 🟡 Medio   | Tabella Catalogo ora usa stesso pannello giallo della tab Priorità |
+| BUG-004: data mostra `0020/05/2026`            | 🟢 Basso   | Parsing ISO string diretto (YYYY-MM-DD) senza `new Date()`         |
+
 
 Commit fix: `0300277`
 
@@ -597,22 +637,25 @@ Commit fix: `0300277`
 
 ### ✅ SPRINT 2 — Alert Engine COMPLETATO (10/04/2026) — DEPLOY VPS PENDENTE
 
-| Artefatto | Stato | Note |
-|---|---|---|
-| `database/migrations/030_notifications_config.sql` | ✅ creato | Tabella config destinatari + soglie per organizzazione |
-| `backend/scripts/run-migration-030.js` | ✅ creato | Script esecuzione migration |
-| `backend/src/controllers/alert.controller.js` | ✅ creato | GET /alerts/count + GET /alerts |
-| `backend/src/routes/alert.routes.js` | ✅ creato | Route alert autenticate |
-| `backend/src/services/alertScheduler.js` | ✅ creato | Cron job 08:00 + template email HTML |
-| `backend/src/server.js` | ✅ aggiornato | alertRoutes + startAlertScheduler integrati |
-| `app/src/services/apiService.js` | ✅ aggiornato | getAlertCount() + getAlerts() |
-| `app/src/layouts/AppLayout.jsx` | ✅ aggiornato | Badge rosso su voce "Documenti" in sidebar |
-| `app/src/layouts/AppLayout.css` | ✅ aggiornato | Stili badge sidebar (espansa + collassata) |
-| Build Vite | ✅ 0 errori | 235 moduli |
-| Commit `c5bc2f8` + push | ✅ su main | Netlify auto-deploy frontend OK |
-| **Deploy backend VPS** | ⚠️ PENDENTE | SSH access denied — eseguire manualmente |
+
+| Artefatto                                          | Stato        | Note                                                   |
+| -------------------------------------------------- | ------------ | ------------------------------------------------------ |
+| `database/migrations/030_notifications_config.sql` | ✅ creato     | Tabella config destinatari + soglie per organizzazione |
+| `backend/scripts/run-migration-030.js`             | ✅ creato     | Script esecuzione migration                            |
+| `backend/src/controllers/alert.controller.js`      | ✅ creato     | GET /alerts/count + GET /alerts                        |
+| `backend/src/routes/alert.routes.js`               | ✅ creato     | Route alert autenticate                                |
+| `backend/src/services/alertScheduler.js`           | ✅ creato     | Cron job 08:00 + template email HTML                   |
+| `backend/src/server.js`                            | ✅ aggiornato | alertRoutes + startAlertScheduler integrati            |
+| `app/src/services/apiService.js`                   | ✅ aggiornato | getAlertCount() + getAlerts()                          |
+| `app/src/layouts/AppLayout.jsx`                    | ✅ aggiornato | Badge rosso su voce "Documenti" in sidebar             |
+| `app/src/layouts/AppLayout.css`                    | ✅ aggiornato | Stili badge sidebar (espansa + collassata)             |
+| Build Vite                                         | ✅ 0 errori   | 235 moduli                                             |
+| Commit `c5bc2f8` + push                            | ✅ su main    | Netlify auto-deploy frontend OK                        |
+| **Deploy backend VPS**                             | ⚠️ PENDENTE  | SSH access denied — eseguire manualmente               |
+
 
 **Deploy VPS manuale (da eseguire):**
+
 ```bash
 cd /var/www/sgq-backend
 git pull origin main
@@ -622,6 +665,7 @@ echo 'Sistemi@2026' | sudo -S systemctl restart sgq-backend.service
 ```
 
 **Configurazione SMTP (da aggiungere in .env sul VPS per attivare email):**
+
 ```
 ALERT_ENABLED=true
 SMTP_HOST=smtp.gmail.com
@@ -633,11 +677,31 @@ SMTP_FROM=SGQ Studio <alerts@qsstudio.it>
 
 ---
 
-### 🚀 SPRINT 3 — da definire (PROSSIMO)
+### 🚀 SPRINT 3 — Impostazioni & Notifiche UI (PROSSIMO — prima cosa da fare)
+
+**Obiettivo**: permettere all'admin di configurare i destinatari email alert dalla UI, senza toccare il server.
+
+**Passi**:
+1. **Pagina Settings → Notifiche** (`/settings/notifications`): form con destinatari email, soglie giorni, toggle alert per tipo
+2. **API**: `GET/PUT /notifications-config` (lettura e salvataggio `notifications_config`)
+3. **Pulsante "Invia email di test"**: verifica che la configurazione SMTP funzioni
+4. **Voce menu** sidebar: aggiungere "🔔 Notifiche" sotto il gruppo Gestione (solo admin)
+5. **Configurazione SMTP** sul VPS `.env`: `ALERT_ENABLED=true`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+
+**Decisione architetturale (10/04/2026)**:
+- SMTP = credenziali tecniche del server → `.env` VPS (configurate una volta sola dal tecnico)
+- Destinatari + soglie = configurazione dell'organizzazione → tabella `notifications_config` → UI admin
+- Un solo account SMTP per tutta la piattaforma (es. `noreply@qsstudio.it`)
+- La pagina Settings → Notifiche è accessibile solo al ruolo `admin`/`superadmin`
+
+---
+
+### 🚀 SPRINT 2B — Gestione file allegati (dopo Sprint 3)
 
 **Obiettivo**: badge alert in sidebar + cron job email giornaliero per scadenze documenti.
 
 **Passi**:
+
 1. **Migration 030**: tabella `notifications_config` (destinatari email + soglie per organizzazione)
 2. **Backend `alert.controller.js`**: endpoint `GET /alerts/count` (badge) + `GET /alerts` (lista)
 3. **Backend `alertScheduler.js`**: cron job `node-schedule` — ogni giorno ore 08:00, query scaduti/in scadenza, email con `nodemailer`
@@ -660,6 +724,7 @@ SMTP_FROM=SGQ Studio <alerts@qsstudio.it>
 - **Cancellazione fisica**: non prevista — i documenti obsoleti restano per il periodo di retention
 
 **Passi**:
+
 1. Migration 031: `file_path`, `file_size`, `mime_type`, `version` su tabella `attachments` + collegamento a `document_registry`
 2. Backend: endpoint upload (multer, nessun filtro MIME tranne blacklist eseguibili) + download autenticato
 3. Frontend: pulsante "📄 Visualizza/Scarica" + dialog "🔄 Nuova revisione" con file picker
@@ -690,6 +755,7 @@ Passi:
 **Attenzione**: NON modificare funzionalità esistenti (audit, NC, checklist). Solo aggiungere nuova sezione.
 
 **Componente universale da costruire**:
+
 - `<DataGrid />` — griglia dati con colonne configurabili, ordinamento, filtri, paginazione, export Excel
 - Riusato da: Document Registry, Qualifiche, WPS/WPQR, Commesse, Rischi, Obiettivi, Azioni
 
@@ -737,14 +803,16 @@ Passi:
 
 ### Debiti tecnici aperti (non bloccanti per Sprint A)
 
-| Debito | Priorità | Note |
-|---|---|---|
-| Fix foto embedded Word | 🔴 | Blocca modulo RDP per Mason — pic:cNvPr id duplicati |
-| Auth mobile ADR-004 | 🟡 | Loop login Android PWA |
-| ISO 45001 domande da norma PDF | 🟡 | Norma disponibile in `docs/Normative/` |
-| `norm_excerpt` in checklist_questions | 🟡 | Alta priorità per report professionali |
-| Token monouso allegati Word | 🟢 | Sicurezza JWT in link Word |
-| React Router (navigazione URL) | 🟢 | Da introdurre per scalabilità navigazione |
+
+| Debito                                | Priorità | Note                                                 |
+| ------------------------------------- | -------- | ---------------------------------------------------- |
+| Fix foto embedded Word                | 🔴       | Blocca modulo RDP per Mason — pic:cNvPr id duplicati |
+| Auth mobile ADR-004                   | 🟡       | Loop login Android PWA                               |
+| ISO 45001 domande da norma PDF        | 🟡       | Norma disponibile in `docs/Normative/`               |
+| `norm_excerpt` in checklist_questions | 🟡       | Alta priorità per report professionali               |
+| Token monouso allegati Word           | 🟢       | Sicurezza JWT in link Word                           |
+| React Router (navigazione URL)        | 🟢       | Da introdurre per scalabilità navigazione            |
+
 
 ---
 
