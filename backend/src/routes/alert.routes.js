@@ -4,7 +4,7 @@
 
 const express    = require('express');
 const router     = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth.middleware');
 const alertCtrl  = require('../controllers/alert.controller');
 
 router.use(authenticate);
