@@ -595,7 +595,45 @@ Commit fix: `0300277`
 
 ---
 
-### 🚀 SPRINT 2 — Alert Engine (PROSSIMO — prima cosa da fare)
+### ✅ SPRINT 2 — Alert Engine COMPLETATO (10/04/2026) — DEPLOY VPS PENDENTE
+
+| Artefatto | Stato | Note |
+|---|---|---|
+| `database/migrations/030_notifications_config.sql` | ✅ creato | Tabella config destinatari + soglie per organizzazione |
+| `backend/scripts/run-migration-030.js` | ✅ creato | Script esecuzione migration |
+| `backend/src/controllers/alert.controller.js` | ✅ creato | GET /alerts/count + GET /alerts |
+| `backend/src/routes/alert.routes.js` | ✅ creato | Route alert autenticate |
+| `backend/src/services/alertScheduler.js` | ✅ creato | Cron job 08:00 + template email HTML |
+| `backend/src/server.js` | ✅ aggiornato | alertRoutes + startAlertScheduler integrati |
+| `app/src/services/apiService.js` | ✅ aggiornato | getAlertCount() + getAlerts() |
+| `app/src/layouts/AppLayout.jsx` | ✅ aggiornato | Badge rosso su voce "Documenti" in sidebar |
+| `app/src/layouts/AppLayout.css` | ✅ aggiornato | Stili badge sidebar (espansa + collassata) |
+| Build Vite | ✅ 0 errori | 235 moduli |
+| Commit `c5bc2f8` + push | ✅ su main | Netlify auto-deploy frontend OK |
+| **Deploy backend VPS** | ⚠️ PENDENTE | SSH access denied — eseguire manualmente |
+
+**Deploy VPS manuale (da eseguire):**
+```bash
+cd /var/www/sgq-backend
+git pull origin main
+npm install node-schedule nodemailer --save
+node backend/scripts/run-migration-030.js
+echo 'Sistemi@2026' | sudo -S systemctl restart sgq-backend.service
+```
+
+**Configurazione SMTP (da aggiungere in .env sul VPS per attivare email):**
+```
+ALERT_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=alerts@qsstudio.it
+SMTP_PASS=<app-password>
+SMTP_FROM=SGQ Studio <alerts@qsstudio.it>
+```
+
+---
+
+### 🚀 SPRINT 3 — da definire (PROSSIMO)
 
 **Obiettivo**: badge alert in sidebar + cron job email giornaliero per scadenze documenti.
 
