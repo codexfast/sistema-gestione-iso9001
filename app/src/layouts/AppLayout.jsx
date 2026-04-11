@@ -61,6 +61,9 @@ function buildNavItems(user, alertCount = 0) {
         ] : []),
         { to: "/settings/templates",        icon: "📝", label: "Template report" },
         { to: "/settings/custom-checklists",icon: "📋", label: "Checklist personalizzate" },
+        ...(isAdmin ? [
+          { to: "/settings/notifications",  icon: "🔔", label: "Notifiche" },
+        ] : []),
       ],
     }] : []),
   ];

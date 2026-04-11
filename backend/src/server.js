@@ -31,6 +31,7 @@ const reportTemplateRoutes = require('./routes/reportTemplate.routes');
 const customChecklistRoutes = require('./routes/customChecklist.routes');
 const documentRoutes        = require('./routes/document.routes');
 const alertRoutes           = require('./routes/alert.routes');
+const notificationsRoutes   = require('./routes/notifications.routes');
 
 const app = express();
 const PORT = process.env.PORT || 10443;
@@ -134,6 +135,7 @@ app.use(API_BASE, reportTemplateRoutes);
 app.use(API_BASE, customChecklistRoutes);
 app.use(API_BASE, documentRoutes);
 app.use(API_BASE, alertRoutes);
+app.use(API_BASE, notificationsRoutes);
 app.use(`${API_BASE}/companies/:companyId/certification-findings`, certFindingsRoutes);
 
 // Static files (uploads)

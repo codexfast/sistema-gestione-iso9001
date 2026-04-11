@@ -955,6 +955,20 @@ class ApiService {
     async getAlerts(days = 30) {
         return this.get(`/alerts?days=${days}`);
     }
+
+    // ─── Notifiche config ────────────────────────────────────────────────────
+
+    async getNotificationsConfig() {
+        return this.get('/notifications-config');
+    }
+
+    async saveNotificationsConfig(data) {
+        return this.put('/notifications-config', data);
+    }
+
+    async sendTestEmail() {
+        return this.post('/notifications-config/test', {});
+    }
 }
 
 /**

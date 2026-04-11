@@ -27,6 +27,7 @@ import ChecklistAdminPage from "./components/ChecklistAdminPage";
 import UsersAdminPage from "./components/UsersAdminPage";
 import ReportTemplatesAdminPage from "./components/ReportTemplatesAdminPage";
 import CustomChecklistsPage from "./components/CustomChecklistsPage";
+import NotificationsSettingsPage from "./pages/NotificationsSettingsPage";
 import ModuleLocked from "./components/ModuleLocked";
 import Login from "./components/Login";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -140,6 +141,14 @@ function AppContent() {
           element={
             <BackWrapper>
               <CustomChecklistsPage />
+            </BackWrapper>
+          }
+        />
+        <Route
+          path="/settings/notifications"
+          element={
+            <BackWrapper>
+              <NotificationsSettingsPage />
             </BackWrapper>
           }
         />

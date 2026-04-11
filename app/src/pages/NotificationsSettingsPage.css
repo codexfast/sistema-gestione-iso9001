@@ -1,0 +1,303 @@
+/* NotificationsSettingsPage.css */
+
+.notif-page {
+  padding: 28px 32px;
+  max-width: 760px;
+}
+
+.notif-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #6b7280;
+  padding: 40px;
+}
+.loading-spinner-sm {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1e3a5f;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ?? Header ??????????????????????????????????????????? */
+.notif-header {
+  margin-bottom: 16px;
+}
+.notif-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 0 0 4px;
+}
+.notif-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ?? Status SMTP ??????????????????????????????????????? */
+.smtp-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+.smtp-dot {
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.smtp-label {
+  font-size: 13px;
+  color: #166534;
+}
+
+/* ?? Error ?????????????????????????????????????????????? */
+.notif-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #dc2626;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.notif-error button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #dc2626;
+  font-size: 16px;
+}
+
+/* ?? Cards ?????????????????????????????????????????????? */
+.notif-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+.notif-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px;
+}
+
+/* ?? Fields ????????????????????????????????????????????? */
+.notif-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.notif-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+.notif-field input[type="text"],
+.notif-field input[type="number"],
+.notif-field input[type="time"] {
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #111827;
+  background: #f9fafb;
+  transition: border-color 0.2s;
+}
+.notif-field input:focus {
+  outline: none;
+  border-color: #1e3a5f;
+  background: #fff;
+}
+.notif-hint {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.required {
+  color: #ef4444;
+}
+
+.notif-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* ?? Toggles ???????????????????????????????????????????? */
+.notif-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.notif-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  transition: background 0.15s;
+}
+.notif-toggle:hover {
+  background: #f3f4f6;
+}
+.notif-toggle input[type="checkbox"] {
+  display: none;
+}
+.toggle-track {
+  width: 40px;
+  height: 22px;
+  background: #d1d5db;
+  border-radius: 11px;
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: background 0.2s;
+}
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  transition: transform 0.2s;
+}
+.notif-toggle input:checked ~ .toggle-track {
+  background: #1e3a5f;
+}
+.notif-toggle input:checked ~ .toggle-track::after {
+  transform: translateX(18px);
+}
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.toggle-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+.toggle-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ?? Footer azioni ??????????????????????????????????????? */
+.notif-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.notif-saved {
+  font-size: 13px;
+  color: #16a34a;
+  font-weight: 500;
+}
+.btn-test {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1.5px solid #1e3a5f;
+  background: #fff;
+  color: #1e3a5f;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-test:hover:not(:disabled) {
+  background: #f0f4fa;
+}
+.btn-test:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-save-notif {
+  margin-left: auto;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-save-notif:hover:not(:disabled) {
+  background: #16304e;
+}
+.btn-save-notif:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ?? Test email result ?????????????????????????????????? */
+.notif-test-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.test-ok {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.test-fail {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+.notif-test-result button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: inherit;
+}
+
+/* ?? Responsive ????????????????????????????????????????? */
+@media (max-width: 600px) {
+  .notif-page {
+    padding: 16px;
+  }
+  .notif-row {
+    flex-direction: column;
+  }
+  .notif-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-save-notif {
+    margin-left: 0;
+  }
+}
