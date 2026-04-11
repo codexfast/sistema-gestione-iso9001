@@ -677,21 +677,32 @@ SMTP_FROM=SGQ Studio <alerts@qsstudio.it>
 
 ---
 
-### 🚀 SPRINT 3 — Impostazioni & Notifiche UI (PROSSIMO — prima cosa da fare)
+### ✅ SPRINT 3 — Impostazioni & Notifiche UI COMPLETATO (11/04/2026) — DEPLOY VPS PENDENTE
 
-**Obiettivo**: permettere all'admin di configurare i destinatari email alert dalla UI, senza toccare il server.
+| Artefatto | Stato | Note |
+| --- | --- | --- |
+| `backend/src/controllers/notifications.controller.js` | ✅ creato | GET + PUT /notifications-config + POST /test |
+| `backend/src/routes/notifications.routes.js` | ✅ creato | Route autenticate |
+| `backend/src/server.js` | ✅ aggiornato | notificationsRoutes integrato |
+| `app/src/pages/NotificationsSettingsPage.jsx` | ✅ creato | Form destinatari, soglie, toggle tipi, pulsante test email |
+| `app/src/pages/NotificationsSettingsPage.css` | ✅ creato | Toggle switch, card layout, responsive |
+| `app/src/services/apiService.js` | ✅ aggiornato | getNotificationsConfig / saveNotificationsConfig / sendTestEmail |
+| `app/src/layouts/AppLayout.jsx` | ✅ aggiornato | Voce "🔔 Notifiche" in sidebar (solo admin) |
+| `app/src/App.jsx` | ✅ aggiornato | Route /settings/notifications |
+| Build Vite | ✅ 0 errori | 237 moduli |
+| Commit `08618e8` + push | ✅ su main | Netlify auto-deploy frontend OK |
+| **Deploy backend VPS** | ⚠️ PENDENTE | Eseguire manualmente sul VPS |
 
-**Passi**:
-1. **Pagina Settings → Notifiche** (`/settings/notifications`): form con destinatari email, soglie giorni, toggle alert per tipo
-2. **API**: `GET/PUT /notifications-config` (lettura e salvataggio `notifications_config`)
-3. **Pulsante "Invia email di test"**: verifica che la configurazione SMTP funzioni
-4. **Voce menu** sidebar: aggiungere "🔔 Notifiche" sotto il gruppo Gestione (solo admin)
-5. **Configurazione SMTP** sul VPS `.env`: `ALERT_ENABLED=true`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+**Deploy VPS manuale (da eseguire, include anche Sprint 2 se non fatto):**
+```bash
+cd /var/www/sgq-backend
+git pull origin main
+echo 'Sistemi@2026' | sudo -S systemctl restart sgq-backend.service
+```
 
-**Decisione architetturale (10/04/2026)**:
+**Decisione architetturale**:
 - SMTP = credenziali tecniche del server → `.env` VPS (configurate una volta sola dal tecnico)
 - Destinatari + soglie = configurazione dell'organizzazione → tabella `notifications_config` → UI admin
-- Un solo account SMTP per tutta la piattaforma (es. `noreply@qsstudio.it`)
 - La pagina Settings → Notifiche è accessibile solo al ruolo `admin`/`superadmin`
 
 ---
