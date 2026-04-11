@@ -651,7 +651,7 @@ Commit fix: `0300277`
 | `app/src/layouts/AppLayout.css`                    | ✅ aggiornato | Stili badge sidebar (espansa + collassata)             |
 | Build Vite                                         | ✅ 0 errori   | 235 moduli                                             |
 | Commit `c5bc2f8` + push                            | ✅ su main    | Netlify auto-deploy frontend OK                        |
-| **Deploy backend VPS**                             | ⚠️ PENDENTE  | SSH access denied — eseguire manualmente               |
+| **Deploy backend VPS**                             | ✅ completato | Migration 030 + restart — 11/04/2026                   |
 
 
 **Deploy VPS manuale (da eseguire):**
@@ -691,7 +691,7 @@ SMTP_FROM=SGQ Studio <alerts@qsstudio.it>
 | `app/src/App.jsx` | ✅ aggiornato | Route /settings/notifications |
 | Build Vite | ✅ 0 errori | 237 moduli |
 | Commit `08618e8` + push | ✅ su main | Netlify auto-deploy frontend OK |
-| **Deploy backend VPS** | ⚠️ PENDENTE | Eseguire manualmente sul VPS |
+| **Deploy backend VPS** | ✅ completato | pscp + migration 030 + restart — 11/04/2026 |
 
 **Deploy VPS manuale (da eseguire, include anche Sprint 2 se non fatto):**
 ```bash
