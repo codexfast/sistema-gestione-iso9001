@@ -1,5 +1,5 @@
 /**
- * NotificationsSettingsPage � Configurazione notifiche email SGQ
+ * NotificationsSettingsPage — Configurazione notifiche email SGQ
  * Sprint 3: accessibile solo ad admin/superadmin
  * Route: /settings/notifications
  */
@@ -111,7 +111,7 @@ function NotificationsSettingsPage() {
       {/* Header */}
       <div className="notif-header">
         <div>
-          <h2 className="notif-title">?? Notifiche & Alert</h2>
+          <h2 className="notif-title">🔔 Notifiche & Alert</h2>
           <p className="notif-subtitle">
             Configura i destinatari delle email di avviso per scadenze documenti e NC aperte.
           </p>
@@ -122,13 +122,13 @@ function NotificationsSettingsPage() {
       <div className={`smtp-status ${process.env.NODE_ENV ? "smtp-unknown" : ""}`}>
         <span className="smtp-dot" />
         <span className="smtp-label">
-          Account SMTP configurato sul server � gestito dal tecnico tramite variabili d'ambiente
+          Account SMTP configurato sul server — gestito dal tecnico tramite variabili d'ambiente
         </span>
       </div>
 
       {/* Errore */}
       {error && (
-        <div className="notif-error">?? {error} <button onClick={() => setError(null)}>?</button></div>
+        <div className="notif-error">⚠️ {error} <button onClick={() => setError(null)}>✕</button></div>
       )}
 
       {/* Form */}
@@ -143,7 +143,7 @@ function NotificationsSettingsPage() {
             value={form.recipients_email}
             onChange={handleChange("recipients_email")}
           />
-          <span className="notif-hint">Separare pi� indirizzi con la virgola</span>
+          <span className="notif-hint">Separare più indirizzi con la virgola</span>
         </div>
 
         <div className="notif-row">
@@ -186,7 +186,7 @@ function NotificationsSettingsPage() {
             />
             <span className="toggle-track" />
             <div className="toggle-info">
-              <span className="toggle-title">?? Documenti in scadenza</span>
+              <span className="toggle-title">📄 Documenti in scadenza</span>
               <span className="toggle-desc">Avviso quando un documento del registro si avvicina alla scadenza</span>
             </div>
           </label>
@@ -199,7 +199,7 @@ function NotificationsSettingsPage() {
             />
             <span className="toggle-track" />
             <div className="toggle-info">
-              <span className="toggle-title">?? Non conformit� aperte</span>
+              <span className="toggle-title">⚠️ Non conformità aperte</span>
               <span className="toggle-desc">Avviso per NC rimaste aperte oltre 30 giorni</span>
             </div>
           </label>
@@ -212,7 +212,7 @@ function NotificationsSettingsPage() {
             />
             <span className="toggle-track" />
             <div className="toggle-info">
-              <span className="toggle-title">?? Qualifiche in scadenza</span>
+              <span className="toggle-title">🎓 Qualifiche in scadenza</span>
               <span className="toggle-desc">Avviso per qualifiche saldatori e personale NDT in scadenza (attivo con Sprint D)</span>
             </div>
           </label>
@@ -229,11 +229,11 @@ function NotificationsSettingsPage() {
           />
           <span className="toggle-track" />
           <div className="toggle-info">
-            <span className="toggle-title">{form.enabled ? "?? Notifiche abilitate" : "?? Notifiche disabilitate"}</span>
+            <span className="toggle-title">{form.enabled ? "🟢 Notifiche abilitate" : "🔴 Notifiche disabilitate"}</span>
             <span className="toggle-desc">
               {form.enabled
                 ? `Le email vengono inviate ogni giorno alle ${form.send_time}`
-                : "Nessuna email verr� inviata finch� le notifiche sono disabilitate"}
+                : "Nessuna email verrà inviata finché le notifiche sono disabilitate"}
             </span>
           </div>
         </label>
@@ -248,7 +248,7 @@ function NotificationsSettingsPage() {
           disabled={testing || !form.recipients_email.trim()}
           title="Invia un'email di test per verificare la configurazione SMTP"
         >
-          {testing ? "Invio in corso..." : "?? Invia email di test"}
+          {testing ? "Invio in corso..." : "📧 Invia email di test"}
         </button>
         <button
           className="btn-save-notif"
